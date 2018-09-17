@@ -18,6 +18,14 @@ defaults
     timeout client    10s
     timeout server    10m
 
+    errorfile 400 /etc/haproxy/errors-custom/400.http
+    errorfile 403 /etc/haproxy/errors-custom/403.http
+    errorfile 408 /etc/haproxy/errors-custom/408.http
+    errorfile 500 /etc/haproxy/errors-custom/500.http
+    errorfile 502 /etc/haproxy/errors-custom/502.http
+    errorfile 503 /etc/haproxy/errors-custom/503.http
+    errorfile 504 /etc/haproxy/errors-custom/504.http
+
 global
     log 127.0.0.1 local0 notice
     maxconn 2000
@@ -84,7 +92,7 @@ backend srv_80_$COUNT
 }
 
 
-HAPROXY_CFG="/usr/local/etc/haproxy/haproxy.cfg"
+HAPROXY_CFG="/etc/haproxy/haproxy.cfg"
 FRONTEND=""
 BACKEND=""
 TURN="FB"
