@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
 set -e
 
 echo " ______                  _    _          _____                     "
@@ -14,6 +15,8 @@ echo ""
 defaults() {
 echo "
 defaults
+    log global
+
     timeout connect    3s
     timeout client    10s
     timeout server    10m
@@ -114,13 +117,22 @@ do
 done
 
 # Write
-defaults > $HAPROXY_CFG
+defaults > ${HAPROXY_CFG}
 if [ ! -z "${LB_STATS_USER}" ]
 then
-    stats ${LB_STATS_USER} ${LB_STATS_PASS} >> $HAPROXY_CFG
+    stats ${LB_STATS_USER} ${LB_STATS_PASS} >> ${HAPROXY_CFG}
 fi
-frontend "$FRONTEND" >> $HAPROXY_CFG
-backend "$BACKEND" >> $HAPROXY_CFG
+frontend "$FRONTEND" >> ${HAPROXY_CFG}
+backend "$BACKEND" >> ${HAPROXY_CFG}
+
+# More
+for config in `ls /etc/haproxy/conf.d/*.cfg`
+do
+    echo Loading extra config: ${config}
+    cat ${config} >> ${HAPROXY_CFG}
+done
+
+echo
 
 /sbin/syslogd -O /proc/1/fd/1
 /docker-entrypoint.sh "$@"

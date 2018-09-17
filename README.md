@@ -5,7 +5,10 @@ This Docker image will create dynamically the `haproxy.cfg` based on the argumen
 ## Features
 
 - Enable or disable Stats on port 1936 with custom password
-- Add a mapping from a host to another
+- Add a mapping from a host to another based on Environment Variables
+- Dont need to setup .cfg file
+- You can add custom .cfg file by mapping the `conf.d` folder
+
 
 ## Usages
 
@@ -28,8 +31,30 @@ docker run \
     -e LB_STATS_USER=admin \
     -e LB_STATS_PASS=mypassword \
     -e LB_HOSTS="my.domain.com container1:8080 other.domain.com other:7000" \
+    -p 80:80 \
     --name easy-haproxy-instance \
-    -t -d byjg/easy-haproxy
+    -d byjg/easy-haproxy
+```
+
+## Mapping custom .cfg files
+
+Just create a folder and put files with the extension .cfg. and map the volume to the container. 
+This will concatenate your config into the main haproxy.cfg
+
+```bash
+docker run \ 
+    /* other parameters */
+    -v /your/local/conf.d:/etc/haproxy/conf.d \
+    -d byjg/easy-haproxy
+```
+
+Check if your config is ok:
+
+```bash
+docker run \ 
+    /* other parameters */
+    -v /your/local/conf.d:/etc/haproxy/conf.d \
+    -byjg/easy-haproxy -c -f /etc/haproxy/haproxy.cfg
 ```
 
 
