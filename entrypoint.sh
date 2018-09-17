@@ -27,7 +27,7 @@ defaults
     errorfile 504 /etc/haproxy/errors-custom/504.http
 
 global
-    log 127.0.0.1 local0 notice
+    log /dev/log local0
     maxconn 2000
 "
 }
@@ -122,5 +122,5 @@ fi
 frontend "$FRONTEND" >> $HAPROXY_CFG
 backend "$BACKEND" >> $HAPROXY_CFG
 
+/sbin/syslogd -O /proc/1/fd/1
 /docker-entrypoint.sh "$@"
-
