@@ -47,7 +47,8 @@ frontend stats
     stats auth $1:$2
 #    acl is_proxystats hdr_dom(host) -i some.host.com
 #    default_backend srv_stats
-    use_backend srv_stats if is_proxystats
+#    use_backend srv_stats if is_proxystats
+    default_backend srv_stats
 
 backend srv_stats
     mode http
