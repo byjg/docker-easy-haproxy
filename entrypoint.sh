@@ -104,6 +104,7 @@ for LB_HOST in `echo ${LB_HOSTS}`;
 do
     if [ "$TURN" == "FB" ]
     then
+        echo "Mapping: $LB_HOST:80"
         FRONTEND="$FRONTEND $LB_HOST"
         TURN="BE"
         continue
@@ -111,6 +112,8 @@ do
 
     if [ "$TURN" == "BE" ]
     then
+        echo "     to: $LB_HOST"
+        echo
         BACKEND="$BACKEND $LB_HOST"
         TURN="FB"
         continue
@@ -121,6 +124,7 @@ done
 defaults > ${HAPROXY_CFG}
 if [ ! -z "${LB_STATS_USER}" ]
 then
+    echo "Stats Enabled: ${LB_STATS_USER}"
     stats ${LB_STATS_USER} ${LB_STATS_PASS} >> ${HAPROXY_CFG}
 fi
 frontend "$FRONTEND" >> ${HAPROXY_CFG}
