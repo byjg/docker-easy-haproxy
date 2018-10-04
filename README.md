@@ -1,40 +1,52 @@
 # Easy HAProxy 
 
-This Docker image will create dynamically the `haproxy.cfg` based on the arguments defined in the command line.
+This Docker image will create dynamically the `haproxy.cfg` based on very simple Yaml.
 
 ## Features
 
 - Enable or disable Stats on port 1936 with custom password
-- Add a mapping from a host to another based on Environment Variables
-- Dont need to setup .cfg file
-- You can add custom .cfg file by mapping the `conf.d` folder
+- Simple mapping host => host:port 
+- Simple redirect host => host:port
 
-
-## Usages
-
-The most common use is to use on Docker Swarm environment when you don't want to expose 
-the container ports and use a Load Balance to deliver to this component in the same 
-overlay network
 
 ## Basic Usage
 
-You have to define 3 variables (LB_STATS_USER, LB_STATS_PASS, LB_HOSTS). 
+Create a yaml file in your machine called `easyconfig.cfg` and put the contents:
 
-Example:
-- HAProxy with statistics and password "mypassowrd" for the user "admin"
-- Domain `my.domain.com` routing to container/host `container1` on port 8080
-- Domain `other.domain.com` routing to container/host `other` on port 7000
+```yaml
+stats:
+  username: admin
+  password: senha
+  port: 1936         # Optional (default 1936)
 
+customerrors: true   # Optional (default false)
+
+easymapping:
+  - port: 80
+    hosts:                                     
+      host1.com.br: container:5000
+      host2.com.br: other:3000
+    redirect:
+      www.host1.com.br: http://host1.com.br
+      
+  - port: 8080
+    hosts:
+      host3.com.br: domain:8181
+```
+
+Then run (remember to enable the proper ports):
 
 ```bash
 docker run \ 
-    -e LB_STATS_USER=admin \
-    -e LB_STATS_PASS=mypassword \
-    -e LB_HOSTS="my.domain.com container1:8080 other.domain.com other:7000" \
+    -v /path/to/local:/etc/easyconfig \
     -p 80:80 \
+    -p 8080:8080 \
+    -p 1936:1936 \
     --name easy-haproxy-instance \
     -d byjg/easy-haproxy
 ```
+
+
 
 ## Mapping custom .cfg files
 
@@ -57,6 +69,20 @@ docker run \
     -byjg/easy-haproxy -c -f /etc/haproxy/haproxy.cfg
 ```
 
+## Docker Compose
+
+```yaml
+version: "3.4"
+services:
+  front:
+    image: byjg/easy-haproxy
+    volume:
+      - /path/to/local:/etc/easyconfig
+    ports:
+      - 80:80
+      - 8080:8080
+      - 1936:1936
+```
 
 ## Build
 
