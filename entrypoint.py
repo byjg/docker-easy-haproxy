@@ -67,31 +67,31 @@ frontend http_in
 """.format(port)
 
     for k in redir:
-        host = k.replace(".", "_")
+        host = k.replace(".", "_") + "_{}".format(port)
         result += "    acl is_redir_{0} hdr_dom(host) -i {1}\n".format(host, k)
-        result += "    use_backend redir_{1}_{0} if is_redir_{0}\n\n".format(host, port)
+        result += "    use_backend redir_{0} if is_redir_{0}\n\n".format(host)
 
     for k in hosts:
-        host = k.replace(".", "_")
+        host = k.replace(".", "_") + "_{}".format(port)
         result += "    acl is_rule_{0} hdr_dom(host) -i {1}\n".format(host, k)
-        result += "    use_backend srv_{1}_{0} if is_rule_{0}\n\n".format(host, port)
+        result += "    use_backend srv_{0} if is_rule_{0}\n\n".format(host)
 
     for k in redir:
-        host = k.replace(".", "_")
+        host = k.replace(".", "_") + "_{}".format(port)
         result += """
-backend redir_{1}_{0}
+backend redir_{0}
     mode http
-    redirect location {2} code 302
-""".format(host, port, redir[k])
+    redirect location {1} code 302
+""".format(host, redir[k])
 
     for k in hosts:
-        host = k.replace(".", "_")
+        host = k.replace(".", "_") + "_{}".format(port)
         result += """
-backend srv_{1}_{0}
+backend srv_{0}
     balance roundrobin
     mode http
     option forwardfor
-    http-request set-header X-Forwarded-Port %[dst_port]""".format(host, port) + """
+    http-request set-header X-Forwarded-Port %[dst_port]""".format(host) + """
     http-request add-header X-Forwarded-Proto https if { ssl_fc }""" + """
     server srv {0} check weight 1
 """.format(hosts[k])
