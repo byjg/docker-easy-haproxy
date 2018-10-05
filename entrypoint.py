@@ -63,12 +63,12 @@ frontend http_in
 
     for k in redir:
         host = k.replace(".", "_")
-        result += "    acl is_redir_{0} hdr_dom(host) -i -m end {1}\n".format(host, k)
+        result += "    acl is_redir_{0} hdr_dom(host) -i {1}\n".format(host, k)
         result += "    use_backend redir_{1}_{0} if is_redir_{0}\n\n".format(host, port)
 
     for k in hosts:
         host = k.replace(".", "_")
-        result += "    acl is_rule_{0} hdr_dom(host) -i -m end {1}\n".format(host, k)
+        result += "    acl is_rule_{0} hdr_dom(host) -i {1}\n".format(host, k)
         result += "    use_backend srv_{1}_{0} if is_rule_{0}\n\n".format(host, port)
 
     for k in redir:
