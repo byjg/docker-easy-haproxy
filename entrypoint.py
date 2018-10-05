@@ -94,7 +94,7 @@ backend srv_{1}_{0}
     return result
 
 
-parsed = yaml.load("/etc/haproxy/haproxy.cfg")
+parsed = yaml.load("/etc/easyconfig/easyconfig.cfg")
 
 print(defaults(parsed["customerrors"] if "customerrors" in parsed else False))
 if "stats" in parsed:
