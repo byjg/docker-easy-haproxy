@@ -1,4 +1,9 @@
 import yaml
+import sys
+
+if len(sys.argv) != 2:
+    print("You need to pass the easyconfig.cfg path")
+    exit(1)
 
 
 def defaults(custom):
@@ -94,7 +99,8 @@ backend srv_{1}_{0}
     return result
 
 
-parsed = yaml.load("/etc/easyconfig/easyconfig.cfg")
+with open(sys.argv[1], 'r') as content_file:
+    parsed = yaml.load(content_file.read())
 
 print(defaults(parsed["customerrors"] if "customerrors" in parsed else False))
 if "stats" in parsed:

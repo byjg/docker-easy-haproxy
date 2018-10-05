@@ -1,0 +1,18 @@
+stats:
+  username: admin
+  password: senha
+  port: 1936
+
+customerrors: true
+
+easymapping:
+  - port: 80
+    hosts:
+      host1.com.br: container:5000
+      host2.com.br: other:3000
+    redirect:
+      www.host1.com.br: http://host1.com.br
+
+  - port: 8080
+    hosts:
+      host3.com.br: domain:8181

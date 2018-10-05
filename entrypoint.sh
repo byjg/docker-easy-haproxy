@@ -12,16 +12,18 @@ echo "                  __/ |                                       __/ |"
 echo "                 |___/                                       |___/ "
 echo ""
 
-if [ ! -f "/etc/easyconfig/easyconfig.cfg" ]
+HAPROXY_CFG="/etc/haproxy/haproxy.cfg"
+EASYCONFIG_CFG="/etc/easyconfig/easyconfig.cfg"
+
+if [ ! -f "$EASYCONFIG_CFG" ]
 then
-    echo "File '/etc/easyconfig/easyconfig.cfg' does not exist"
+    echo "File '$EASYCONFIG_CFG' does not exist"
     exit 1
 fi
 
 
-HAPROXY_CFG="/etc/haproxy/haproxy.cfg"
 
-python3 /entrypoint.py > $HAPROXY_CFG
+python3 /entrypoint.py "$EASYCONFIG_CFG" > $HAPROXY_CFG
 
 
 /sbin/syslogd -O /proc/1/fd/1
