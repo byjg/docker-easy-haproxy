@@ -60,7 +60,7 @@ def easymapping(o):
     redir = o["redirect"] if "redirect" in o else dict()
 
     result = """
-frontend http_in
+frontend http_in_{0}
     bind *:{0}
     mode http
     
