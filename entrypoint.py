@@ -43,7 +43,7 @@ frontend stats
     stats realm Haproxy\ Statistics
     stats uri /
     stats auth {0}:{1}
-#    acl is_proxystats hdr_dom(host) -i some.host.com
+#    acl is_proxystats hdr(host) -i some.host.com
 #    default_backend srv_stats
 #    use_backend srv_stats if is_proxystats
     default_backend srv_stats
@@ -67,22 +67,13 @@ frontend http_in_{0}
 """.format(port)
 
     for k in redir:
-        host = k.replace(".", "_") + "_{}".format(port)
-        result += "    acl is_redir_{0} hdr_dom(host) -i {1}\n".format(host, k)
-        result += "    use_backend redir_{0} if is_redir_{0}\n\n".format(host)
+        result += "    redirect prefix " + redir[k] + " code 301 if { hdr(host) -i " + k + " }\n"
 
+    result += "\n"
     for k in hosts:
         host = k.replace(".", "_") + "_{}".format(port)
-        result += "    acl is_rule_{0} hdr_dom(host) -i {1}\n".format(host, k)
+        result += "    acl is_rule_{0} hdr(host) -i {1}\n".format(host, k)
         result += "    use_backend srv_{0} if is_rule_{0}\n\n".format(host)
-
-    for k in redir:
-        host = k.replace(".", "_") + "_{}".format(port)
-        result += """
-backend redir_{0}
-    mode http
-    redirect location {1} code 302
-""".format(host, redir[k])
 
     for k in hosts:
         host = k.replace(".", "_") + "_{}".format(port)
