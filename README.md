@@ -2,14 +2,14 @@
 
 This Docker image will create dynamically the `haproxy.cfg` based on very simple Yaml.
 
-## Features
+# Features
 
 - Enable or disable Stats on port 1936 with custom password
 - Simple mapping host => host:port 
 - Simple redirect host => host:port
 
 
-## Basic Usage
+# Basic Usage
 
 Create a yaml file in your machine called `easyconfig.cfg` and put the contents:
 
@@ -48,7 +48,7 @@ docker run \
 
 
 
-## Mapping custom .cfg files
+# Mapping custom .cfg files
 
 Just create a folder and put files with the extension .cfg. and map the volume to the container. 
 This will concatenate your config into the main haproxy.cfg
@@ -69,7 +69,7 @@ docker run \
     -byjg/easy-haproxy -c -f /etc/haproxy/haproxy.cfg
 ```
 
-## Docker Compose
+# Docker Compose
 
 ```yaml
 version: "3.4"
@@ -84,8 +84,9 @@ services:
       - 1936:1936
 ```
 
-## Build
+# Build
 
 ```
 docker build -t byjg/easy-haproxy .
 ```
+
