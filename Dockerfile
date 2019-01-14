@@ -1,4 +1,4 @@
-FROM haproxy:1.8-alpine
+FROM haproxy:1.9-alpine
 
 RUN apk add --no-cache bash python3 py-yaml
 
