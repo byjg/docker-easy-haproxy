@@ -1,6 +1,6 @@
 stats:
   username: admin
-  password: senha
+  password: password
   port: 1936
 
 customerrors: true
@@ -12,6 +12,11 @@ easymapping:
       host2.com.br: other:3000
     redirect:
       www.host1.com.br: http://host1.com.br
+
+  - port: 443
+    ssl_cert: /etc/easyconfig/mycert.pem
+    hosts:
+      host1.com.br: container:80
 
   - port: 8080
     hosts:

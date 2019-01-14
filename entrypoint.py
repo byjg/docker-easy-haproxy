@@ -29,6 +29,7 @@ defaults
 global
     log /dev/log local0
     maxconn 2000
+    tune.ssl.default-dh-param 2048
 """
     return result
 
@@ -54,29 +55,31 @@ backend srv_stats
 """.format(map["username"], map["password"], map["port"] if "port" in map else 1936)
 
 
-def easymapping(o):
+def easymapping(o, salt):
     port = o["port"]
+    ssl = " ssl crt " + o["ssl_cert"] if "ssl_cert" in o else ""
     hosts = o["hosts"] if "hosts" in o else dict()
     redir = o["redirect"] if "redirect" in o else dict()
 
     result = """
-frontend http_in_{0}
-    bind *:{0}
+frontend http_in_{0}_{1}
+    bind *:{0} {2}
     mode http
     
-""".format(port)
+""".format(port, salt, ssl)
 
     for k in redir:
         result += "    redirect prefix " + redir[k] + " code 301 if { hdr(host) -i " + k + " }\n"
 
     result += "\n"
     for k in hosts:
-        host = k.replace(".", "_") + "_{}".format(port)
-        result += "    acl is_rule_{0} hdr(host) -i {1}\n".format(host, k)
-        result += "    use_backend srv_{0} if is_rule_{0}\n\n".format(host)
+        host = k.replace(".", "_") + "_{0}_{1}".format(port, salt)
+        result += "    acl is_rule_{0}_1 hdr(host) -i {1}\n".format(host, k)
+        result += "    acl is_rule_{0}_2 hdr(host) -i {1}:{2}\n".format(host, k, port)
+        result += "    use_backend srv_{0} if is_rule_{0}_1 OR is_rule_{0}_2\n\n".format(host)
 
     for k in hosts:
-        host = k.replace(".", "_") + "_{}".format(port)
+        host = k.replace(".", "_") + "_{0}_{1}".format(port, salt)
         result += """
 backend srv_{0}
     balance roundrobin
@@ -93,11 +96,14 @@ backend srv_{0}
 with open(sys.argv[1], 'r') as content_file:
     parsed = yaml.load(content_file.read())
 
+n = 0
+
 print(defaults(parsed["customerrors"] if "customerrors" in parsed else False))
 if "stats" in parsed:
     print(stats(parsed["stats"]))
 if "easymapping" in parsed:
     for k in parsed["easymapping"]:
-        print(easymapping(k))
+        n = n + 1
+        print(easymapping(k, n))
 
 

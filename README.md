@@ -16,7 +16,7 @@ Create a yaml file in your machine called `easyconfig.cfg` and put the contents:
 ```yaml
 stats:
   username: admin
-  password: senha
+  password: password
   port: 1936         # Optional (default 1936)
 
 customerrors: true   # Optional (default false)
@@ -29,6 +29,11 @@ easymapping:
     redirect:
       www.host1.com.br: http://host1.com.br
       
+  - port: 443
+    ssl_cert: /etc/easyconfig/mycert.pem
+    hosts:
+      host1.com.br: container:80
+
   - port: 8080
     hosts:
       host3.com.br: domain:8181
@@ -83,6 +88,25 @@ services:
       - 8080:8080
       - 1936:1936
 ```
+
+# Handling SSL
+
+HaProxy can handle SSL for you. in this case add the parameter pointing to file containing
+the pem of certificates and key in only one file:
+
+```
+  - port: 443
+    ssl_cert: /etc/easyconfig/mycert.pem
+    hosts:
+      host1.com.br: container:80
+```
+
+Important: Different certificates need to be handled in different entries. 
+
+# Setting Custom Errors
+
+Map the volume : `/etc/haproxy/errors-custom/` and put a file named `ERROR_NUMBER.http` where ERROR_NUMBER
+is the http error code (e.g. 503.http)  
 
 # Build
 
