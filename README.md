@@ -5,53 +5,57 @@ This Docker image will create dynamically the `haproxy.cfg` based on very simple
 # Features
 
 - Enable or disable Stats on port 1936 with custom password
-- Simple mapping host => host:port 
-- Simple redirect host => host:port
+- Discover and setup haproxy from Docker Tag 
+- Discover and setup haproxy redirect from Docker Tag
 
 
 # Basic Usage
 
-Create a yaml file in your machine called `easyconfig.cfg` and put the contents:
-
-```yaml
-stats:
-  username: admin
-  password: password
-  port: 1936         # Optional (default 1936)
-
-customerrors: true   # Optional (default false)
-
-easymapping:
-  - port: 80
-    hosts:                                     
-      host1.com.br: container:5000
-      host2.com.br: other:3000
-    redirect:
-      www.host1.com.br: http://host1.com.br
-      
-  - port: 443
-    ssl_cert: /etc/easyconfig/mycert.pem
-    hosts:
-      host1.com.br: container:80
-
-  - port: 8080
-    hosts:
-      host3.com.br: domain:8181
-```
-
-Then run (remember to enable the proper ports):
+Docker run:
 
 ```bash
 docker run \ 
-    -v /path/to/local:/etc/easyconfig \
     -p 80:80 \
     -p 8080:8080 \
     -p 1936:1936 \
     --name easy-haproxy-instance \
+    -e DISCOVER=swarm \
+    -e HAPROXY_USERNAME=admin \
+    -e HAPROXY_PASSWORD=password \
+    -e HAPROXY_STATS_PORT=1936 \ 
+    -e REFRESH_STATE=1 \
     -d byjg/easy-haproxy
 ```
 
+The `DISCOVER` environment variable will define where is located your containers (see below more details):
+- swarm
+- awsecs
 
+# Tags to defined:
+
+| Tag                                        | Description                                                                                             |
+|--------------------------------------------|---------------------------------------------------------------------------------------------------------|
+| com.byjg.easyhaproxy.definitions           | A Comma delimited list with the definitions. Each name requires the definition of the parameters below. |
+| com.byjg.easyhaproxy.port.<definition>     | What is the port that the HAProxy will listen to.                                                       |
+| com.byjg.easyhaproxy.host.<definition>     | What is the host that the HAProxy will listen to.                                                       |
+| com.byjg.easyhaproxy.redirect.<definition> | Host redirects from connections in the port defined above.                                              |
+| com.byjg.easyhaproxy.sslcert.<definition>  | Cert PEM Base64 encoded.                                                                                |
+
+E.g.
+
+```
+docker run \
+    -l com.byjg.easyhaproxy.definitions=http \
+    -l com.byjg.easyhaproxy.port.http=80\
+    -l com.byjg.easyhaproxy.host.http=byjg.com.br \
+    ....
+```
+
+## Redirect Example:
+
+```text
+www.byjg.com.br=>http://byjg.com.br,byjg.com=>http://byjg.com.br
+```
 
 # Mapping custom .cfg files
 
@@ -113,4 +117,19 @@ is the http error code (e.g. 503.http)
 ```
 docker build -t byjg/easy-haproxy .
 ```
+
+
+
+# Docker Swarm
+
+
+# AWS
+
+Easy HAProxy will try to get tasks from the tasks running in the CLUSTER. 
+It is important that easy haproxy run in the ECS Cluster and can connect to the containers.  
+
+   
+You'll have to pass also the `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` or setup a role in the instance in order and 
+the `ECS_CLUSTER` with the arn of the cluster
+
 
