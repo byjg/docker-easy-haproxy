@@ -33,13 +33,14 @@ The `DISCOVER` environment variable will define where is located your containers
 
 # Tags to defined:
 
-| Tag                                        | Description                                                                                             |
-|--------------------------------------------|---------------------------------------------------------------------------------------------------------|
-| com.byjg.easyhaproxy.definitions           | A Comma delimited list with the definitions. Each name requires the definition of the parameters below. |
-| com.byjg.easyhaproxy.port.<definition>     | What is the port that the HAProxy will listen to.                                                       |
-| com.byjg.easyhaproxy.host.<definition>     | What is the host that the HAProxy will listen to.                                                       |
-| com.byjg.easyhaproxy.redirect.<definition> | Host redirects from connections in the port defined above.                                              |
-| com.byjg.easyhaproxy.sslcert.<definition>  | Cert PEM Base64 encoded.                                                                                |
+| Tag                                         | Description                                                                                             |
+|---------------------------------------------|---------------------------------------------------------------------------------------------------------|
+| com.byjg.easyhaproxy.definitions            | A Comma delimited list with the definitions. Each name requires the definition of the parameters below. |
+| com.byjg.easyhaproxy.port.<definition>      | What is the port that the HAProxy will listen to.                                                       |
+| com.byjg.easyhaproxy.localport.<definition> | What is the port that the container is listening.                                                       |
+| com.byjg.easyhaproxy.host.<definition>      | What is the host that the HAProxy will listen to. (Defaults to 80)                                      |
+| com.byjg.easyhaproxy.redirect.<definition>  | Host redirects from connections in the port defined above.                                              |
+| com.byjg.easyhaproxy.sslcert.<definition>   | Cert PEM Base64 encoded.                                                                                |
 
 E.g.
 
