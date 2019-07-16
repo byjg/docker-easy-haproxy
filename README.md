@@ -24,6 +24,7 @@ docker run \
     -e HAPROXY_PASSWORD=password \
     -e HAPROXY_STATS_PORT=1936 \ 
     -e REFRESH_STATE=1 \
+    -v /var/run/docker.sock:/var/run/docker.sock \
     -d byjg/easy-haproxy
 ```
 
