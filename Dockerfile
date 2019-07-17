@@ -1,23 +1,19 @@
 FROM haproxy:1.9-alpine
 
-WORKDIR /root
+WORKDIR /scripts
 
 RUN apk add --no-cache bash python3 py-yaml supervisor docker
 
-COPY requirements.txt /root
+COPY requirements.txt /scripts
 RUN pip3 install --upgrade pip \
  && pip install -r requirements.txt
 
+COPY swarm.* /scripts/
+COPY static.* /scripts/
+COPY templates /scripts/templates/
+COPY easymapping /scripts/easymapping/
 
-COPY haproxy.cfg /etc/haproxy/haproxy.cfg
-COPY conf.d /etc/haproxy/conf.d
-COPY assets/errors-custom/* /etc/haproxy/errors-custom/
-COPY assets/supervisord.conf /etc/supervisord.conf
-COPY assets/crontab /etc/crontabs/root
-
-COPY scripts/exit-event-listener.py /exit-event-listener.py
-COPY scripts/haproxy.sh /haproxy.sh
-COPY scripts/haproxy-reload.sh /haproxy-reload.sh
+COPY assets /
 
 
 #CMD ["haproxy", "-f", "/etc/haproxy/haproxy.cfg"]

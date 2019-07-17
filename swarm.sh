@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-
 #docker run \
 #    -l com.byjg.easyhaproxy.definitions=http \
 #    -l com.byjg.easyhaproxy.port.http=80 \
@@ -22,9 +21,8 @@ done
 
 
 if cmp -s ./.docker_data ./.docker_data_old ; then
-   echo "Nothing changed"
-else
-   echo "Something changed"
+   exit 0
 fi
 
+python3 swarm.py
 # byjg_site={"com.byjg.easyhaproxy.definition":"http","com.byjg.easyhaproxy.host.http":"byjg.com.br","com.byjg.easyhaproxy.port.http":"80","com.byjg.easyhaproxy.redirect.http":"byjg.com.br%http://www.byjg.com.br,byjg.com%http://www.byjg.com.br","maintainer":"Joao Gilberto Magalhaes"}
