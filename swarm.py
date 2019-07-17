@@ -2,13 +2,19 @@ import os
 import json
 from easymapping import HaproxyConfigGenerator
 
-path = os.path.dirname(os.path.realpath(__file__))
-with open(path + "/.docker_data", 'r') as content_file:
+# path = os.path.dirname(os.path.realpath(__file__))
+with open("/tmp/.docker_data", 'r') as content_file:
     lineList = content_file.readlines()
 
 result = {
     "easymapping": []
 }
+if os.getenv("HAPROXY_USERNAME"):
+    result["stats"] = {
+        "username": os.getenv("HAPROXY_USERNAME"),
+        "password": os.getenv("HAPROXY_PASSWORD"),
+        "port": os.getenv("HAPROXY_STATS_PORT"),
+    }
 
 for line in lineList:
     line = line.strip()
@@ -33,7 +39,7 @@ for line in lineList:
 
             redirect = d["com.byjg.easyhaproxy.redirect." + definition] if "com.byjg.easyhaproxy.redirect." + definition in d else ""
             for r in redirect.split(","):
-                r_parts = r.split("=>")
+                r_parts = r.split("--")
                 data["redirect"][r_parts[0]] = r_parts[1]
 
             result["easymapping"].append(data)
@@ -42,7 +48,6 @@ for line in lineList:
 cfg = HaproxyConfigGenerator(result)
 print(cfg.generate())
 
-print(result)
 # print(jsonStr)
 
 

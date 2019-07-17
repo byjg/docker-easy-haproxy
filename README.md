@@ -23,14 +23,13 @@ docker run \
     -e HAPROXY_USERNAME=admin \
     -e HAPROXY_PASSWORD=password \
     -e HAPROXY_STATS_PORT=1936 \ 
-    -e REFRESH_STATE=1 \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -d byjg/easy-haproxy
 ```
 
 The `DISCOVER` environment variable will define where is located your containers (see below more details):
 - swarm
-- awsecs
+- static (maps to /etc/haproxy/easyconfig.yml)
 
 # Tags to defined:
 
