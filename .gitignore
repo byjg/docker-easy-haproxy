@@ -2,3 +2,4 @@
 *~
 venv
 .docker_data
+__pycache__
