@@ -1,5 +1,7 @@
 import os
 import json
+import time
+import base64
 from easymapping import HaproxyConfigGenerator
 
 # path = os.path.dirname(os.path.realpath(__file__))
@@ -7,7 +9,8 @@ with open("/tmp/.docker_data", 'r') as content_file:
     lineList = content_file.readlines()
 
 result = {
-    "easymapping": []
+    "easymapping": [],
+    "customerrors": True if os.getenv("HAPROXY_CUSTOMERRORS") == "true" else False
 }
 if os.getenv("HAPROXY_USERNAME"):
     result["stats"] = {
@@ -27,6 +30,9 @@ for line in lineList:
         definitions = d["com.byjg.easyhaproxy.definitions"].split(",")
 
         for definition in definitions:
+            if "com.byjg.easyhaproxy.host." + definition not in d:
+                continue
+
             port = d["com.byjg.easyhaproxy.port." + definition] if "com.byjg.easyhaproxy.port." + definition in d else "80"
             data = {
                 "port": port,
@@ -35,12 +41,19 @@ for line in lineList:
                 # "ssl_cert": ""
             }
 
-            data["hosts"][d["com.byjg.easyhaproxy.host." + definition] if "com.byjg.easyhaproxy.host." + definition in d else ""] = container + ":" + (d["com.byjg.easyhaproxy.localport." + definition] if "com.byjg.easyhaproxy.localport." + definition in d else "80")
+            data["hosts"][d["com.byjg.easyhaproxy.host." + definition]] = container + ":" + (d["com.byjg.easyhaproxy.localport." + definition] if "com.byjg.easyhaproxy.localport." + definition in d else "80")
 
-            redirect = d["com.byjg.easyhaproxy.redirect." + definition] if "com.byjg.easyhaproxy.redirect." + definition in d else ""
-            for r in redirect.split(","):
-                r_parts = r.split("--")
-                data["redirect"][r_parts[0]] = r_parts[1]
+            if "com.byjg.easyhaproxy.sslcert." + definition in d:
+                filename = '/etc/haproxy/certs/' + d["com.byjg.easyhaproxy.host." + definition] + "." + str(time.time()) + ".pem"
+                data["ssl_cert"] = filename
+                with open(filename, 'wb') as file:
+                    file.write(base64.b64decode(d["com.byjg.easyhaproxy.sslcert." + definition]))
+
+            if "com.byjg.easyhaproxy.redirect." + definition in d:
+                redirect = d["com.byjg.easyhaproxy.redirect." + definition] if "com.byjg.easyhaproxy.redirect." + definition in d else ""
+                for r in redirect.split(","):
+                    r_parts = r.split("--")
+                    data["redirect"][r_parts[0]] = r_parts[1]
 
             result["easymapping"].append(data)
 
