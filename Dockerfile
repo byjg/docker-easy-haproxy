@@ -1,4 +1,4 @@
-FROM haproxy:1.9-alpine
+FROM haproxy:2.0.2-alpine
 
 WORKDIR /scripts
 
@@ -15,6 +15,4 @@ COPY easymapping /scripts/easymapping/
 
 COPY assets /
 
-
-#CMD ["haproxy", "-f", "/etc/haproxy/haproxy.cfg"]
 CMD ["/usr/bin/supervisord",  "-n",  "-c", "/etc/supervisord.conf" ]
