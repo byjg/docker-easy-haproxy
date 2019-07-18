@@ -30,13 +30,13 @@ The mapping to `/var/run/docker.sock` is necessary to discover the docker contai
 
 The environment variables will setup the HAProxy. 
 
-| Environment Variable | Description                                                      |
-|----------------------|------------------------------------------------------------------|
-| DISCOVER             | How `haproxy.cfg` will be created: `static`, `docker` or `swarm` |
-| HAPROXY_USERNAME     | The HAProxy username to the statistics                           |
-| HAPROXY_PASSWORD     | The HAProxy password to the statistics                           |
-| HAPROXY_STATS_PORT   | The HAProxy port to the statistics                               |
-| HAPROXY_CUSTOMERRORS | If HAProxy will use custom HTML errors. true/false               |
+| Environment Variable | Description                                                        |
+|----------------------|--------------------------------------------------------------------|
+| DISCOVER             | How `haproxy.cfg` will be created: `static`, `docker` or `swarm`   |
+| HAPROXY_USERNAME     | The HAProxy username to the statistics. Default: `admin`           |
+| HAPROXY_PASSWORD     | The HAProxy password to the statistics. If not set disable stats.  |
+| HAPROXY_STATS_PORT   | The HAProxy port to the statistics. Default: `1936`                |
+| HAPROXY_CUSTOMERRORS | If HAProxy will use custom HTML errors. true/false. Default: false |
 
 
 
