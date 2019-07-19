@@ -83,7 +83,18 @@ Important: easyhaproxy needs to be in the same network of the containers or othe
 | com.byjg.easyhaproxy.redirect.<definition>  | Host redirects from connections in the port defined above.                                              |
 | com.byjg.easyhaproxy.sslcert.<definition>   | Cert PEM Base64 encoded.                                                                                |
 
-E.g.
+
+Note: if you are deploying a stack set labels at the `deploy` level:
+
+```yaml
+services:
+ foo:
+   deploy:
+      labels:
+         com.byjg.easyhaproxy.definitions: "http,https"
+         ...
+```
+
 
 ### Single Definition:
 

@@ -6,6 +6,7 @@ RELOAD="true"
 
 if [[ "$DISCOVER" == "static" ]]; then
     CONTROL_FILE="/etc/haproxy/haproxy.cfg"
+    touch ${CONTROL_FILE}
     cp ${CONTROL_FILE} ${CONTROL_FILE}.old
     python3 static.py /etc/haproxy/easyconfig.yml > ${CONTROL_FILE}
 else
