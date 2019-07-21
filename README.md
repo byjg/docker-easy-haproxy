@@ -126,7 +126,7 @@ docker run \
 
 ```bash
 docker run \
-    -l com.byjg.easyhaproxy.redirect.<defintion>=www.byjg.com.br::http://byjg.com.br,byjg.com::http://byjg.com.br
+    -l com.byjg.easyhaproxy.redirect.<defintion>=www.byjg.com.br--http://byjg.com.br,byjg.com--http://byjg.com.br
 ```
 
 # DISCOVER: `static`
