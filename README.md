@@ -188,7 +188,7 @@ You can attach a valid SSL certificate to the request.
 1. First Create a single PEM file including CA. 
 
 ```bash
-cat cert.pem priv.pem > single.pem
+cat example.com.crt example.com.key > single.pem
 
 cat single.pem
 
