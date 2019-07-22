@@ -21,6 +21,7 @@ The basic command line to run is:
 docker run -d \ 
     --name easy-haproxy-container \
     -v /var/run/docker.sock:/var/run/docker.sock \
+    -e DISCOVER="swarm|docker|static" \
     # + Environment Variables \
     # + ports mapped to the host \
     byjg/easy-haproxy
@@ -30,13 +31,13 @@ The mapping to `/var/run/docker.sock` is necessary to discover the docker contai
 
 The environment variables will setup the HAProxy. 
 
-| Environment Variable | Description                                                        |
-|----------------------|--------------------------------------------------------------------|
-| DISCOVER             | How `haproxy.cfg` will be created: `static`, `docker` or `swarm`   |
-| HAPROXY_USERNAME     | The HAProxy username to the statistics. Default: `admin`           |
-| HAPROXY_PASSWORD     | The HAProxy password to the statistics. If not set disable stats.  |
-| HAPROXY_STATS_PORT   | The HAProxy port to the statistics. Default: `1936`                |
-| HAPROXY_CUSTOMERRORS | If HAProxy will use custom HTML errors. true/false. Default: false |
+| Environment Variable | Description                                                                   |
+|----------------------|-------------------------------------------------------------------------------|
+| DISCOVER             | How `haproxy.cfg` will be created: `static`, `docker` or `swarm`              |
+| HAPROXY_USERNAME     | (Optional) The HAProxy username to the statistics. Default: `admin`           |
+| HAPROXY_PASSWORD     | The HAProxy password to the statistics. If not set disable stats.             |
+| HAPROXY_STATS_PORT   | (Optional) The HAProxy port to the statistics. Default: `1936`                |
+| HAPROXY_CUSTOMERRORS | (Optional) If HAProxy will use custom HTML errors. true/false. Default: false |
 
 
 
@@ -77,11 +78,11 @@ Important: easyhaproxy needs to be in the same network of the containers or othe
 | Tag                                         | Description                                                                                             |
 |---------------------------------------------|---------------------------------------------------------------------------------------------------------|
 | com.byjg.easyhaproxy.definitions            | A Comma delimited list with the definitions. Each name requires the definition of the parameters below. |
-| com.byjg.easyhaproxy.port.<definition>      | What is the port that the HAProxy will listen to.                                                       |
-| com.byjg.easyhaproxy.localport.<definition> | What is the port that the container is listening. (Defaults to 80)                                      |
+| com.byjg.easyhaproxy.port.<definition>      | (Optional) What is the port that the HAProxy will listen to. (Defaults to 80)                           |
+| com.byjg.easyhaproxy.localport.<definition> | (Optional) What is the port that the container is listening. (Defaults to 80)                           |
 | com.byjg.easyhaproxy.host.<definition>      | What is the host that the HAProxy will listen to.                                                       |
-| com.byjg.easyhaproxy.redirect.<definition>  | Host redirects from connections in the port defined above.                                              |
-| com.byjg.easyhaproxy.sslcert.<definition>   | Cert PEM Base64 encoded.                                                                                |
+| com.byjg.easyhaproxy.redirect.<definition>  | (Optional) Host redirects from connections in the port defined above.                                   |
+| com.byjg.easyhaproxy.sslcert.<definition>   | (Optional) Cert PEM Base64 encoded.                                                                     |
 
 
 Note: if you are deploying a stack set labels at the `deploy` level:
@@ -119,7 +120,8 @@ docker run \
     -l com.byjg.easyhaproxy.port.admin=80 \
     -l com.byjg.easyhaproxy.localport.admin=3001 \
     -l com.byjg.easyhaproxy.host.admin=admin.byjg.com.br \
-    ....
+    .... \
+    some/myimage
 ```
 
 ### Redirect Example:
@@ -158,7 +160,7 @@ easymapping:
 
   - port: 8080
     hosts:
-      host3.com.br: domain:8181```
+      host3.com.br: domain:8181
 ```
 
 Running:
@@ -181,17 +183,33 @@ docker run \
 
 # Handling SSL
 
-HaProxy can handle SSL for you. in this case add the parameter pointing to file containing
-the pem of certificates and key in only one file:
+You can attach a valid SSL certificate to the request. 
 
-```
-  - port: 443
-    ssl_cert: /etc/easyconfig/mycert.pem
-    hosts:
-      host1.com.br: container:80
+1. First Create a single PEM file including CA. 
+
+```bash
+cat cert.pem priv.pem > single.pem
+
+cat single.pem
+
+-----BEGIN CERTIFICATE-----
+MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC5ZheHqmBnEJP+
+U9r1gxYWKLzdqrMrcxtQN6M1hIH9n0peuJeIrybdcV7sMbStMXI=
+-----END CERTIFICATE-----
+
+-----BEGIN PRIVATE KEY-----
+MIIEojCCA4qgAwIBAgIUegW2BimwuL4RzRZ2WYkHA6U5nkAwDQYJKoZIhvcNAQEL
+3j4wz8/I5fdsk090j4s5KA==
+-----END PRIVATE KEY-----
 ```
 
-Important: Different certificates need to be handled in different entries. 
+2. Convert it to BASE64 in a single line:
+
+```bash
+cat single.pem | base64 -w0
+```
+
+3. Use this string to define the label `com.byjg.easyhaproxy.sslcert.<definition>`
 
 # Setting Custom Errors
 
