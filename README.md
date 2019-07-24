@@ -78,11 +78,11 @@ Important: easyhaproxy needs to be in the same network of the containers or othe
 | Tag                                         | Description                                                                                             |
 |---------------------------------------------|---------------------------------------------------------------------------------------------------------|
 | com.byjg.easyhaproxy.definitions            | A Comma delimited list with the definitions. Each name requires the definition of the parameters below. |
-| com.byjg.easyhaproxy.port.<definition>      | (Optional) What is the port that the HAProxy will listen to. (Defaults to 80)                           |
-| com.byjg.easyhaproxy.localport.<definition> | (Optional) What is the port that the container is listening. (Defaults to 80)                           |
-| com.byjg.easyhaproxy.host.<definition>      | What is the host that the HAProxy will listen to.                                                       |
-| com.byjg.easyhaproxy.redirect.<definition>  | (Optional) Host redirects from connections in the port defined above.                                   |
-| com.byjg.easyhaproxy.sslcert.<definition>   | (Optional) Cert PEM Base64 encoded.                                                                     |
+| com.byjg.easyhaproxy.port.[definition]      | (Optional) What is the port that the HAProxy will listen to. (Defaults to 80)                           |
+| com.byjg.easyhaproxy.localport.[definition] | (Optional) What is the port that the container is listening. (Defaults to 80)                           |
+| com.byjg.easyhaproxy.host.[definition]      | What is the host that the HAProxy will listen to.                                                       |
+| com.byjg.easyhaproxy.redirect.[definition]  | (Optional) Host redirects from connections in the port defined above.                                   |
+| com.byjg.easyhaproxy.sslcert.[definition]   | (Optional) Cert PEM Base64 encoded.                                                                     |
 
 
 Note: if you are deploying a stack set labels at the `deploy` level:
@@ -209,7 +209,7 @@ MIIEojCCA4qgAwIBAgIUegW2BimwuL4RzRZ2WYkHA6U5nkAwDQYJKoZIhvcNAQEL
 cat single.pem | base64 -w0
 ```
 
-3. Use this string to define the label `com.byjg.easyhaproxy.sslcert.<definition>`
+3. Use this string to define the label `com.byjg.easyhaproxy.sslcert.[definition]`
 
 # Setting Custom Errors
 
