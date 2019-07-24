@@ -1,10 +1,18 @@
-FROM haproxy:1.9-alpine
+FROM haproxy:2.0.2-alpine
 
-RUN apk add --no-cache bash python3 py-yaml
+WORKDIR /scripts
 
-COPY entrypoint.* /
-COPY conf.d /etc/haproxy/conf.d
-COPY assets/errors-custom/* /etc/haproxy/errors-custom/
+RUN apk add --no-cache bash python3 py-yaml supervisor docker
 
-ENTRYPOINT [ "/entrypoint.sh" ]
-CMD ["haproxy", "-f", "/etc/haproxy/haproxy.cfg"]
+COPY requirements.txt /scripts
+RUN pip3 install --upgrade pip \
+ && pip install -r requirements.txt
+
+COPY swarm.* /scripts/
+COPY static.* /scripts/
+COPY templates /scripts/templates/
+COPY easymapping /scripts/easymapping/
+
+COPY assets /
+
+CMD ["/usr/bin/supervisord",  "-n",  "-c", "/etc/supervisord.conf" ]
