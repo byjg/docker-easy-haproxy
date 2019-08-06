@@ -47,7 +47,7 @@ The environment variable `DISCOVER` will define where is located your containers
 - swarm
 - static
 
-# DISCOVER: `docker`
+# DISCOVER: docker
 
 This method will use a regular docker installation to discover the containers and configure the HAProxy. 
 
@@ -65,7 +65,7 @@ docker run --network easyhaproxy byjg/easyhaproxy
 docker run --network easyhaproxy myimage
 ```
 
-# DISCOVER: `swarm`
+# DISCOVER: swarm
 
 This method requires a functional Docker Swarm Cluster. The system will search for the labels in all containers on all 
 swarm nodes. 
@@ -133,7 +133,7 @@ docker run \
     -l com.byjg.easyhaproxy.redirect.<defintion>=www.byjg.com.br--http://byjg.com.br,byjg.com--http://byjg.com.br
 ```
 
-# DISCOVER: `static`
+# DISCOVER: static
 
 This method expects a YAML file to setup the `haproxy.cfg`
 
