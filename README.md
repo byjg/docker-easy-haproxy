@@ -31,6 +31,7 @@ The mapping to `/var/run/docker.sock` is necessary to discover the docker contai
 
 The environment variables will setup the HAProxy. 
 
+{:.table}
 | Environment Variable | Description                                                                   |
 |----------------------|-------------------------------------------------------------------------------|
 | DISCOVER             | How `haproxy.cfg` will be created: `static`, `docker` or `swarm`              |
@@ -75,6 +76,7 @@ Important: easyhaproxy needs to be in the same network of the containers or othe
 
 ## Tags to be attached in the Docker Container
 
+{:.table}
 | Tag                                         | Description                                                                                             |
 |---------------------------------------------|---------------------------------------------------------------------------------------------------------|
 | com.byjg.easyhaproxy.definitions            | A Comma delimited list with the definitions. Each name requires the definition of the parameters below. |
