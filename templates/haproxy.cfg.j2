@@ -15,7 +15,7 @@ defaults
 {% endif %}
 
 global
-    log /dev/log local0
+    log stdout  format raw  local0  info
     maxconn 2000
     tune.ssl.default-dh-param 2048
 
