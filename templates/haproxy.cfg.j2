@@ -39,10 +39,17 @@ backend srv_stats
 {% endif %}
 
 {% for o in data["easymapping"] %}
+    {% set mode = o["mode"] or "http" %}
     {% set salt = loop.index %}
-frontend http_in_{{ o["port"] }}_{{ salt }}
+frontend {{ mode }}_in_{{ o["port"] }}_{{ salt }}
     bind *:{{ o["port"] }} {{ " ssl crt " + o["ssl_cert"] if "ssl_cert" in o else "" }}
-    mode http
+    mode {{ mode }}
+
+    {% if mode == "tcp" -%}
+    option tcplog
+    tcp-request inspect-delay 5s
+    tcp-request content accept if { req.ssl_hello_type 1 }
+    {% endif -%}
 
     {% for k in o["redirect"] -%}
     redirect prefix {{ o["redirect"][k] }} code 301 if { hdr(host) -i {{ k }} }
@@ -59,10 +66,14 @@ frontend http_in_{{ o["port"] }}_{{ salt }}
         {% set host = k.replace(".", "_") + "_{0}_{1}".format(o["port"], salt) %}
 backend srv_{{ host }}
     balance roundrobin
-    mode http
+    mode {{ mode }}
+
+{% if mode == "http" %}
     option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
+{% endif %}
+
     server srv {{ o["hosts"][k] }} check weight 1
     {% endfor %}
 {% endfor %}

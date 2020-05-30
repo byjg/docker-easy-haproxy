@@ -36,6 +36,7 @@ for line in lineList:
             if "com.byjg.easyhaproxy.host." + definition not in d:
                 continue
 
+            mode = d["com.byjg.easyhaproxy.mode." + definition] if "com.byjg.easyhaproxy.mode." + definition in d else "http"
             port = d["com.byjg.easyhaproxy.port." + definition] if "com.byjg.easyhaproxy.port." + definition in d else "80"
             hash = hashlib.md5(d["com.byjg.easyhaproxy.sslcert." + definition].encode('utf-8')).hexdigest() if "com.byjg.easyhaproxy.sslcert." + definition in d else ""
 
@@ -43,6 +44,7 @@ for line in lineList:
 
             if key not in easymapping:
                 easymapping[key] = {
+                    "mode": mode,
                     "port": port,
                     "hosts": dict(),
                     "redirect": dict(),

@@ -80,6 +80,7 @@ Important: easyhaproxy needs to be in the same network of the containers or othe
 | Tag                                         | Description                                                                                             |
 |---------------------------------------------|---------------------------------------------------------------------------------------------------------|
 | com.byjg.easyhaproxy.definitions            | A Comma delimited list with the definitions. Each name requires the definition of the parameters below. |
+| com.byjg.easyhaproxy.mode.[definition]      | (Optional) Is this http or tcp mode in HAProxy. (Defaults to http)                           |
 | com.byjg.easyhaproxy.port.[definition]      | (Optional) What is the port that the HAProxy will listen to. (Defaults to 80)                           |
 | com.byjg.easyhaproxy.localport.[definition] | (Optional) What is the port that the container is listening. (Defaults to 80)                           |
 | com.byjg.easyhaproxy.host.[definition]      | What is the host that the HAProxy will listen to.                                                       |
@@ -124,6 +125,19 @@ docker run \
     -l com.byjg.easyhaproxy.host.admin=admin.byjg.com.br \
     .... \
     some/myimage
+```
+
+### TLS passthrough
+
+Used to pass on SSL-termination to a backend:
+
+```bash
+docker run \
+    -l com.byjg.easyhaproxy.defintions=tcp-service \
+    -l com.byjg.easyhaproxy.mode.tcp-service=tcp \
+    -l com.byjg.easyhaproxy.port.tcp-service=443
+    .... \
+    some/tcp-service
 ```
 
 ### Redirect Example:
