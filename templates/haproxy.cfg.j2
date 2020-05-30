@@ -1,3 +1,8 @@
+global
+    log stdout  format raw  local0  info
+    maxconn 2000
+    tune.ssl.default-dh-param 2048
+
 defaults
     log global
 
@@ -13,11 +18,6 @@ defaults
     errorfile 503 /etc/haproxy/errors-custom/503.http
     errorfile 504 /etc/haproxy/errors-custom/504.http
 {% endif %}
-
-global
-    log stdout  format raw  local0  info
-    maxconn 2000
-    tune.ssl.default-dh-param 2048
 
 {% if "stats" in data %}
 frontend stats
@@ -37,43 +37,31 @@ backend srv_stats
     mode http
     server Local 127.0.0.1:{{ data["stats"]["port"] | default(1936) }}
 {% endif %}
-
-{% for o in data["easymapping"] %}
+{% for o in data["easymapping"] -%}
     {% set mode = o["mode"] or "http" %}
     {% set salt = loop.index %}
+
 frontend {{ mode }}_in_{{ o["port"] }}_{{ salt }}
-    bind *:{{ o["port"] }} {{ " ssl crt " + o["ssl_cert"] if "ssl_cert" in o else "" }}
-    mode {{ mode }}
+    {% include "bind.j2" %}
+    {% if mode == "http" %}
+        {% include "frontend-mode-http.j2" %}
+    {% else %}
+        {% include "frontend-mode-tcp.j2" %}
+    {% endif %}
 
-    {% if mode == "tcp" -%}
-    option tcplog
-    tcp-request inspect-delay 5s
-    tcp-request content accept if { req.ssl_hello_type 1 }
-    {% endif -%}
-
-    {% for k in o["redirect"] -%}
-    redirect prefix {{ o["redirect"][k] }} code 301 if { hdr(host) -i {{ k }} }
-    {% endfor -%}
-
-    {% for k in o["hosts"] %}
-        {% set host = k.replace(".", "_") + "_{0}_{1}".format(o["port"], salt) %}
-    acl is_rule_{{ host }}_1 hdr(host) -i {{ k }}
-    acl is_rule_{{ host }}_2 hdr(host) -i {{ k }}:{{ o["port"] }}
-    use_backend srv_{{ host }} if is_rule_{{ host }}_1 OR is_rule_{{ host }}_2
-    {% endfor %}
-
-    {% for k in o["hosts"] %}
+    {% for k in o["hosts"] -%}
         {% set host = k.replace(".", "_") + "_{0}_{1}".format(o["port"], salt) %}
 backend srv_{{ host }}
     balance roundrobin
     mode {{ mode }}
-
-{% if mode == "http" %}
+        {% if mode == "http" %}
     option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
-{% endif %}
-
+        {% elif mode == "tcp" %}
+    option tcp-check
+    tcp-check connect
+        {% endif %}
     server srv {{ o["hosts"][k] }} check weight 1
     {% endfor %}
 {% endfor %}

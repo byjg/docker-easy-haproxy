@@ -8,8 +8,6 @@ COPY requirements.txt /scripts
 RUN pip3 install --upgrade pip \
  && pip install -r requirements.txt
 
-COPY swarm.* /scripts/
-COPY static.* /scripts/
 COPY templates /scripts/templates/
 COPY easymapping /scripts/easymapping/
 

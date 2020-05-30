@@ -1,0 +1,2 @@
+test_agent={"com.byjg.easyhaproxy.definitions":"agent","com.byjg.easyhaproxy.host.agent":"agent.quantum.local","com.byjg.easyhaproxy.localport.agent":"9001","com.byjg.easyhaproxy.mode.agent":"tcp","com.byjg.easyhaproxy.port.agent":"31339","com.docker.stack.image":"portainer/agent:1.5.1","com.docker.stack.namespace":"test","com.planetary-quantum":"monitoring"}
+test_proxy={"com.docker.stack.image":"byjg/easy-haproxy:local","com.docker.stack.namespace":"test"}
