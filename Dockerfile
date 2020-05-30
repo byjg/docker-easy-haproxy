@@ -1,4 +1,4 @@
-FROM haproxy:2.0.2-alpine
+FROM haproxy:2.1-alpine
 
 WORKDIR /scripts
 
