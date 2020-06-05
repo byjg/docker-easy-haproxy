@@ -101,6 +101,7 @@ class HaproxyConfigGenerator:
                 if key not in easymapping:
                     easymapping[key] = {
                         "mode": mode,
+                        "health-check": "",
                         "port": port,
                         "hosts": dict(),
                         "redirect": dict(),
@@ -110,6 +111,11 @@ class HaproxyConfigGenerator:
                 ct_port = self.label.get(
                     self.label.create(["localport", definition]),
                     "80"
+                )
+
+                easymapping[key]["health-check"] = self.label.get(
+                    self.label.create(["health-check", definition]),
+                    ""
                 )
 
                 easymapping[key]["hosts"][d[host_label]] = "{}:{}".format(container, ct_port)

@@ -60,8 +60,8 @@ backend srv_{{ host }}
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
         {% elif mode == "tcp" %}
     option tcp-check
-    tcp-check connect
+    tcp-check connect{{ " ssl" if o["health-check"] == "ssl" }}
         {% endif %}
-    server srv {{ o["hosts"][k] }} check weight 1
+    server srv {{ o["hosts"][k] }} check weight 1{{ " verify none" if o["health-check"] == "ssl" }}
     {% endfor %}
 {% endfor %}

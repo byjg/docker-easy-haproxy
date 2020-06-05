@@ -86,7 +86,7 @@ Important: easyhaproxy needs to be in the same network of the containers or othe
 | com.byjg.easyhaproxy.host.[definition]      | What is the host that the HAProxy will listen to.                                                       |
 | com.byjg.easyhaproxy.redirect.[definition]  | (Optional) Host redirects from connections in the port defined above.                                   |
 | com.byjg.easyhaproxy.sslcert.[definition]   | (Optional) Cert PEM Base64 encoded.                                                                     |
-
+| com.byjg.easyhaproxy.health-check.[definition] | (Optional) `ssl`, enable health check via SSL in `mode tcp` (Defaults to "empty")                    |
 
 Note: if you are deploying a stack set labels at the `deploy` level:
 
@@ -135,10 +135,13 @@ Used to pass on SSL-termination to a backend:
 docker run \
     -l com.byjg.easyhaproxy.defintions=tcp-service \
     -l com.byjg.easyhaproxy.mode.tcp-service=tcp \
+    -l com.byjg.easyhaproxy.health-check.tcp-service=ssl \
     -l com.byjg.easyhaproxy.port.tcp-service=443
     .... \
     some/tcp-service
 ```
+
+ - enable health-check via SSL on the backend with the optional `health-check` label
 
 ### Redirect Example:
 
