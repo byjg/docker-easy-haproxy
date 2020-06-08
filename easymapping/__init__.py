@@ -2,8 +2,7 @@ import base64
 import hashlib
 from jinja2 import Environment, FileSystemLoader
 import json
-import time
-
+import os
 
 class DockerLabelHandler:
     def __init__(self, label):
@@ -34,9 +33,12 @@ class DockerLabelHandler:
 
 
 class HaproxyConfigGenerator:
-    def __init__(self, mapping):
+    def __init__(self, mapping, ssl_cert_folder="/etc/haproxy/certs"):
         self.mapping = mapping
         self.label = DockerLabelHandler("com.byjg.easyhaproxy")
+        self.ssl_cert_folder = ssl_cert_folder
+        self.ssl_cert_increment = 0
+        os.makedirs(self.ssl_cert_folder, exist_ok=True)
 
 
     def generate(self, lineList = []):
@@ -89,14 +91,13 @@ class HaproxyConfigGenerator:
                     "80"
                 )
 
+                hash = ""
                 if self.label.create(["sslcert", definition]) in d:
                     hash = hashlib.md5(
                         d[self.label.create(["sslcert", definition])].encode('utf-8')
                     ).hexdigest()
-                else:
-                    hash = ""
 
-                key = port+hash
+                key = port if not hash else port + "_" + hash
 
                 if key not in easymapping:
                     easymapping[key] = {
@@ -123,8 +124,9 @@ class HaproxyConfigGenerator:
                 # handle SSL
                 ssl_label = self.label.create(["sslcert", definition])
                 if self.label.has_label(ssl_label):
-                    filename = "/etc/haproxy/certs/{}.{}.pem".format(
-                        d[ssl_label], str(time.time())
+                    self.ssl_cert_increment += 1
+                    filename = "{}/{}.{}.pem".format(
+                        self.ssl_cert_folder, d[host_label], str(self.ssl_cert_increment)
                     )
                     easymapping[key]["ssl_cert"] = filename
                     with open(filename, 'wb') as file:
