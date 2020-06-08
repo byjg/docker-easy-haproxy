@@ -52,32 +52,8 @@ def test_parser_static():
     haproxy_config = cfg.generate()
     assert len(haproxy_config) > 0
 
-    # assert on auth on stats
-    assert "stats auth admin:test123" in haproxy_config
-
-    # assert that we found redirect
-    assert "redirect prefix http://host1.com.br code 301 if { hdr(host) -i www.host1.com.br }" in haproxy_config
-
-    # assert that we found the services
-    frontend_http_cfg = "frontend http_in_80_1\n"
-    frontend_http_cfg += "    bind *:80"
-    assert frontend_http_cfg in haproxy_config
-
-    frontend_https_cfg = "frontend http_in_443_2\n"
-    frontend_https_cfg += "    bind *:443"
-    assert frontend_https_cfg in haproxy_config
-
-    # print(haproxy_config)
-    frontend_http8080_cfg = "frontend http_in_8080_3\n"
-    frontend_http8080_cfg += "    bind *:8080"
-    assert frontend_http8080_cfg in haproxy_config
-
-
-    # verify ssl config with certificate
-    frontend_ssl_cfg = "frontend http_in_443_2\n"
-    frontend_ssl_cfg += "    bind *:443  ssl crt BASE64_PEM_CERTIFICATE"
-    assert frontend_ssl_cfg in haproxy_config
-
+    with open(path + "/expected/static.txt", 'r') as expected_file:
+        assert expected_file.read() == haproxy_config
 
 def test_parser_tcp():
     lineList = load_fixture("services-tcp")
