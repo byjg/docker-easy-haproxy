@@ -173,7 +173,7 @@ easymapping:
       www.host1.com.br: http://host1.com.br
 
   - port: 443
-    ssl_cert: BASE64_PEM_CERTIFICATE
+    ssl_cert: /path/to/ssl/certificate
     hosts:
       host1.com.br: container:80
 
