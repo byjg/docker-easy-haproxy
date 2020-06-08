@@ -1,0 +1,8 @@
+    {% if "ssl_cert" in o %}
+    bind *:{{ o["port"] }}  ssl crt {{ o["ssl_cert"] }}
+    {% elif "h2" in o and o["h2"] %}
+    bind *:{{ o["port"] }} proto h2
+    option http-use-htx
+    {% else %}
+    bind *:{{ o["port"] }}
+    {% endif %}

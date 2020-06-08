@@ -1,3 +1,8 @@
+global
+    log stdout  format raw  local0  info
+    maxconn 2000
+    tune.ssl.default-dh-param 2048
+
 defaults
     log global
 
@@ -13,11 +18,6 @@ defaults
     errorfile 503 /etc/haproxy/errors-custom/503.http
     errorfile 504 /etc/haproxy/errors-custom/504.http
 {% endif %}
-
-global
-    log /dev/log local0
-    maxconn 2000
-    tune.ssl.default-dh-param 2048
 
 {% if "stats" in data %}
 frontend stats
@@ -37,32 +37,31 @@ backend srv_stats
     mode http
     server Local 127.0.0.1:{{ data["stats"]["port"] | default(1936) }}
 {% endif %}
-
-{% for o in data["easymapping"] %}
+{% for o in data["easymapping"] -%}
+    {% set mode = o["mode"] or "http" %}
     {% set salt = loop.index %}
-frontend http_in_{{ o["port"] }}_{{ salt }}
-    bind *:{{ o["port"] }} {{ " ssl crt " + o["ssl_cert"] if "ssl_cert" in o else "" }}
-    mode http
 
-    {% for k in o["redirect"] -%}
-    redirect prefix {{ o["redirect"][k] }} code 301 if { hdr(host) -i {{ k }} }
-    {% endfor -%}
+frontend {{ mode }}_in_{{ o["port"] }}_{{ salt }}
+    {% include "bind.j2" %}
+    {% if mode == "http" %}
+        {% include "frontend-mode-http.j2" %}
+    {% else %}
+        {% include "frontend-mode-tcp.j2" %}
+    {% endif %}
 
-    {% for k in o["hosts"] %}
-        {% set host = k.replace(".", "_") + "_{0}_{1}".format(o["port"], salt) %}
-    acl is_rule_{{ host }}_1 hdr(host) -i {{ k }}
-    acl is_rule_{{ host }}_2 hdr(host) -i {{ k }}:{{ o["port"] }}
-    use_backend srv_{{ host }} if is_rule_{{ host }}_1 OR is_rule_{{ host }}_2
-    {% endfor %}
-
-    {% for k in o["hosts"] %}
+    {% for k in o["hosts"] -%}
         {% set host = k.replace(".", "_") + "_{0}_{1}".format(o["port"], salt) %}
 backend srv_{{ host }}
     balance roundrobin
-    mode http
+    mode {{ mode }}
+        {% if mode == "http" %}
     option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
-    server srv {{ o["hosts"][k] }} check weight 1
+        {% elif mode == "tcp" %}
+    option tcp-check
+    tcp-check connect{{ " ssl" if o["health-check"] == "ssl" }}
+        {% endif %}
+    server srv {{ o["hosts"][k] }} check weight 1{{ " verify none" if o["health-check"] == "ssl" }}
     {% endfor %}
 {% endfor %}
