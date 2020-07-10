@@ -2,14 +2,13 @@ FROM haproxy:2.1-alpine
 
 WORKDIR /scripts
 
-RUN apk add --no-cache bash python3 py-yaml supervisor docker
+RUN apk add --no-cache bash python3 py-yaml supervisor docker \
+ && ln -s /usr/bin/python3 /usr/bin/python
 
 COPY requirements.txt /scripts
 RUN pip3 install --upgrade pip \
  && pip install -r requirements.txt
 
-COPY swarm.* /scripts/
-COPY static.* /scripts/
 COPY templates /scripts/templates/
 COPY easymapping /scripts/easymapping/
 

@@ -1,0 +1,11 @@
+    mode http
+    {% for k in o["redirect"] %}
+    redirect prefix {{ o["redirect"][k] }} code 301 if { hdr(host) -i {{ k }} }
+    {% endfor %}
+    {% for k in o["hosts"] %}
+        {% set host = k.replace(".", "_") + "_{0}_{1}".format(o["port"], salt) %}
+
+    acl is_rule_{{ host }}_1 hdr(host) -i {{ k }}
+    acl is_rule_{{ host }}_2 hdr(host) -i {{ k }}:{{ o["port"] }}
+    use_backend srv_{{ host }} if is_rule_{{ host }}_1 OR is_rule_{{ host }}_2
+    {% endfor %}

@@ -1,0 +1,12 @@
+global
+    log stdout  format raw  local0  info
+    maxconn 2000
+    tune.ssl.default-dh-param 2048
+
+defaults
+    log global
+
+    timeout connect    3s
+    timeout client    10s
+    timeout server    10m
+

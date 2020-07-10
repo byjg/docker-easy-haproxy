@@ -18,14 +18,18 @@ else
     if [[ "$DISCOVER" == "docker" ]]; then
         CONTAINERS=$(docker ps -q)
         LABEL_PATH=".Config.Labels"
+
+        for container in ${CONTAINERS}; do
+            docker inspect --format "{{ json $LABEL_PATH }}" ${container} | xargs -I % echo ${container}=% >> ${CONTROL_FILE}
+        done
     else
         CONTAINERS=$(docker node ps $(docker node ls -q) --format "{{ .Name }}" --filter desired-state=running | cut -d. -f1 | sort | uniq)
         LABEL_PATH=".Spec.Labels"
-    fi
 
-    for container in ${CONTAINERS}; do
-        docker inspect --format "{{ json $LABEL_PATH }}" ${container} | xargs -I % echo ${container}=% >> ${CONTROL_FILE}
-    done
+        for container in ${CONTAINERS}; do
+            docker service inspect --format "{{ json $LABEL_PATH }}" ${container} | xargs -I % echo ${container}=% >> ${CONTROL_FILE}
+        done
+    fi
 
     if cmp -s ${CONTROL_FILE} ${CONTROL_FILE}.old ; then
         RELOAD="false"
