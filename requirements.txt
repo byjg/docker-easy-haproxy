@@ -1,3 +1,4 @@
 pyyaml
 docker
 jinja2
+pytest

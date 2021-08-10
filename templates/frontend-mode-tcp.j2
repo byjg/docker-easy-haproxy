@@ -1,0 +1,6 @@
+    mode tcp
+    option tcplog
+    log global
+{% set backend = (o["hosts"]|first) %}
+    default_backend srv_{{ backend.replace(".", "_") + "_{0}_{1}".format(o["port"], salt) }}
+

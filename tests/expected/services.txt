@@ -1,0 +1,95 @@
+global
+    log stdout  format raw  local0  info
+    maxconn 2000
+    tune.ssl.default-dh-param 2048
+
+defaults
+    log global
+
+    timeout connect    3s
+    timeout client    10s
+    timeout server    10m
+
+
+frontend tcp_in_31339_1
+    bind *:31339
+    mode tcp
+    option tcplog
+    log global
+    default_backend srv_agent_quantum_example_org_31339_1
+
+backend srv_agent_quantum_example_org_31339_1
+    balance roundrobin
+    mode tcp
+    option tcp-check
+    tcp-check connect
+    server srv my-stack_agent:9001 check weight 1
+
+frontend http_in_31337_2
+    bind *:31337
+    mode http
+
+    acl is_rule_cadvisor_quantum_example_org_31337_2_1 hdr(host) -i cadvisor.quantum.example.org
+    acl is_rule_cadvisor_quantum_example_org_31337_2_2 hdr(host) -i cadvisor.quantum.example.org:31337
+    use_backend srv_cadvisor_quantum_example_org_31337_2 if is_rule_cadvisor_quantum_example_org_31337_2_1 OR is_rule_cadvisor_quantum_example_org_31337_2_2
+
+    acl is_rule_node-exporter_quantum_example_org_31337_2_1 hdr(host) -i node-exporter.quantum.example.org
+    acl is_rule_node-exporter_quantum_example_org_31337_2_2 hdr(host) -i node-exporter.quantum.example.org:31337
+    use_backend srv_node-exporter_quantum_example_org_31337_2 if is_rule_node-exporter_quantum_example_org_31337_2_1 OR is_rule_node-exporter_quantum_example_org_31337_2_2
+
+backend srv_cadvisor_quantum_example_org_31337_2
+    balance roundrobin
+    mode http
+    option forwardfor
+    http-request set-header X-Forwarded-Port %[dst_port]
+    http-request add-header X-Forwarded-Proto https if { ssl_fc }
+    server srv my-stack_cadvisor:8080 check weight 1
+backend srv_node-exporter_quantum_example_org_31337_2
+    balance roundrobin
+    mode http
+    option forwardfor
+    http-request set-header X-Forwarded-Port %[dst_port]
+    http-request add-header X-Forwarded-Proto https if { ssl_fc }
+    server srv my-stack_node-exporter:9100 check weight 1
+
+frontend http_in_80_3
+    bind *:80
+    mode http
+    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i somehost.com.br }
+    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i somehost.com }
+    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i www.somehost.com }
+    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i byjg.ca }
+    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i www.byjg.ca }
+
+    acl is_rule_www_somehost_com_br_80_3_1 hdr(host) -i www.somehost.com.br
+    acl is_rule_www_somehost_com_br_80_3_2 hdr(host) -i www.somehost.com.br:80
+    use_backend srv_www_somehost_com_br_80_3 if is_rule_www_somehost_com_br_80_3_1 OR is_rule_www_somehost_com_br_80_3_2
+
+backend srv_www_somehost_com_br_80_3
+    balance roundrobin
+    mode http
+    option forwardfor
+    http-request set-header X-Forwarded-Port %[dst_port]
+    http-request add-header X-Forwarded-Proto https if { ssl_fc }
+    server srv some-service:80 check weight 1
+
+frontend http_in_443_4
+    bind *:443  ssl crt /tmp/www.somehost.com.br.1.pem
+    mode http
+    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i somehost.com.br }
+    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i somehost.com }
+    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i www.somehost.com }
+    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i byjg.ca }
+    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i www.byjg.ca }
+
+    acl is_rule_www_somehost_com_br_443_4_1 hdr(host) -i www.somehost.com.br
+    acl is_rule_www_somehost_com_br_443_4_2 hdr(host) -i www.somehost.com.br:443
+    use_backend srv_www_somehost_com_br_443_4 if is_rule_www_somehost_com_br_443_4_1 OR is_rule_www_somehost_com_br_443_4_2
+
+backend srv_www_somehost_com_br_443_4
+    balance roundrobin
+    mode http
+    option forwardfor
+    http-request set-header X-Forwarded-Port %[dst_port]
+    http-request add-header X-Forwarded-Proto https if { ssl_fc }
+    server srv some-service:80 check weight 1

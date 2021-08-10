@@ -1,24 +1,24 @@
-# Easy HAProxy 
+# Easy HAProxy
 
-This Docker image will create dynamically the `haproxy.cfg` based on the labels defined in docker containers or from 
-a simple Yaml instead docker 
+This Docker image will create dynamically the `haproxy.cfg` based on the labels defined in docker containers or from
+a simple Yaml instead docker
 
-# Features
+## Features
 
 - Enable or disable Stats on port 1936 with custom password
-- Discover and setup haproxy from Docker Tag 
+- Discover and setup haproxy from Docker Tag
 - Discover and setup haproxy redirect from Docker Tag
-- Setup HAProxy CFG from a Yaml file. 
+- Setup HAProxy CFG from a Yaml file.
 
 
-# Basic Usage
+## Basic Usage
 
-The Easy HAProxy will create the `haproxy.cfg` automatically based on the containers or from a YAML provided. 
+The Easy HAProxy will create the `haproxy.cfg` automatically based on the containers or from a YAML provided.
 
 The basic command line to run is:
 
 ```bash
-docker run -d \ 
+docker run -d \
     --name easy-haproxy-container \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -e DISCOVER="swarm|docker|static" \
@@ -29,9 +29,8 @@ docker run -d \
 
 The mapping to `/var/run/docker.sock` is necessary to discover the docker containers and get the labels;
 
-The environment variables will setup the HAProxy. 
+The environment variables will setup the HAProxy.
 
-{:.table}
 | Environment Variable | Description                                                                   |
 |----------------------|-------------------------------------------------------------------------------|
 | DISCOVER             | How `haproxy.cfg` will be created: `static`, `docker` or `swarm`              |
@@ -47,11 +46,11 @@ The environment variable `DISCOVER` will define where is located your containers
 - swarm
 - static
 
-# DISCOVER: docker
+## DISCOVER: docker
 
-This method will use a regular docker installation to discover the containers and configure the HAProxy. 
+This method will use a regular docker installation to discover the containers and configure the HAProxy.
 
-The only requirement is that containers and easy-haproxy must be in the same docker network. 
+The only requirement is that containers and easy-haproxy must be in the same docker network.
 
 The discover will occur every minute.
 
@@ -65,27 +64,27 @@ docker run --network easyhaproxy byjg/easyhaproxy
 docker run --network easyhaproxy myimage
 ```
 
-# DISCOVER: swarm
+## DISCOVER: swarm
 
-This method requires a functional Docker Swarm Cluster. The system will search for the labels in all containers on all 
-swarm nodes. 
+This method requires a functional Docker Swarm Cluster. The system will search for the labels in all containers on all
+swarm nodes.
 
 The discover will occur every minute.
 
-Important: easyhaproxy needs to be in the same network of the containers or otherwise will not access.   
+Important: easyhaproxy needs to be in the same network of the containers or otherwise will not access.
 
-## Tags to be attached in the Docker Container
+### Tags to be attached in the Docker Container (Swarm or Docker)
 
-{:.table}
-| Tag                                         | Description                                                                                             |
-|---------------------------------------------|---------------------------------------------------------------------------------------------------------|
-| com.byjg.easyhaproxy.definitions            | A Comma delimited list with the definitions. Each name requires the definition of the parameters below. |
-| com.byjg.easyhaproxy.port.[definition]      | (Optional) What is the port that the HAProxy will listen to. (Defaults to 80)                           |
-| com.byjg.easyhaproxy.localport.[definition] | (Optional) What is the port that the container is listening. (Defaults to 80)                           |
-| com.byjg.easyhaproxy.host.[definition]      | What is the host that the HAProxy will listen to.                                                       |
-| com.byjg.easyhaproxy.redirect.[definition]  | (Optional) Host redirects from connections in the port defined above.                                   |
-| com.byjg.easyhaproxy.sslcert.[definition]   | (Optional) Cert PEM Base64 encoded.                                                                     |
-
+| Tag                                         | Description                                                                                             | Example      |
+|---------------------------------------------|---------------------------------------------------------------------------------------------------------|--------------|
+| com.byjg.easyhaproxy.definitions            | A Comma delimited list with the definitions. Each name requires the definition of the parameters below. | http,https   |
+| com.byjg.easyhaproxy.mode.[definition]      | (Optional) Is this http or tcp mode in HAProxy. (Defaults to http)                                      | http         |
+| com.byjg.easyhaproxy.port.[definition]      | (Optional) What is the port that the HAProxy will listen to. (Defaults to 80)                           | 80           |
+| com.byjg.easyhaproxy.localport.[definition] | (Optional) What is the port that the container is listening. (Defaults to 80)                           | 8080         |
+| com.byjg.easyhaproxy.host.[definition]      | What is the host that the HAProxy will listen to.                                                       | somehost.com |
+| com.byjg.easyhaproxy.redirect.[definition]  | (Optional) Host redirects from connections in the port defined above.                                   | foo.com--https://bla.com,bar.com--https://bar.org |
+| com.byjg.easyhaproxy.sslcert.[definition]   | (Optional) Cert PEM Base64 encoded.                                                                     |              |
+| com.byjg.easyhaproxy.health-check.[definition] | (Optional) `ssl`, enable health check via SSL in `mode tcp` (Defaults to "empty")                 |              |
 
 Note: if you are deploying a stack set labels at the `deploy` level:
 
@@ -126,6 +125,22 @@ docker run \
     some/myimage
 ```
 
+### TLS passthrough
+
+Used to pass on SSL-termination to a backend:
+
+```bash
+docker run \
+    -l com.byjg.easyhaproxy.defintions=tcp-service \
+    -l com.byjg.easyhaproxy.mode.tcp-service=tcp \
+    -l com.byjg.easyhaproxy.health-check.tcp-service=ssl \
+    -l com.byjg.easyhaproxy.port.tcp-service=443
+    .... \
+    some/tcp-service
+```
+
+ - enable health-check via SSL on the backend with the optional `health-check` label
+
 ### Redirect Example:
 
 ```bash
@@ -133,7 +148,7 @@ docker run \
     -l com.byjg.easyhaproxy.redirect.<defintion>=www.byjg.com.br--http://byjg.com.br,byjg.com--http://byjg.com.br
 ```
 
-# DISCOVER: static
+## DISCOVER: static
 
 This method expects a YAML file to setup the `haproxy.cfg`
 
@@ -149,14 +164,14 @@ customerrors: true   # Optional (default false)
 
 easymapping:
   - port: 80
-    hosts:                                     
+    hosts:
       host1.com.br: container:5000
       host2.com.br: other:3000
     redirect:
       www.host1.com.br: http://host1.com.br
-      
+
   - port: 443
-    ssl_cert: BASE64_PEM_CERTIFICATE
+    ssl_cert: /path/to/ssl/certificate
     hosts:
       host1.com.br: container:80
 
@@ -173,10 +188,10 @@ docker run -v /my/config.yml:/etc/haproxy/easyconfig.yml .... byjg/easyhaproxy
 
 # Mapping custom .cfg files
 
-Map a folder containing valid HAProxy `.cfg` files to `/etc/haproxy/conf.d`. It will be concatenated to your HAProxy CFG. 
+Map a folder containing valid HAProxy `.cfg` files to `/etc/haproxy/conf.d`. It will be concatenated to your HAProxy CFG.
 
 ```bash
-docker run \ 
+docker run \
     /* other parameters */
     -v /your/local/conf.d:/etc/haproxy/conf.d \
     -d byjg/easy-haproxy
@@ -185,9 +200,9 @@ docker run \
 
 # Handling SSL
 
-You can attach a valid SSL certificate to the request. 
+You can attach a valid SSL certificate to the request.
 
-1. First Create a single PEM file including CA. 
+1. First Create a single PEM file including CA.
 
 ```bash
 cat example.com.crt example.com.key > single.pem
@@ -215,8 +230,8 @@ cat single.pem | base64 -w0
 
 # Setting Custom Errors
 
-If enabled, map the volume : `/etc/haproxy/errors-custom/` to your container and put a file named `ERROR_NUMBER.http` 
-where ERROR_NUMBER is the http error code (e.g. 503.http)  
+If enabled, map the volume : `/etc/haproxy/errors-custom/` to your container and put a file named `ERROR_NUMBER.http`
+where ERROR_NUMBER is the http error code (e.g. 503.http)
 
 # Build
 
