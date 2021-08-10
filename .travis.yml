@@ -9,7 +9,7 @@ jobs:
     - stage: test
       if: (type IN (pull_request))
       install:
-        - pip install -r requirements
+        - pip install -r requirements.txt
       script:
         - pytest -s tests/
 
