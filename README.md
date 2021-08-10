@@ -3,7 +3,7 @@
 This Docker image will create dynamically the `haproxy.cfg` based on the labels defined in docker containers or from
 a simple Yaml instead docker
 
-# Features
+## Features
 
 - Enable or disable Stats on port 1936 with custom password
 - Discover and setup haproxy from Docker Tag
@@ -11,7 +11,7 @@ a simple Yaml instead docker
 - Setup HAProxy CFG from a Yaml file.
 
 
-# Basic Usage
+## Basic Usage
 
 The Easy HAProxy will create the `haproxy.cfg` automatically based on the containers or from a YAML provided.
 
@@ -31,7 +31,6 @@ The mapping to `/var/run/docker.sock` is necessary to discover the docker contai
 
 The environment variables will setup the HAProxy.
 
-{:.table}
 | Environment Variable | Description                                                                   |
 |----------------------|-------------------------------------------------------------------------------|
 | DISCOVER             | How `haproxy.cfg` will be created: `static`, `docker` or `swarm`              |
@@ -47,7 +46,7 @@ The environment variable `DISCOVER` will define where is located your containers
 - swarm
 - static
 
-# DISCOVER: docker
+## DISCOVER: docker
 
 This method will use a regular docker installation to discover the containers and configure the HAProxy.
 
@@ -65,7 +64,7 @@ docker run --network easyhaproxy byjg/easyhaproxy
 docker run --network easyhaproxy myimage
 ```
 
-# DISCOVER: swarm
+## DISCOVER: swarm
 
 This method requires a functional Docker Swarm Cluster. The system will search for the labels in all containers on all
 swarm nodes.
@@ -74,19 +73,18 @@ The discover will occur every minute.
 
 Important: easyhaproxy needs to be in the same network of the containers or otherwise will not access.
 
-## Tags to be attached in the Docker Container
+### Tags to be attached in the Docker Container (Swarm or Docker)
 
-{:.table}
-| Tag                                         | Description                                                                                             |
-|---------------------------------------------|---------------------------------------------------------------------------------------------------------|
-| com.byjg.easyhaproxy.definitions            | A Comma delimited list with the definitions. Each name requires the definition of the parameters below. |
-| com.byjg.easyhaproxy.mode.[definition]      | (Optional) Is this http or tcp mode in HAProxy. (Defaults to http)                           |
-| com.byjg.easyhaproxy.port.[definition]      | (Optional) What is the port that the HAProxy will listen to. (Defaults to 80)                           |
-| com.byjg.easyhaproxy.localport.[definition] | (Optional) What is the port that the container is listening. (Defaults to 80)                           |
-| com.byjg.easyhaproxy.host.[definition]      | What is the host that the HAProxy will listen to.                                                       |
-| com.byjg.easyhaproxy.redirect.[definition]  | (Optional) Host redirects from connections in the port defined above.                                   |
-| com.byjg.easyhaproxy.sslcert.[definition]   | (Optional) Cert PEM Base64 encoded.                                                                     |
-| com.byjg.easyhaproxy.health-check.[definition] | (Optional) `ssl`, enable health check via SSL in `mode tcp` (Defaults to "empty")                    |
+| Tag                                         | Description                                                                                             | Example      |
+|---------------------------------------------|---------------------------------------------------------------------------------------------------------|--------------|
+| com.byjg.easyhaproxy.definitions            | A Comma delimited list with the definitions. Each name requires the definition of the parameters below. | http,https   |
+| com.byjg.easyhaproxy.mode.[definition]      | (Optional) Is this http or tcp mode in HAProxy. (Defaults to http)                                      | http         |
+| com.byjg.easyhaproxy.port.[definition]      | (Optional) What is the port that the HAProxy will listen to. (Defaults to 80)                           | 80           |
+| com.byjg.easyhaproxy.localport.[definition] | (Optional) What is the port that the container is listening. (Defaults to 80)                           | 8080         |
+| com.byjg.easyhaproxy.host.[definition]      | What is the host that the HAProxy will listen to.                                                       | somehost.com |
+| com.byjg.easyhaproxy.redirect.[definition]  | (Optional) Host redirects from connections in the port defined above.                                   | foo.com--https://bla.com,bar.com--https://bar.org |
+| com.byjg.easyhaproxy.sslcert.[definition]   | (Optional) Cert PEM Base64 encoded.                                                                     |              |
+| com.byjg.easyhaproxy.health-check.[definition] | (Optional) `ssl`, enable health check via SSL in `mode tcp` (Defaults to "empty")                 |              |
 
 Note: if you are deploying a stack set labels at the `deploy` level:
 
@@ -150,7 +148,7 @@ docker run \
     -l com.byjg.easyhaproxy.redirect.<defintion>=www.byjg.com.br--http://byjg.com.br,byjg.com--http://byjg.com.br
 ```
 
-# DISCOVER: static
+## DISCOVER: static
 
 This method expects a YAML file to setup the `haproxy.cfg`
 
