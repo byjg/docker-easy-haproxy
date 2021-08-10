@@ -12,7 +12,10 @@ RUN pip3 install --upgrade pip \
 
 COPY templates /scripts/templates/
 COPY easymapping /scripts/easymapping/
+COPY tests/ /scripts/tests/
 
 COPY assets /
+
+RUN pytest -s tests/
 
 CMD ["/usr/bin/supervisord",  "-n",  "-c", "/etc/supervisord.conf" ]

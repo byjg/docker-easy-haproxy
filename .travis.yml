@@ -1,9 +1,26 @@
 language: python
-python:
-  - "3.7"
 
-install:
-  - pip install -r requirements.txt
+services:
+  - docker
 
-script:
-  - pytest -s tests/
+
+jobs:
+  include:
+    - stage: test
+      if: (type IN (pull_request))
+      install:
+        - pip install -r requirements
+      script:
+        - pytest -s tests/
+
+    - stage: build docker
+      if: (branch = master) AND (NOT (type IN (pull_request)))
+      install:
+        - docker pull byjg/k8s-ci
+      script:
+        - docker run --privileged -v  /tmp/z:/var/lib/containers -it --rm -v $PWD:/work -w /work -e DOCKER_USERNAME=$DOCKER_USERNAME -e DOCKER_PASSWORD=$DOCKER_PASSWORD -e DOCKER_REGISTRY=$DOCKER_REGISTRY byjg/k8s-ci /work/build-multiarch.sh
+
+    - stage: documentation
+      if: (branch = master) AND (NOT (type IN (pull_request)))
+      install: skip
+      script: "curl https://opensource.byjg.com/add-doc.sh | bash /dev/stdin devops docker-easy-haproxy"

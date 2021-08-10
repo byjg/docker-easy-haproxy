@@ -84,7 +84,7 @@ Important: easyhaproxy needs to be in the same network of the containers or othe
 | com.byjg.easyhaproxy.host.[definition]      | What is the host that the HAProxy will listen to.                                                       | somehost.com |
 | com.byjg.easyhaproxy.redirect.[definition]  | (Optional) Host redirects from connections in the port defined above.                                   | foo.com--https://bla.com,bar.com--https://bar.org |
 | com.byjg.easyhaproxy.sslcert.[definition]   | (Optional) Cert PEM Base64 encoded.                                                                     |              |
-| com.byjg.easyhaproxy.health-check.[definition] | (Optional) `ssl`, enable health check via SSL in `mode tcp` (Defaults to "empty")                 |              |
+| com.byjg.easyhaproxy.health-check.[definition] | (Optional) `ssl`, enable health check via SSL in `mode tcp` (Defaults to "empty")                 |              |
 
 Note: if you are deploying a stack set labels at the `deploy` level:
 
