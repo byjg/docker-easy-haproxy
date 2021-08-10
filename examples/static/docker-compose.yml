@@ -1,0 +1,18 @@
+version: "3"
+
+services:
+  haproxy:
+    image: byjg/easy-haproxy
+    volumes:
+      - ./config.yml:/etc/haproxy/easyconfig.yml
+      - ./host1.local.pem:/etc/certs/host1.local.pem
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      DISCOVER: static
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+      - "1936:1936/tcp"
+
+  container:
+    image: byjg/static-httpserver

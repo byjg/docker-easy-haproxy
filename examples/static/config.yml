@@ -1,0 +1,17 @@
+stats:
+  username: admin
+  password: password
+  port: 1936         # Optional (default 1936)
+
+customerrors: true   # Optional (default false)
+
+easymapping:
+  - port: 80
+    redirect:
+      host1.local: https://host1.local
+      www.host1.local: https://host1.local
+
+  - port: 443
+    ssl_cert: /etc/certs/host1.local.pem
+    hosts:
+      host1.local: container:8080
