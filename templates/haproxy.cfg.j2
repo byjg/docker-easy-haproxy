@@ -38,7 +38,7 @@ backend srv_stats
     server Local 127.0.0.1:{{ data["stats"]["port"] | default(1936) }}
 {% endif %}
 {% for o in data["easymapping"] -%}
-    {% set mode = o["mode"] or "http" %}
+    {% set mode = o["mode"] or "http" %}
     {% set salt = loop.index %}
 
 frontend {{ mode }}_in_{{ o["port"] }}_{{ salt }}
