@@ -46,7 +46,11 @@ The environment variable `DISCOVER` will define where is located your containers
 - swarm
 - static
 
-## DISCOVER: docker
+## Automatic Discover Services
+
+Easy HAProxy can discover automatically the container services running in the same network of Docker or in a Docker Swarm cluster. 
+
+### DISCOVER: docker
 
 This method will use a regular docker installation to discover the containers and configure the HAProxy.
 
@@ -64,7 +68,7 @@ docker run --network easyhaproxy byjg/easyhaproxy
 docker run --network easyhaproxy myimage
 ```
 
-## DISCOVER: swarm
+### DISCOVER: swarm
 
 This method requires a functional Docker Swarm Cluster. The system will search for the labels in all containers on all
 swarm nodes.
@@ -75,25 +79,27 @@ Important: easyhaproxy needs to be in the same network of the containers or othe
 
 ### Tags to be attached in the Docker Container (Swarm or Docker)
 
-| Tag                                         | Description                                                                                             | Example      |
-|---------------------------------------------|---------------------------------------------------------------------------------------------------------|--------------|
-| com.byjg.easyhaproxy.definitions            | A Comma delimited list with the definitions. Each name requires the definition of the parameters below. | http,https   |
-| com.byjg.easyhaproxy.mode.[definition]      | (Optional) Is this http or tcp mode in HAProxy. (Defaults to http)                                      | http         |
-| com.byjg.easyhaproxy.port.[definition]      | (Optional) What is the port that the HAProxy will listen to. (Defaults to 80)                           | 80           |
-| com.byjg.easyhaproxy.localport.[definition] | (Optional) What is the port that the container is listening. (Defaults to 80)                           | 8080         |
-| com.byjg.easyhaproxy.host.[definition]      | What is the host that the HAProxy will listen to.                                                       | somehost.com |
-| com.byjg.easyhaproxy.redirect.[definition]  | (Optional) Host redirects from connections in the port defined above.                                   | foo.com--https://bla.com,bar.com--https://bar.org |
-| com.byjg.easyhaproxy.sslcert.[definition]   | (Optional) Cert PEM Base64 encoded.                                                                     |              |
-| com.byjg.easyhaproxy.health-check.[definition] | (Optional) `ssl`, enable health check via SSL in `mode tcp` (Defaults to "empty")                 |              |
+| Tag                                | Description                                                                                             | Example      |
+|------------------------------------|---------------------------------------------------------------------------------------------------------|--------------|
+| easyhaproxy.definitions            | A Comma delimited list with the definitions. Each name requires the definition of the parameters below. | service,service2   |
+| easyhaproxy.mode.[definition]      | (Optional) Is this `http` or `tcp` mode in HAProxy. (Defaults to http)                                  | http  |
+| easyhaproxy.port.[definition]      | (Optional) What is the port that the HAProxy will listen to. (Defaults to 80)                           | 80           |
+| easyhaproxy.localport.[definition] | (Optional) What is the port that the container is listening. (Defaults to 80)                           | 8080         |
+| easyhaproxy.host.[definition]      | What is the host that the HAProxy will listen to.                                                       | somehost.com |
+| easyhaproxy.redirect.[definition]  | (Optional) Host redirects from connections in the port defined above.                                   | foo.com--https://bla.com,bar.com--https://bar.org |
+| easyhaproxy.sslcert.[definition]   | (Optional) Cert PEM Base64 encoded.                                                                     |              |
+| easyhaproxy.health-check.[definition] | (Optional) `ssl`, enable health check via SSL in `mode tcp` (Defaults to "empty")                 |              |
 
-Note: if you are deploying a stack set labels at the `deploy` level:
+### Defining the labels in Docker Swarm
+
+if you are deploying a stack in a Docker Swarm cluster set labels at the `deploy` level:
 
 ```yaml
 services:
  foo:
    deploy:
       labels:
-         com.byjg.easyhaproxy.definitions: "http,https"
+         easyhaproxy.definitions: "service1,service2"
          ...
 ```
 
@@ -102,9 +108,9 @@ services:
 
 ```bash
 docker run \
-    -l com.byjg.easyhaproxy.definitions=http \
-    -l com.byjg.easyhaproxy.port.http=80\
-    -l com.byjg.easyhaproxy.host.http=byjg.com.br \
+    -l easyhaproxy.definitions=webapi \
+    -l easyhaproxy.port.webapi=80\
+    -l easyhaproxy.host.webapi=byjg.com.br \
     ....
 ```
 
@@ -112,15 +118,15 @@ docker run \
 
 ```bash
 docker run \
-    -l com.byjg.easyhaproxy.definitions=express,admin \
+    -l easyhaproxy.definitions=express,admin \
 
-    -l com.byjg.easyhaproxy.port.express=80 \
-    -l com.byjg.easyhaproxy.localport.express=3000 \
-    -l com.byjg.easyhaproxy.host.express=express.byjg.com.br \
+    -l easyhaproxy.port.express=80 \
+    -l easyhaproxy.localport.express=3000 \
+    -l easyhaproxy.host.express=express.byjg.com.br \
 
-    -l com.byjg.easyhaproxy.port.admin=80 \
-    -l com.byjg.easyhaproxy.localport.admin=3001 \
-    -l com.byjg.easyhaproxy.host.admin=admin.byjg.com.br \
+    -l easyhaproxy.port.admin=80 \
+    -l easyhaproxy.localport.admin=3001 \
+    -l easyhaproxy.host.admin=admin.byjg.com.br \
     .... \
     some/myimage
 ```
@@ -131,10 +137,10 @@ Used to pass on SSL-termination to a backend:
 
 ```bash
 docker run \
-    -l com.byjg.easyhaproxy.defintions=tcp-service \
-    -l com.byjg.easyhaproxy.mode.tcp-service=tcp \
-    -l com.byjg.easyhaproxy.health-check.tcp-service=ssl \
-    -l com.byjg.easyhaproxy.port.tcp-service=443
+    -l easyhaproxy.defintions=example \
+    -l easyhaproxy.mode.example=tcp \
+    -l easyhaproxy.health-check.example=ssl \
+    -l easyhaproxy.port.example=443
     .... \
     some/tcp-service
 ```
@@ -145,7 +151,7 @@ docker run \
 
 ```bash
 docker run \
-    -l com.byjg.easyhaproxy.redirect.<defintion>=www.byjg.com.br--http://byjg.com.br,byjg.com--http://byjg.com.br
+    -l easyhaproxy.redirect.<defintion>=www.byjg.com.br--http://byjg.com.br,byjg.com--http://byjg.com.br
 ```
 
 ## DISCOVER: static
@@ -186,7 +192,7 @@ Running:
 docker run -v /my/config.yml:/etc/haproxy/easyconfig.yml .... byjg/easyhaproxy
 ```
 
-# Mapping custom .cfg files
+## Mapping custom .cfg files
 
 Map a folder containing valid HAProxy `.cfg` files to `/etc/haproxy/conf.d`. It will be concatenated to your HAProxy CFG.
 
@@ -198,7 +204,7 @@ docker run \
 ```
 
 
-# Handling SSL
+## Handling SSL
 
 You can attach a valid SSL certificate to the request.
 
@@ -226,14 +232,14 @@ MIIEojCCA4qgAwIBAgIUegW2BimwuL4RzRZ2WYkHA6U5nkAwDQYJKoZIhvcNAQEL
 cat single.pem | base64 -w0
 ```
 
-3. Use this string to define the label `com.byjg.easyhaproxy.sslcert.[definition]`
+3. Use this string to define the label `easyhaproxy.sslcert.[definition]`
 
-# Setting Custom Errors
+## Setting Custom Errors
 
 If enabled, map the volume : `/etc/haproxy/errors-custom/` to your container and put a file named `ERROR_NUMBER.http`
 where ERROR_NUMBER is the http error code (e.g. 503.http)
 
-# Build
+## Build
 
 ```
 docker build -t byjg/easy-haproxy .
