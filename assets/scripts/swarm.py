@@ -10,9 +10,13 @@ result = {
 }
 
 if os.getenv("HAPROXY_PASSWORD"):
+    password = os.getenv("HAPROXY_PASSWORD")
+    if password.startswith("/run/secrets/"): # support docker secrets
+        with open(password) as passfh:
+            password = passfh.read().strip()
     result["stats"] = {
         "username": os.getenv("HAPROXY_USERNAME") if os.getenv("HAPROXY_USERNAME") else "admin",
-        "password": os.getenv("HAPROXY_PASSWORD"),
+        "password": password,
         "port": os.getenv("HAPROXY_STATS_PORT") if os.getenv("HAPROXY_STATS_PORT") else "1936",
     }
 
