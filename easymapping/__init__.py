@@ -45,7 +45,11 @@ class HaproxyConfigGenerator:
         # static?
         if len(lineList) > 0:
             self.mapping["easymapping"] = self.__parse(lineList)
-
+        else:
+            for d in self.mapping["easymapping"]:
+                for name, hosts in d.get('hosts', {}).items():
+                    if type(hosts) != list:
+                        d['hosts'][name] = [hosts]
         # still 'None' -> default to [] for jinja2
         if self.mapping["easymapping"] is None:
             self.mapping["easymapping"] = []
@@ -119,7 +123,8 @@ class HaproxyConfigGenerator:
                     ""
                 )
 
-                easymapping[key]["hosts"][d[host_label]] = "{}:{}".format(container, ct_port)
+                easymapping[key]["hosts"].setdefault(d[host_label], [])
+                easymapping[key]["hosts"][d[host_label]] += ["{}:{}".format(container, ct_port)]
 
                 # handle SSL
                 ssl_label = self.label.create(["sslcert", definition])

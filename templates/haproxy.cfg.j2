@@ -62,6 +62,8 @@ backend srv_{{ host }}
     option tcp-check
     tcp-check connect{{ " ssl" if o["health-check"] == "ssl" }}
         {% endif %}
-    server srv {{ o["hosts"][k] }} check weight 1{{ " verify none" if o["health-check"] == "ssl" }}
+        {% for c in o["hosts"][k] %}
+    server srv-{{ loop.index0 }} {{ c }} check weight 1{{ " verify none" if o["health-check"] == "ssl" }}
+        {% endfor %}
     {% endfor %}
 {% endfor %}

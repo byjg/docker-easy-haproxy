@@ -1,0 +1,38 @@
+version: "3"
+
+services:
+  haproxy:
+    image: 0x0400/easy-haproxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      DISCOVER: docker
+      HAPROXY_CUSTOMERRORS: "true"
+      HAPROXY_USERNAME: admin
+      HAPROXY_PASSWORD: password
+      HAPROXY_STATS_PORT: 1936
+    ports:
+        - 19901:19901
+
+
+  nginx:
+      #image: nginx
+    image: stenote/nginx-hostname
+    deploy:
+        replicas: 2
+    labels:
+      easyhaproxy.definitions: "http"
+
+      easyhaproxy.redirect.http: google.helloworld.com--www.google.com
+      easyhaproxy.host.http: www.helloworld.com
+      easyhaproxy.port.http: 19901
+      easyhaproxy.localport.http: 80
+
+# curl -H Host:www.helloworld.com localhost:19901
+# f6d8d45b7411
+# 59b213cb8592
+
+# curl -I -H Host:google.helloworld.com localhost:19901
+# HTTP/1.1 301 Moved Permanently
+# content-length: 0
+# location: www.google.com/
