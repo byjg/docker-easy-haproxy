@@ -1,5 +1,8 @@
 # Easy HAProxy
 
+[![Opensource ByJG](https://img.shields.io/badge/opensource-byjg-success.svg)](http://opensource.byjg.com)
+[![Build Status](https://github.com/byjg/docker-easy-haproxy/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/byjg/docker-easy-haproxy/actions/workflows/build.yml)
+
 This Docker image will create dynamically the `haproxy.cfg` based on the labels defined in docker containers or from
 a simple Yaml instead docker
 
@@ -246,3 +249,5 @@ docker build -t byjg/easy-haproxy .
 ```
 
 
+----
+[Open source ByJG](http://opensource.byjg.com)
