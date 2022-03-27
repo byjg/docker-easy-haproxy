@@ -53,14 +53,14 @@ backend srv_host1_com_br_80_1
     option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
-    server srv container:5000 check weight 1
+    server srv-0 container:5000 check weight 1
 backend srv_host2_com_br_80_1
     balance roundrobin
     mode http
     option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
-    server srv other:3000 check weight 1
+    server srv-0 other:3000 check weight 1
 
 frontend http_in_443_2
     bind *:443  ssl crt /etc/haproxy/certs/mycert.pem
@@ -76,7 +76,7 @@ backend srv_host1_com_br_443_2
     option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
-    server srv container:80 check weight 1
+    server srv-0 container:80 check weight 1
 
 frontend http_in_8080_3
     bind *:8080
@@ -92,4 +92,4 @@ backend srv_host3_com_br_8080_3
     option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
-    server srv domain:8181 check weight 1
+    server srv-0 domain:8181 check weight 1

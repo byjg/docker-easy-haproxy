@@ -23,4 +23,4 @@ backend srv_agent_quantum_local_31339_1
     mode tcp
     option tcp-check
     tcp-check connect ssl
-    server srv test_agent:9001 check weight 1 verify none
+    server srv-0 test_agent:9001 check weight 1 verify none
