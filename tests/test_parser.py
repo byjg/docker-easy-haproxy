@@ -79,3 +79,19 @@ def test_parser_tcp():
     path = os.path.dirname(os.path.realpath(__file__))
     with open(path + "/expected/services-tcp.txt", 'r') as expected_file:
         assert expected_file.read() == haproxy_config
+
+def test_parser_multi_containers():
+    lineList = load_fixture("services-multi-containers")
+
+    result = {
+        "customerrors": False
+    }
+
+    cfg = easymapping.HaproxyConfigGenerator(result, "/tmp")
+    haproxy_config = cfg.generate(lineList)
+
+    assert len(haproxy_config) > 0
+    path = os.path.dirname(os.path.realpath(__file__))
+    with open(path + "/expected/services-multi-containers.txt", 'r') as expected_file:
+        assert expected_file.read() == haproxy_config
+

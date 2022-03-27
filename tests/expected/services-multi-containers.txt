@@ -1,0 +1,29 @@
+global
+    log stdout  format raw  local0  info
+    maxconn 2000
+    tune.ssl.default-dh-param 2048
+
+defaults
+    log global
+
+    timeout connect    3s
+    timeout client    10s
+    timeout server    10m
+
+
+frontend http_in_19901_1
+    bind *:19901
+    mode http
+
+    acl is_rule_www_helloworld_com_19901_1_1 hdr(host) -i www.helloworld.com
+    acl is_rule_www_helloworld_com_19901_1_2 hdr(host) -i www.helloworld.com:19901
+    use_backend srv_www_helloworld_com_19901_1 if is_rule_www_helloworld_com_19901_1_1 OR is_rule_www_helloworld_com_19901_1_2
+
+backend srv_www_helloworld_com_19901_1
+    balance roundrobin
+    mode http
+    option forwardfor
+    http-request set-header X-Forwarded-Port %[dst_port]
+    http-request add-header X-Forwarded-Proto https if { ssl_fc }
+    server srv-0 test_nginx.2.t5r94mjlced7m3t5orfjbowmm:80 check weight 1
+    server srv-1 test_nginx.1.p552hqxkdx88narjrp5kouwb2:80 check weight 1

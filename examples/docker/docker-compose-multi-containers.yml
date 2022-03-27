@@ -19,7 +19,7 @@ services:
       #image: nginx
     image: stenote/nginx-hostname
     deploy:
-        replicas: 2
+      replicas: 2
     labels:
       easyhaproxy.definitions: "http"
 
