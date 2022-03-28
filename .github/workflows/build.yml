@@ -74,6 +74,14 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+      - name: Docker Hub Description
+        if: github.event_name != 'pull_request' || github.event.inputs.push == 'true'
+        uses: peter-evans/dockerhub-description@v2.1.0
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKER_REGISTRY_USER }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKER_REGISTRY_TOKEN }}
+          DOCKERHUB_REPOSITORY: ${{ env.IMAGE_NAME }}
+
   Documentation:
     runs-on: 'ubuntu-latest'
     needs: Build
