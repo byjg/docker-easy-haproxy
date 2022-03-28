@@ -62,8 +62,8 @@ jobs:
         with:
           images: ${{ secrets.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}
 
-      Build and push Docker image with Buildx (don't push on PR)
-      https://github.com/docker/build-push-action
+      # Build and push Docker image with Buildx (don't push on PR)
+      # https://github.com/docker/build-push-action
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
         with:
