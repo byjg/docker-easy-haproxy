@@ -62,24 +62,24 @@ jobs:
         with:
           images: ${{ secrets.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}
 
-      # Build and push Docker image with Buildx (don't push on PR)
-      # https://github.com/docker/build-push-action
-      # - name: Build and push Docker image
-      #   uses: docker/build-push-action@v2
-      #   with:
-      #     context: .
-      #     file: Dockerfile
-      #     platforms: linux/amd64,linux/arm64
-      #     push: ${{ github.event_name != 'pull_request' || github.event.inputs.push == 'true' }}
-      #     tags: ${{ steps.meta.outputs.tags }}
-      #     labels: ${{ steps.meta.outputs.labels }}
+      Build and push Docker image with Buildx (don't push on PR)
+      https://github.com/docker/build-push-action
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' || github.event.inputs.push == 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
-      - name: Docker Hub Description
-        if: github.event_name != 'pull_request' || github.event.inputs.push == 'true'
-        run: |
-          wget -q  https://github.com/christian-korneck/docker-pushrm/releases/download/v1.8.0/docker-pushrm_linux_amd64 -O $HOME/.docker/cli-plugins/docker-pushrm
-          chmod +x $HOME/.docker/cli-plugins/docker-pushrm
-          docker pushrm ${{ env.IMAGE_NAME }}
+      # - name: Docker Hub Description
+      #   if: github.event_name != 'pull_request' || github.event.inputs.push == 'true'
+      #   run: |
+      #     wget -q  https://github.com/christian-korneck/docker-pushrm/releases/download/v1.8.0/docker-pushrm_linux_amd64 -O $HOME/.docker/cli-plugins/docker-pushrm
+      #     chmod +x $HOME/.docker/cli-plugins/docker-pushrm
+      #     docker pushrm ${{ env.IMAGE_NAME }}
 
   Documentation:
     runs-on: 'ubuntu-latest'
