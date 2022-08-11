@@ -1,8 +1,17 @@
+# curl -H Host:www.helloworld.com localhost:19901
+# f6d8d45b7411
+# 59b213cb8592
+
+# curl -I -H Host:google.helloworld.com localhost:19901
+# HTTP/1.1 301 Moved Permanently
+# content-length: 0
+# location: www.google.com/
+
 version: "3"
 
 services:
   haproxy:
-    image: 0x0400/easy-haproxy
+    image: byjg/easy-haproxy
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
@@ -28,11 +37,3 @@ services:
       easyhaproxy.port.http: 19901
       easyhaproxy.localport.http: 80
 
-# curl -H Host:www.helloworld.com localhost:19901
-# f6d8d45b7411
-# 59b213cb8592
-
-# curl -I -H Host:google.helloworld.com localhost:19901
-# HTTP/1.1 301 Moved Permanently
-# content-length: 0
-# location: www.google.com/
