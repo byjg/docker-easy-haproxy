@@ -170,8 +170,6 @@ stats:
   password: password
   port: 1936         # Optional (default 1936)
 
-lookup_label: easyhaproxy    # The key the system will try to find in the docker labels. 
-
 customerrors: true   # Optional (default false)
 
 easymapping:

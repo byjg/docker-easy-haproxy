@@ -50,6 +50,29 @@ def test_parser_finds_services():
     with open(cert_file, 'r') as expected_file:
         assert expected_file.read() == "Some PEM Certificate"
 
+def test_parser_finds_services_changed_label():
+    lineList = load_fixture("services-changed-label")
+
+    result = {
+        "customerrors": False,
+        "lookup_label": "haproxy"
+    }
+
+    cert_file = "/tmp/www.somehost.com.br.1.pem"
+    if os.path.exists(cert_file):
+        os.remove(cert_file)
+
+    cfg = easymapping.HaproxyConfigGenerator(result, "/tmp")
+    haproxy_config = cfg.generate(lineList)
+
+    assert len(haproxy_config) > 0
+    path = os.path.dirname(os.path.realpath(__file__))
+    with open(path + "/expected/services.txt", 'r') as expected_file:
+        assert expected_file.read() == haproxy_config
+
+    with open(cert_file, 'r') as expected_file:
+        assert expected_file.read() == "Some PEM Certificate"
+
 
 def test_parser_static():
     path = os.path.dirname(os.path.realpath(__file__))
