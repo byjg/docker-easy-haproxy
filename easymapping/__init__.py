@@ -35,7 +35,7 @@ class DockerLabelHandler:
 class HaproxyConfigGenerator:
     def __init__(self, mapping, ssl_cert_folder="/etc/haproxy/certs"):
         self.mapping = mapping
-        self.label = DockerLabelHandler("easyhaproxy")
+        self.label = DockerLabelHandler(mapping['lookup_label'] if 'lookup_label' in mapping else "easyhaproxy")
         self.ssl_cert_folder = ssl_cert_folder
         self.ssl_cert_increment = 0
         os.makedirs(self.ssl_cert_folder, exist_ok=True)

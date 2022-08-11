@@ -16,6 +16,10 @@ if os.getenv("HAPROXY_PASSWORD"):
         "port": os.getenv("HAPROXY_STATS_PORT") if os.getenv("HAPROXY_STATS_PORT") else "1936",
     }
 
+result["metadata"] = {
+    "lookup_label": os.getenv("LOOKUP_LABEL") if os.getenv("LOOKUP_LABEL") else "easyhaproxy",
+}
+
 cfg = HaproxyConfigGenerator(result)
 print(cfg.generate(lineList))
 

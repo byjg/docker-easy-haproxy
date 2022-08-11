@@ -37,6 +37,7 @@ The environment variables will setup the HAProxy.
 | Environment Variable | Description                                                                   |
 |----------------------|-------------------------------------------------------------------------------|
 | DISCOVER             | How `haproxy.cfg` will be created: `static`, `docker` or `swarm`              |
+| LOOKUP_LABEL         | (Optional) The key will search to match resources. Default: `easyhaproxy`.     |
 | HAPROXY_USERNAME     | (Optional) The HAProxy username to the statistics. Default: `admin`           |
 | HAPROXY_PASSWORD     | The HAProxy password to the statistics. If not set disable stats.             |
 | HAPROXY_STATS_PORT   | (Optional) The HAProxy port to the statistics. Default: `1936`                |
@@ -168,6 +169,8 @@ stats:
   username: admin
   password: password
   port: 1936         # Optional (default 1936)
+
+lookup_label: easyhaproxy    # The key the system will try to find in the docker labels. 
 
 customerrors: true   # Optional (default false)
 
