@@ -32,8 +32,8 @@ services:
     labels:
       easyhaproxy.definitions: "http"
 
-      easyhaproxy.redirect.http: google.helloworld.com--www.google.com
-      easyhaproxy.host.http: www.helloworld.com
-      easyhaproxy.port.http: 19901
-      easyhaproxy.localport.http: 80
+      easyhaproxy.http.redirect: google.helloworld.com--www.google.com
+      easyhaproxy.http.host: www.helloworld.com
+      easyhaproxy.http.port: 19901
+      easyhaproxy.http.localport: 80
 

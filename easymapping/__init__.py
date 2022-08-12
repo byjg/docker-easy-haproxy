@@ -81,24 +81,24 @@ class HaproxyConfigGenerator:
             definitions = d[self.label.create("definitions")].split(",")
             for definition in definitions:
                 mode = self.label.get(
-                    self.label.create(["mode", definition]),
+                    self.label.create([definition, "mode"]),
                     "http"
                 )
 
                 # TODO: we can ignore "host" in TCP, but it would break the template
-                host_label = self.label.create(["host", definition])
+                host_label = self.label.create([definition, "host"])
                 if not self.label.has_label(host_label):
                     continue
 
                 port = self.label.get(
-                    self.label.create(["port", definition]),
+                    self.label.create([definition, "port"]),
                     "80"
                 )
 
                 hash = ""
-                if self.label.create(["sslcert", definition]) in d:
+                if self.label.create([definition, "sslcert"]) in d:
                     hash = hashlib.md5(
-                        d[self.label.create(["sslcert", definition])].encode('utf-8')
+                        d[self.label.create([definition, "sslcert"])].encode('utf-8')
                     ).hexdigest()
 
                 key = port if not hash else port + "_" + hash
@@ -114,12 +114,12 @@ class HaproxyConfigGenerator:
 
                 # TODO: this could use `EXPOSE` from `Dockerfile`?
                 ct_port = self.label.get(
-                    self.label.create(["localport", definition]),
+                    self.label.create([definition, "localport"]),
                     "80"
                 )
 
                 easymapping[key]["health-check"] = self.label.get(
-                    self.label.create(["health-check", definition]),
+                    self.label.create([definition, "health-check"]),
                     ""
                 )
 
@@ -127,7 +127,7 @@ class HaproxyConfigGenerator:
                 easymapping[key]["hosts"][d[host_label]] += ["{}:{}".format(container, ct_port)]
 
                 # handle SSL
-                ssl_label = self.label.create(["sslcert", definition])
+                ssl_label = self.label.create([definition, "sslcert"])
                 if self.label.has_label(ssl_label):
                     self.ssl_cert_increment += 1
                     filename = "{}/{}.{}.pem".format(
@@ -141,7 +141,7 @@ class HaproxyConfigGenerator:
 
                 # handle redirects
                 redirect = self.label.get(
-                    self.label.create(["redirect", definition])
+                    self.label.create([definition, "redirect"])
                 )
                 if len(redirect) > 0:
                     for r in redirect.split(","):

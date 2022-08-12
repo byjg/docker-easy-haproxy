@@ -86,13 +86,13 @@ Important: easyhaproxy needs to be in the same network of the containers or othe
 | Tag                                | Description                                                                                             | Example      |
 |------------------------------------|---------------------------------------------------------------------------------------------------------|--------------|
 | easyhaproxy.definitions            | A Comma delimited list with the definitions. Each name requires the definition of the parameters below. | service,service2   |
-| easyhaproxy.mode.[definition]      | (Optional) Is this `http` or `tcp` mode in HAProxy. (Defaults to http)                                  | http  |
-| easyhaproxy.port.[definition]      | (Optional) What is the port that the HAProxy will listen to. (Defaults to 80)                           | 80           |
-| easyhaproxy.localport.[definition] | (Optional) What is the port that the container is listening. (Defaults to 80)                           | 8080         |
-| easyhaproxy.host.[definition]      | What is the host that the HAProxy will listen to.                                                       | somehost.com |
-| easyhaproxy.redirect.[definition]  | (Optional) Host redirects from connections in the port defined above.                                   | foo.com--https://bla.com,bar.com--https://bar.org |
-| easyhaproxy.sslcert.[definition]   | (Optional) Cert PEM Base64 encoded.                                                                     |              |
-| easyhaproxy.health-check.[definition] | (Optional) `ssl`, enable health check via SSL in `mode tcp` (Defaults to "empty")                 |              |
+| easyhaproxy.[definition].mode      | (Optional) Is this `http` or `tcp` mode in HAProxy. (Defaults to http)                                  | http  |
+| easyhaproxy.[definition].port      | (Optional) What is the port that the HAProxy will listen to. (Defaults to 80)                           | 80           |
+| easyhaproxy.[definition].localport | (Optional) What is the port that the container is listening. (Defaults to 80)                           | 8080         |
+| easyhaproxy.[definition].host      | What is the host that the HAProxy will listen to.                                                       | somehost.com |
+| easyhaproxy.[definition].redirect  | (Optional) Host redirects from connections in the port defined above.                                   | foo.com--https://bla.com,bar.com--https://bar.org |
+| easyhaproxy.[definition].sslcert   | (Optional) Cert PEM Base64 encoded.                                                                     |              |
+| easyhaproxy.[definition].health-check | (Optional) `ssl`, enable health check via SSL in `mode tcp` (Defaults to "empty")                 |              |
 
 ### Defining the labels in Docker Swarm
 
@@ -113,8 +113,8 @@ services:
 ```bash
 docker run \
     -l easyhaproxy.definitions=webapi \
-    -l easyhaproxy.port.webapi=80\
-    -l easyhaproxy.host.webapi=byjg.com.br \
+    -l easyhaproxy.webapi.port=80\
+    -l easyhaproxy.webapi.host=byjg.com.br \
     ....
 ```
 
@@ -124,13 +124,13 @@ docker run \
 docker run \
     -l easyhaproxy.definitions=express,admin \
 
-    -l easyhaproxy.port.express=80 \
-    -l easyhaproxy.localport.express=3000 \
-    -l easyhaproxy.host.express=express.byjg.com.br \
+    -l easyhaproxy.express.port=80 \
+    -l easyhaproxy.express.localport=3000 \
+    -l easyhaproxy.express.host=express.byjg.com.br \
 
-    -l easyhaproxy.port.admin=80 \
-    -l easyhaproxy.localport.admin=3001 \
-    -l easyhaproxy.host.admin=admin.byjg.com.br \
+    -l easyhaproxy.admin.port=80 \
+    -l easyhaproxy.admin.localport=3001 \
+    -l easyhaproxy.admin.host=admin.byjg.com.br \
     .... \
     some/myimage
 ```
@@ -142,9 +142,9 @@ Used to pass on SSL-termination to a backend:
 ```bash
 docker run \
     -l easyhaproxy.defintions=example \
-    -l easyhaproxy.mode.example=tcp \
-    -l easyhaproxy.health-check.example=ssl \
-    -l easyhaproxy.port.example=443
+    -l easyhaproxy.example.mode=tcp \
+    -l easyhaproxy.example.health-check=ssl \
+    -l easyhaproxy.example.port=443
     .... \
     some/tcp-service
 ```
@@ -155,7 +155,7 @@ docker run \
 
 ```bash
 docker run \
-    -l easyhaproxy.redirect.<defintion>=www.byjg.com.br--http://byjg.com.br,byjg.com--http://byjg.com.br
+    -l easyhaproxy.[definition].redirect=www.byjg.com.br--http://byjg.com.br,byjg.com--http://byjg.com.br
 ```
 
 ## DISCOVER: static
@@ -236,7 +236,7 @@ MIIEojCCA4qgAwIBAgIUegW2BimwuL4RzRZ2WYkHA6U5nkAwDQYJKoZIhvcNAQEL
 cat single.pem | base64 -w0
 ```
 
-3. Use this string to define the label `easyhaproxy.sslcert.[definition]`
+3. Use this string to define the label `easyhaproxy.[definition].sslcert`
 
 ## Setting Custom Errors
 
