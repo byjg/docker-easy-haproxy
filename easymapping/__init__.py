@@ -41,10 +41,10 @@ class HaproxyConfigGenerator:
         os.makedirs(self.ssl_cert_folder, exist_ok=True)
 
 
-    def generate(self, lineList = []):
+    def generate(self, line_list = []):
         # static?
-        if len(lineList) > 0:
-            self.mapping["easymapping"] = self.__parse(lineList)
+        if len(line_list) > 0:
+            self.mapping["easymapping"] = self.parse(line_list)
         else:
             for d in self.mapping["easymapping"]:
                 for name, hosts in d.get('hosts', {}).items():
@@ -63,10 +63,10 @@ class HaproxyConfigGenerator:
         return template.render(data=self.mapping)
 
 
-    def __parse(self, lineList):
+    def parse(self, line_list):
         easymapping = dict()
 
-        for line in lineList:
+        for line in line_list:
             line = line.strip()
             i = line.find("=")
             container = line[:i]
