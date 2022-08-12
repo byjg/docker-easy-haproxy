@@ -3,11 +3,14 @@ import hashlib
 from jinja2 import Environment, FileSystemLoader
 import json
 import os
+import re
 
 class DockerLabelHandler:
     def __init__(self, label):
         self.__label_base = label
 
+    def get_lookup_label(self):
+        return self.__label_base
 
     def create(self, key):
         if isinstance(key, str):
@@ -70,16 +73,23 @@ class HaproxyConfigGenerator:
             line = line.strip()
             i = line.find("=")
             container = line[:i]
-            jsonStr = line[i+1:]
-            d = json.loads(jsonStr)
+            json_str = line[i+1:]
+            d = json.loads(json_str)
 
-            if self.label.create("definitions") not in d.keys():
+            # Extract the definitions dynamically
+            definitions = {}
+            r = re.compile(self.label.get_lookup_label() + r"\.(.*)\..*")
+            for key in d.keys():
+                if r.match(key):
+                    definitions[r.search(key).group(1)] = 1
+
+            if len(definitions.keys()) == 0:
                 continue
 
             self.label.set_data(d)
 
-            definitions = d[self.label.create("definitions")].split(",")
-            for definition in definitions:
+            # Parse each definition found. 
+            for definition in definitions.keys():
                 mode = self.label.get(
                     self.label.create([definition, "mode"]),
                     "http"

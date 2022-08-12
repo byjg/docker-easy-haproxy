@@ -27,8 +27,6 @@ services:
   container:
     image: byjg/static-httpserver
     labels:
-      haproxy.definitions: "http,https"
-
       haproxy.http.redirect: host1.local--https://host1.local
       haproxy.http.host: host1.local
       haproxy.http.port: 80

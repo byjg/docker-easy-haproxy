@@ -26,8 +26,6 @@ services:
   container:
     image: byjg/static-httpserver
     labels:
-      easyhaproxy.definitions: "http,https"
-
       easyhaproxy.http.redirect: host1.local--https://host1.local
       easyhaproxy.http.host: host1.local
       easyhaproxy.http.port: 80

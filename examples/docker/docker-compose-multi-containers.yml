@@ -30,8 +30,6 @@ services:
     deploy:
       replicas: 2
     labels:
-      easyhaproxy.definitions: "http"
-
       easyhaproxy.http.redirect: google.helloworld.com--www.google.com
       easyhaproxy.http.host: www.helloworld.com
       easyhaproxy.http.port: 19901

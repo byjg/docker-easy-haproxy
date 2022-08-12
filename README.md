@@ -83,16 +83,15 @@ Important: easyhaproxy needs to be in the same network of the containers or othe
 
 ### Tags to be attached in the Docker Container (Swarm or Docker)
 
-| Tag                                | Description                                                                                             | Example      |
-|------------------------------------|---------------------------------------------------------------------------------------------------------|--------------|
-| easyhaproxy.definitions            | A Comma delimited list with the definitions. Each name requires the definition of the parameters below. | service,service2   |
-| easyhaproxy.[definition].mode      | (Optional) Is this `http` or `tcp` mode in HAProxy. (Defaults to http)                                  | http  |
-| easyhaproxy.[definition].port      | (Optional) What is the port that the HAProxy will listen to. (Defaults to 80)                           | 80           |
-| easyhaproxy.[definition].localport | (Optional) What is the port that the container is listening. (Defaults to 80)                           | 8080         |
-| easyhaproxy.[definition].host      | What is the host that the HAProxy will listen to.                                                       | somehost.com |
-| easyhaproxy.[definition].redirect  | (Optional) Host redirects from connections in the port defined above.                                   | foo.com--https://bla.com,bar.com--https://bar.org |
-| easyhaproxy.[definition].sslcert   | (Optional) Cert PEM Base64 encoded.                                                                     |              |
-| easyhaproxy.[definition].health-check | (Optional) `ssl`, enable health check via SSL in `mode tcp` (Defaults to "empty")                 |              |
+| Tag                                   | Description                                                                                             | Example      |
+|---------------------------------------|---------------------------------------------------------------------------------------------------------|--------------|
+| easyhaproxy.[definition].mode         | (Optional) Is this `http` or `tcp` mode in HAProxy. (Defaults to http)                                  | http         |
+| easyhaproxy.[definition].port         | (Optional) What is the port that the HAProxy will listen to. (Defaults to 80)                           | 80           |
+| easyhaproxy.[definition].localport.   | (Optional) What is the port that the container is listening. (Defaults to 80)                           | 8080         |
+| easyhaproxy.[definition].host         | What is the host that the HAProxy will listen to.                                                       | somehost.com |
+| easyhaproxy.[definition].redirect     | (Optional) Host redirects from connections in the port defined above.                                   | foo.com--https://bla.com,bar.com--https://bar.org |
+| easyhaproxy.[definition].sslcert      | (Optional) Cert PEM Base64 encoded.                                                                     |              |
+| easyhaproxy.[definition].health-check | (Optional) `ssl`, enable health check via SSL in `mode tcp` (Defaults to "empty")                       |              |
 
 ### Defining the labels in Docker Swarm
 
@@ -103,7 +102,8 @@ services:
  foo:
    deploy:
       labels:
-         easyhaproxy.definitions: "service1,service2"
+         easyhaproxy.my.host: "www.example.org"
+         easyhaproxy.my.localport: 8080
          ...
 ```
 
@@ -112,7 +112,6 @@ services:
 
 ```bash
 docker run \
-    -l easyhaproxy.definitions=webapi \
     -l easyhaproxy.webapi.port=80\
     -l easyhaproxy.webapi.host=byjg.com.br \
     ....
@@ -122,8 +121,6 @@ docker run \
 
 ```bash
 docker run \
-    -l easyhaproxy.definitions=express,admin \
-
     -l easyhaproxy.express.port=80 \
     -l easyhaproxy.express.localport=3000 \
     -l easyhaproxy.express.host=express.byjg.com.br \
