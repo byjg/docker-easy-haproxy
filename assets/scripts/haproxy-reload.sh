@@ -4,7 +4,7 @@ cd /scripts
 
 RELOAD="true"
 
-if [[ "$DISCOVER" == "static" ]]; then
+if [[ "$EASYHAPROXY_DISCOVER" == "static" ]]; then
     CONTROL_FILE="/etc/haproxy/haproxy.cfg"
     touch ${CONTROL_FILE}
     cp ${CONTROL_FILE} ${CONTROL_FILE}.old
@@ -15,7 +15,7 @@ else
     mv ${CONTROL_FILE} ${CONTROL_FILE}.old
     touch ${CONTROL_FILE}
 
-    if [[ "$DISCOVER" == "docker" ]]; then
+    if [[ "$EASYHAPROXY_DISCOVER" == "docker" ]]; then
         CONTAINERS=$(docker ps -q)
         LABEL_PATH=".Config.Labels"
 

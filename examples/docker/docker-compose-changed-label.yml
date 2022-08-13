@@ -12,8 +12,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      DISCOVER: docker
-      LOOKUP_LABEL: haproxy
+      EASYHAPROXY_DISCOVER: docker
+      EASYHAPROXY_LABEL_PREFIX: haproxy
       HAPROXY_CUSTOMERRORS: "true"
       HAPROXY_USERNAME: admin
       HAPROXY_PASSWORD: password

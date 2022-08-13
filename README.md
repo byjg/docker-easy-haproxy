@@ -24,7 +24,7 @@ The basic command line to run is:
 docker run -d \
     --name easy-haproxy-container \
     -v /var/run/docker.sock:/var/run/docker.sock \
-    -e DISCOVER="swarm|docker|static" \
+    -e EASYHAPROXY_DISCOVER="swarm|docker|static" \
     # + Environment Variables \
     # + ports mapped to the host \
     byjg/easy-haproxy
@@ -34,18 +34,18 @@ The mapping to `/var/run/docker.sock` is necessary to discover the docker contai
 
 The environment variables will setup the HAProxy.
 
-| Environment Variable | Description                                                                   |
-|----------------------|-------------------------------------------------------------------------------|
-| DISCOVER             | How `haproxy.cfg` will be created: `static`, `docker` or `swarm`              |
-| LOOKUP_LABEL         | (Optional) The key will search to match resources. Default: `easyhaproxy`.     |
-| HAPROXY_USERNAME     | (Optional) The HAProxy username to the statistics. Default: `admin`           |
-| HAPROXY_PASSWORD     | The HAProxy password to the statistics. If not set disable stats.             |
-| HAPROXY_STATS_PORT   | (Optional) The HAProxy port to the statistics. Default: `1936`                |
-| HAPROXY_CUSTOMERRORS | (Optional) If HAProxy will use custom HTML errors. true/false. Default: false |
+| Environment Variable     | Description                                                                   |
+|--------------------------|-------------------------------------------------------------------------------|
+| EASYHAPROXY_DISCOVER     | How `haproxy.cfg` will be created: `static`, `docker` or `swarm`              |
+| EASYHAPROXY_LABEL_PREFIX | (Optional) The key will search to match resources. Default: `easyhaproxy`.    |
+| HAPROXY_USERNAME         | (Optional) The HAProxy username to the statistics. Default: `admin`           |
+| HAPROXY_PASSWORD         | The HAProxy password to the statistics. If not set disable stats.             |
+| HAPROXY_STATS_PORT       | (Optional) The HAProxy port to the statistics. Default: `1936`                |
+| HAPROXY_CUSTOMERRORS.    | (Optional) If HAProxy will use custom HTML errors. true/false. Default: false |
 
 
 
-The environment variable `DISCOVER` will define where is located your containers (see below more details):
+The environment variable `EASYHAPROXY_DISCOVER` will define where is located your containers (see below more details):
 - docker
 - swarm
 - static
@@ -54,7 +54,7 @@ The environment variable `DISCOVER` will define where is located your containers
 
 Easy HAProxy can discover automatically the container services running in the same network of Docker or in a Docker Swarm cluster. 
 
-### DISCOVER: docker
+### EASYHAPROXY_DISCOVER: docker
 
 This method will use a regular docker installation to discover the containers and configure the HAProxy.
 
@@ -72,7 +72,7 @@ docker run --network easyhaproxy byjg/easyhaproxy
 docker run --network easyhaproxy myimage
 ```
 
-### DISCOVER: swarm
+### EASYHAPROXY_DISCOVER: swarm
 
 This method requires a functional Docker Swarm Cluster. The system will search for the labels in all containers on all
 swarm nodes.
@@ -138,7 +138,6 @@ Used to pass on SSL-termination to a backend:
 
 ```bash
 docker run \
-    -l easyhaproxy.defintions=example \
     -l easyhaproxy.example.mode=tcp \
     -l easyhaproxy.example.health-check=ssl \
     -l easyhaproxy.example.port=443
@@ -155,7 +154,7 @@ docker run \
     -l easyhaproxy.[definition].redirect=www.byjg.com.br--http://byjg.com.br,byjg.com--http://byjg.com.br
 ```
 
-## DISCOVER: static
+## EASYHAPROXY_DISCOVER: static
 
 This method expects a YAML file to setup the `haproxy.cfg`
 

@@ -1,3 +1,6 @@
+# To test:
+# curl -k -H "Host: host1.local" https://127.0.0.1/
+
 version: "3"
 
 services:
@@ -8,7 +11,7 @@ services:
       - ./host1.local.pem:/etc/certs/host1.local.pem
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      DISCOVER: static
+      EASYHAPROXY_DISCOVER: static
     ports:
       - "80:80/tcp"
       - "443:443/tcp"
