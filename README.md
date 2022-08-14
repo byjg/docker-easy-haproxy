@@ -3,8 +3,8 @@
 [![Opensource ByJG](https://img.shields.io/badge/opensource-byjg-success.svg)](http://opensource.byjg.com)
 [![Build Status](https://github.com/byjg/docker-easy-haproxy/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/byjg/docker-easy-haproxy/actions/workflows/build.yml)
 [![GitHub source](https://img.shields.io/badge/Github-source-informational?logo=github)](https://github.com/byjg/docker-easy-haproxy/)
-[![GitHub license](https://img.shields.io/github/license/byjg/uri.svg)](https://opensource.byjg.com/opensource/licensing.html)
-[![GitHub release](https://img.shields.io/github/release/byjg/uri.svg)](https://github.com/byjg/docker-easy-haproxy/releases/)
+[![GitHub license](https://img.shields.io/github/license/byjg/docker-easy-haproxy.svg)](https://opensource.byjg.com/opensource/licensing.html)
+[![GitHub release](https://img.shields.io/github/release/byjg/docker-easy-haproxy.svg)](https://github.com/byjg/docker-easy-haproxy/releases/)
 
 Service discovery for HAProxy.
 
