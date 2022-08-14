@@ -3,11 +3,14 @@ import hashlib
 from jinja2 import Environment, FileSystemLoader
 import json
 import os
+import re
 
 class DockerLabelHandler:
     def __init__(self, label):
         self.__label_base = label
 
+    def get_lookup_label(self):
+        return self.__label_base
 
     def create(self, key):
         if isinstance(key, str):
@@ -41,10 +44,10 @@ class HaproxyConfigGenerator:
         os.makedirs(self.ssl_cert_folder, exist_ok=True)
 
 
-    def generate(self, lineList = []):
+    def generate(self, line_list = []):
         # static?
-        if len(lineList) > 0:
-            self.mapping["easymapping"] = self.__parse(lineList)
+        if len(line_list) > 0:
+            self.mapping["easymapping"] = self.parse(line_list)
         else:
             for d in self.mapping["easymapping"]:
                 for name, hosts in d.get('hosts', {}).items():
@@ -63,42 +66,49 @@ class HaproxyConfigGenerator:
         return template.render(data=self.mapping)
 
 
-    def __parse(self, lineList):
+    def parse(self, line_list):
         easymapping = dict()
 
-        for line in lineList:
+        for line in line_list:
             line = line.strip()
             i = line.find("=")
             container = line[:i]
-            jsonStr = line[i+1:]
-            d = json.loads(jsonStr)
+            json_str = line[i+1:]
+            d = json.loads(json_str)
 
-            if self.label.create("definitions") not in d.keys():
+            # Extract the definitions dynamically
+            definitions = {}
+            r = re.compile(self.label.get_lookup_label() + r"\.(.*)\..*")
+            for key in d.keys():
+                if r.match(key):
+                    definitions[r.search(key).group(1)] = 1
+
+            if len(definitions.keys()) == 0:
                 continue
 
             self.label.set_data(d)
 
-            definitions = d[self.label.create("definitions")].split(",")
-            for definition in definitions:
+            # Parse each definition found. 
+            for definition in definitions.keys():
                 mode = self.label.get(
-                    self.label.create(["mode", definition]),
+                    self.label.create([definition, "mode"]),
                     "http"
                 )
 
                 # TODO: we can ignore "host" in TCP, but it would break the template
-                host_label = self.label.create(["host", definition])
+                host_label = self.label.create([definition, "host"])
                 if not self.label.has_label(host_label):
                     continue
 
                 port = self.label.get(
-                    self.label.create(["port", definition]),
+                    self.label.create([definition, "port"]),
                     "80"
                 )
 
                 hash = ""
-                if self.label.create(["sslcert", definition]) in d:
+                if self.label.create([definition, "sslcert"]) in d:
                     hash = hashlib.md5(
-                        d[self.label.create(["sslcert", definition])].encode('utf-8')
+                        d[self.label.create([definition, "sslcert"])].encode('utf-8')
                     ).hexdigest()
 
                 key = port if not hash else port + "_" + hash
@@ -114,12 +124,12 @@ class HaproxyConfigGenerator:
 
                 # TODO: this could use `EXPOSE` from `Dockerfile`?
                 ct_port = self.label.get(
-                    self.label.create(["localport", definition]),
+                    self.label.create([definition, "localport"]),
                     "80"
                 )
 
                 easymapping[key]["health-check"] = self.label.get(
-                    self.label.create(["health-check", definition]),
+                    self.label.create([definition, "health-check"]),
                     ""
                 )
 
@@ -127,7 +137,7 @@ class HaproxyConfigGenerator:
                 easymapping[key]["hosts"][d[host_label]] += ["{}:{}".format(container, ct_port)]
 
                 # handle SSL
-                ssl_label = self.label.create(["sslcert", definition])
+                ssl_label = self.label.create([definition, "sslcert"])
                 if self.label.has_label(ssl_label):
                     self.ssl_cert_increment += 1
                     filename = "{}/{}.{}.pem".format(
@@ -141,7 +151,7 @@ class HaproxyConfigGenerator:
 
                 # handle redirects
                 redirect = self.label.get(
-                    self.label.create(["redirect", definition])
+                    self.label.create([definition, "redirect"])
                 )
                 if len(redirect) > 0:
                     for r in redirect.split(","):

@@ -15,7 +15,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      DISCOVER: docker
+      EASYHAPROXY_DISCOVER: docker
       HAPROXY_CUSTOMERRORS: "true"
       HAPROXY_USERNAME: admin
       HAPROXY_PASSWORD: password
@@ -30,10 +30,8 @@ services:
     deploy:
       replicas: 2
     labels:
-      easyhaproxy.definitions: "http"
-
-      easyhaproxy.redirect.http: google.helloworld.com--www.google.com
-      easyhaproxy.host.http: www.helloworld.com
-      easyhaproxy.port.http: 19901
-      easyhaproxy.localport.http: 80
+      easyhaproxy.http.redirect: google.helloworld.com--www.google.com
+      easyhaproxy.http.host: www.helloworld.com
+      easyhaproxy.http.port: 19901
+      easyhaproxy.http.localport: 80
 
