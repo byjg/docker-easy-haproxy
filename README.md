@@ -2,6 +2,11 @@
 
 [![Opensource ByJG](https://img.shields.io/badge/opensource-byjg-success.svg)](http://opensource.byjg.com)
 [![Build Status](https://github.com/byjg/docker-easy-haproxy/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/byjg/docker-easy-haproxy/actions/workflows/build.yml)
+[![GitHub source](https://img.shields.io/badge/Github-source-informational?logo=github)](https://github.com/byjg/docker-easy-haproxy/)
+[![GitHub license](https://img.shields.io/github/license/byjg/uri.svg)](https://opensource.byjg.com/opensource/licensing.html)
+[![GitHub release](https://img.shields.io/github/release/byjg/uri.svg)](https://github.com/byjg/docker-easy-haproxy/releases/)
+
+Service discovery for HAProxy.
 
 This Docker image will create dynamically the `haproxy.cfg` based on the labels defined in docker containers or from
 a simple Yaml instead docker
@@ -12,7 +17,6 @@ a simple Yaml instead docker
 - Discover and setup haproxy from Docker Tag
 - Discover and setup haproxy redirect from Docker Tag
 - Setup HAProxy CFG from a Yaml file.
-
 
 ## Basic Usage
 
@@ -43,9 +47,8 @@ The environment variables will setup the HAProxy.
 | HAPROXY_STATS_PORT       | (Optional) The HAProxy port to the statistics. Default: `1936`                |
 | HAPROXY_CUSTOMERRORS.    | (Optional) If HAProxy will use custom HTML errors. true/false. Default: false |
 
-
-
 The environment variable `EASYHAPROXY_DISCOVER` will define where is located your containers (see below more details):
+
 - docker
 - swarm
 - static
@@ -107,8 +110,7 @@ services:
          ...
 ```
 
-
-### Single Definition:
+### Single Definition
 
 ```bash
 docker run \
@@ -117,7 +119,7 @@ docker run \
     ....
 ```
 
-### Multiples Definitions on the same container:
+### Multiples Definitions on the same container
 
 ```bash
 docker run \
@@ -134,7 +136,7 @@ docker run \
 
 ### TLS passthrough
 
-Used to pass on SSL-termination to a backend:
+Used to pass on SSL-termination to a backend. Alternatively, you can enable health-check via SSL on the backend with the optional `health-check` label:
 
 ```bash
 docker run \
@@ -145,9 +147,7 @@ docker run \
     some/tcp-service
 ```
 
- - enable health-check via SSL on the backend with the optional `health-check` label
-
-### Redirect Example:
+### Redirect Example
 
 ```bash
 docker run \
@@ -203,7 +203,6 @@ docker run \
     -d byjg/easy-haproxy
 ```
 
-
 ## Handling SSL
 
 You can attach a valid SSL certificate to the request.
@@ -241,10 +240,10 @@ where ERROR_NUMBER is the http error code (e.g. 503.http)
 
 ## Build
 
-```
+
+```bash
 docker build -t byjg/easy-haproxy .
 ```
-
 
 ----
 [Open source ByJG](http://opensource.byjg.com)
