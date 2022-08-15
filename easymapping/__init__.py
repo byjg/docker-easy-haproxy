@@ -148,7 +148,7 @@ class HaproxyConfigGenerator:
                         }
                     easymapping["443"]["hosts"][d[host_label]] = dict(easymapping[port]["hosts"][d[host_label]])
                     easymapping["443"]["hosts"][d[host_label]]["letsencrypt"] = False
-
+                    easymapping["443"]["ssl_cert"] = "/etc/haproxy/certs"
                     
 
                 # handle SSL

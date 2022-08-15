@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-@todo
-
 mkdir -p /var/log/letsencrypt
 ln -sf /dev/stdout  /var/log/letsencrypt/letsencrypt.log
 
