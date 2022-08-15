@@ -2,6 +2,7 @@
 
 # Semaphore
 if [ -f /tmp/certbot-lock ]; then
+    echo "[CERTBOT_JOB] Another process is running"
     exit 0
 fi
 
@@ -25,6 +26,7 @@ for domain in $(cat /scripts/letsencrypt_hosts.txt); do
 done
 
 if [ -n "$REQUEST_CERTS" ]; then
+    echo "[CERTBOT_JOB] Requesting certificates for $REQUEST_CERTS"
     certbot certonly \
         --standalone \
         --preferred-challenges http \
@@ -39,6 +41,7 @@ if [ -n "$REQUEST_CERTS" ]; then
 fi
 
 if [ -n "$RENEW_CERTS" ]; then
+    echo "[CERTBOT_JOB] Resquesting renew certificated fort $RENEW_CERTS"
     certbot renew --post-hook "/scripts/certbot_to_haproxy.sh"
 fi
 
