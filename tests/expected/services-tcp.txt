@@ -11,14 +11,14 @@ defaults
     timeout server    10m
 
 
-frontend tcp_in_31339_1
+frontend tcp_in_31339
     bind *:31339
     mode tcp
     option tcplog
     log global
-    default_backend srv_agent_quantum_local_31339_1
+    default_backend srv_agent_quantum_local_31339
 
-backend srv_agent_quantum_local_31339_1
+backend srv_agent_quantum_local_31339
     balance roundrobin
     mode tcp
     option tcp-check
@@ -26,4 +26,5 @@ backend srv_agent_quantum_local_31339_1
     server srv-0 test_agent:9001 check weight 1 verify none
 
 backend letsencrypt_backend
+    mode http
     server certbot 127.0.0.1:2080

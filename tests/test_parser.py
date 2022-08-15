@@ -19,7 +19,7 @@ def test_parser_doesnt_crash():
         "customerrors": False
     }
 
-    cfg = easymapping.HaproxyConfigGenerator(result, "/tmp")
+    cfg = easymapping.HaproxyConfigGenerator(result, "/tmp/certs")
     haproxy_config = cfg.generate(line_list)
 
     assert len(haproxy_config) > 0
@@ -35,11 +35,11 @@ def test_parser_finds_services():
         "customerrors": False
     }
 
-    cert_file = "/tmp/www.somehost.com.br.1.pem"
+    cert_file = "/tmp/certs/www.somehost.com.br.pem"
     if os.path.exists(cert_file):
         os.remove(cert_file)
 
-    cfg = easymapping.HaproxyConfigGenerator(result, "/tmp")
+    cfg = easymapping.HaproxyConfigGenerator(result, "/tmp/certs")
     haproxy_config = cfg.generate(line_list)
 
     assert len(haproxy_config) > 0
@@ -60,11 +60,11 @@ def test_parser_finds_services_changed_label():
         "lookup_label": "haproxy"
     }
 
-    cert_file = "/tmp/www.somehost.com.br.1.pem"
+    cert_file = "/tmp/certs/www.somehost.com.br.pem"
     if os.path.exists(cert_file):
         os.remove(cert_file)
 
-    cfg = easymapping.HaproxyConfigGenerator(result, "/tmp")
+    cfg = easymapping.HaproxyConfigGenerator(result, "/tmp/certs")
     haproxy_config = cfg.generate(line_list)
 
     assert len(haproxy_config) > 0
@@ -84,11 +84,11 @@ def test_parser_finds_services_raw():
         "customerrors": False
     }
 
-    cert_file = "/tmp/www.somehost.com.br.1.pem"
+    cert_file = "/tmp/certs/www.somehost.com.br.pem"
     if os.path.exists(cert_file):
         os.remove(cert_file)
 
-    cfg = easymapping.HaproxyConfigGenerator(result, "/tmp")
+    cfg = easymapping.HaproxyConfigGenerator(result, "/tmp/certs")
 
     parsed_object = [
         {
@@ -132,6 +132,33 @@ def test_parser_finds_services_raw():
         {
             "mode":"http",
             "health-check":"",
+            "port":"443",
+            "hosts":{
+                "node-exporter.quantum.example.org": {
+                    "containers": [
+                        "my-stack_node-exporter:9100"
+                    ],
+                    "letsencrypt": False
+                },
+                "www.somehost.com.br":{
+                    "containers": [
+                        "some-service:80"
+                    ],
+                    "letsencrypt": False
+                }
+            },
+            "redirect":{
+                "somehost.com.br":"https://www.somehost.com.br",
+                "somehost.com":"https://www.somehost.com.br",
+                "www.somehost.com":"https://www.somehost.com.br",
+                "byjg.ca":"https://www.somehost.com.br",
+                "www.byjg.ca":"https://www.somehost.com.br"
+            },
+            "ssl_cert":"/tmp/certs/www.somehost.com.br.pem"
+        },
+        {
+            "mode":"http",
+            "health-check":"",
             "port":"80",
             "hosts":{
                 "www.somehost.com.br":{
@@ -148,27 +175,6 @@ def test_parser_finds_services_raw():
                 "byjg.ca":"https://www.somehost.com.br",
                 "www.byjg.ca":"https://www.somehost.com.br"
             }
-        },
-        {
-            "mode":"http",
-            "health-check":"",
-            "port":"443",
-            "hosts":{
-                "www.somehost.com.br":{
-                    "containers": [
-                        "some-service:80"
-                    ],
-                    "letsencrypt": False
-                }
-            },
-            "redirect":{
-                "somehost.com.br":"https://www.somehost.com.br",
-                "somehost.com":"https://www.somehost.com.br",
-                "www.somehost.com":"https://www.somehost.com.br",
-                "byjg.ca":"https://www.somehost.com.br",
-                "www.byjg.ca":"https://www.somehost.com.br"
-            },
-            "ssl_cert":"/tmp/www.somehost.com.br.1.pem"
         }
     ]
 
@@ -184,7 +190,7 @@ def test_parser_static():
     with open(path + "/fixtures/static.yml", 'r') as content_file:
         parsed = yaml.load(content_file.read(), Loader=yaml.FullLoader)
 
-    cfg = easymapping.HaproxyConfigGenerator(parsed, "/tmp")
+    cfg = easymapping.HaproxyConfigGenerator(parsed, "/tmp/certs")
     haproxy_config = cfg.generate()
     assert len(haproxy_config) > 0
 
@@ -259,7 +265,7 @@ def test_parser_tcp():
         "customerrors": False
     }
 
-    cfg = easymapping.HaproxyConfigGenerator(result, "/tmp")
+    cfg = easymapping.HaproxyConfigGenerator(result, "/tmp/certs")
     haproxy_config = cfg.generate(line_list)
     # print(haproxy_config)
 
@@ -276,7 +282,7 @@ def test_parser_multi_containers():
         "customerrors": False
     }
 
-    cfg = easymapping.HaproxyConfigGenerator(result, "/tmp")
+    cfg = easymapping.HaproxyConfigGenerator(result, "/tmp/certs")
     haproxy_config = cfg.generate(line_list)
 
     assert len(haproxy_config) > 0

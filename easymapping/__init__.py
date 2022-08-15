@@ -42,11 +42,10 @@ class DockerLabelHandler:
 
 
 class HaproxyConfigGenerator:
-    def __init__(self, mapping, ssl_cert_folder="/etc/haproxy/certs"):
+    def __init__(self, mapping, ssl_cert_folder="/etc/haproxy/certs/discover"):
         self.mapping = mapping
         self.label = DockerLabelHandler(mapping['lookup_label'] if 'lookup_label' in mapping else "easyhaproxy")
         self.ssl_cert_folder = ssl_cert_folder
-        self.ssl_cert_increment = 0
         self.letsencrypt_hosts = []
         os.makedirs(self.ssl_cert_folder, exist_ok=True)
 
@@ -112,16 +111,8 @@ class HaproxyConfigGenerator:
                 )
                 self.letsencrypt_hosts.append(d[host_label]) if letsencrypt and d[host_label] not in self.letsencrypt_hosts else self.letsencrypt_hosts
 
-                hash = ""
-                if self.label.create([definition, "sslcert"]) in d:
-                    hash = hashlib.md5(
-                        d[self.label.create([definition, "sslcert"])].encode('utf-8')
-                    ).hexdigest()
-
-                key = port if not hash else port + "_" + hash
-
-                if key not in easymapping:
-                    easymapping[key] = {
+                if port not in easymapping:
+                    easymapping[port] = {
                         "mode": mode,
                         "health-check": "",
                         "port": port,
@@ -135,25 +126,38 @@ class HaproxyConfigGenerator:
                     "80"
                 )
 
-                easymapping[key]["health-check"] = self.label.get(
+                easymapping[port]["health-check"] = self.label.get(
                     self.label.create([definition, "health-check"]),
                     ""
                 )
 
-                easymapping[key]["hosts"].setdefault(d[host_label], {})
-                easymapping[key]["hosts"][d[host_label]].setdefault("containers", [])
-                easymapping[key]["hosts"][d[host_label]].setdefault("letsencrypt", False)
-                easymapping[key]["hosts"][d[host_label]]["containers"] += ["{}:{}".format(container, ct_port)]
-                easymapping[key]["hosts"][d[host_label]]["letsencrypt"] = letsencrypt
+                easymapping[port]["hosts"].setdefault(d[host_label], {})
+                easymapping[port]["hosts"][d[host_label]].setdefault("containers", [])
+                easymapping[port]["hosts"][d[host_label]].setdefault("letsencrypt", False)
+                easymapping[port]["hosts"][d[host_label]]["containers"] += ["{}:{}".format(container, ct_port)]
+                easymapping[port]["hosts"][d[host_label]]["letsencrypt"] = letsencrypt
+
+                if letsencrypt:
+                    if "443" not in easymapping:
+                        easymapping["443"] = {
+                            "mode": "http",
+                            "health-check": "ssl",
+                            "port": "443",
+                            "hosts": dict(),
+                            "redirect": dict(),
+                        }
+                    easymapping["443"]["hosts"][d[host_label]] = dict(easymapping[port]["hosts"][d[host_label]])
+                    easymapping["443"]["hosts"][d[host_label]]["letsencrypt"] = False
+
+                    
 
                 # handle SSL
                 ssl_label = self.label.create([definition, "sslcert"])
                 if self.label.has_label(ssl_label):
-                    self.ssl_cert_increment += 1
-                    filename = "{}/{}.{}.pem".format(
-                        self.ssl_cert_folder, d[host_label], str(self.ssl_cert_increment)
+                    filename = "{}/{}.pem".format(
+                        self.ssl_cert_folder, d[host_label]
                     )
-                    easymapping[key]["ssl_cert"] = filename
+                    easymapping[port]["ssl_cert"] = filename
                     with open(filename, 'wb') as file:
                         file.write(
                             base64.b64decode(d[ssl_label])
@@ -166,6 +170,6 @@ class HaproxyConfigGenerator:
                 if len(redirect) > 0:
                     for r in redirect.split(","):
                         r_parts = r.split("--")
-                        easymapping[key]["redirect"][r_parts[0]] = r_parts[1]
+                        easymapping[port]["redirect"][r_parts[0]] = r_parts[1]
 
         return easymapping.values()

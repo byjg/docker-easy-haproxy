@@ -39,9 +39,8 @@ backend srv_stats
 {% endif %}
 {% for o in data["easymapping"] -%}
     {% set mode = o["mode"] or "http" %}
-    {% set salt = loop.index %}
 
-frontend {{ mode }}_in_{{ o["port"] }}_{{ salt }}
+frontend {{ mode }}_in_{{ o["port"] }}
     {% include "bind.j2" %}
     {% if mode == "http" %}
         {% include "frontend-mode-http.j2" %}
@@ -50,7 +49,7 @@ frontend {{ mode }}_in_{{ o["port"] }}_{{ salt }}
     {% endif %}
 
     {% for k in o["hosts"] -%}
-        {% set host = k.replace(".", "_") + "_{0}_{1}".format(o["port"], salt) %}
+        {% set host = k.replace(".", "_") + "_{0}".format(o["port"]) %}
 backend srv_{{ host }}
     balance roundrobin
     mode {{ mode }}
@@ -69,4 +68,5 @@ backend srv_{{ host }}
 {% endfor %}
 
 backend letsencrypt_backend
+    mode http
     server certbot 127.0.0.1:2080

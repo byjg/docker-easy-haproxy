@@ -11,42 +11,42 @@ defaults
     timeout server    10m
 
 
-frontend tcp_in_31339_1
+frontend tcp_in_31339
     bind *:31339
     mode tcp
     option tcplog
     log global
-    default_backend srv_agent_quantum_example_org_31339_1
+    default_backend srv_agent_quantum_example_org_31339
 
-backend srv_agent_quantum_example_org_31339_1
+backend srv_agent_quantum_example_org_31339
     balance roundrobin
     mode tcp
     option tcp-check
     tcp-check connect
     server srv-0 my-stack_agent:9001 check weight 1
 
-frontend http_in_31337_2
+frontend http_in_31337
     bind *:31337
     mode http
 
-    acl is_rule_cadvisor_quantum_example_org_31337_2_1 hdr(host) -i cadvisor.quantum.example.org
-    acl is_rule_cadvisor_quantum_example_org_31337_2_2 hdr(host) -i cadvisor.quantum.example.org:31337
-    use_backend srv_cadvisor_quantum_example_org_31337_2 if is_rule_cadvisor_quantum_example_org_31337_2_1 OR is_rule_cadvisor_quantum_example_org_31337_2_2
+    acl is_rule_cadvisor_quantum_example_org_31337_1 hdr(host) -i cadvisor.quantum.example.org
+    acl is_rule_cadvisor_quantum_example_org_31337_2 hdr(host) -i cadvisor.quantum.example.org:31337
+    use_backend srv_cadvisor_quantum_example_org_31337 if is_rule_cadvisor_quantum_example_org_31337_1 OR is_rule_cadvisor_quantum_example_org_31337_2
 
-    acl is_rule_node-exporter_quantum_example_org_31337_2_1 hdr(host) -i node-exporter.quantum.example.org
-    acl is_rule_node-exporter_quantum_example_org_31337_2_2 hdr(host) -i node-exporter.quantum.example.org:31337
-    acl is_letsencrypt_node-exporter_quantum_example_org_31337_2 path_beg /.well-known/acme-challenge/
-    use_backend letsencrypt_backend if is_letsencrypt_node-exporter_quantum_example_org_31337_2 is_rule_node-exporter_quantum_example_org_31337_2_1 OR is_letsencrypt_node-exporter_quantum_example_org_31337_2 is_rule_node-exporter_quantum_example_org_31337_2_2
-    use_backend srv_node-exporter_quantum_example_org_31337_2 if is_rule_node-exporter_quantum_example_org_31337_2_1 OR is_rule_node-exporter_quantum_example_org_31337_2_2
+    acl is_rule_node-exporter_quantum_example_org_31337_1 hdr(host) -i node-exporter.quantum.example.org
+    acl is_rule_node-exporter_quantum_example_org_31337_2 hdr(host) -i node-exporter.quantum.example.org:31337
+    acl is_letsencrypt_node-exporter_quantum_example_org_31337 path_beg /.well-known/acme-challenge/
+    use_backend letsencrypt_backend if is_letsencrypt_node-exporter_quantum_example_org_31337 is_rule_node-exporter_quantum_example_org_31337_1 OR is_letsencrypt_node-exporter_quantum_example_org_31337 is_rule_node-exporter_quantum_example_org_31337_2
+    use_backend srv_node-exporter_quantum_example_org_31337 if is_rule_node-exporter_quantum_example_org_31337_1 OR is_rule_node-exporter_quantum_example_org_31337_2
 
-backend srv_cadvisor_quantum_example_org_31337_2
+backend srv_cadvisor_quantum_example_org_31337
     balance roundrobin
     mode http
     option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
     server srv-0 my-stack_cadvisor:8080 check weight 1
-backend srv_node-exporter_quantum_example_org_31337_2
+backend srv_node-exporter_quantum_example_org_31337
     balance roundrobin
     mode http
     option forwardfor
@@ -54,7 +54,39 @@ backend srv_node-exporter_quantum_example_org_31337_2
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
     server srv-0 my-stack_node-exporter:9100 check weight 1
 
-frontend http_in_80_3
+frontend http_in_443
+    bind *:443  ssl crt /etc/haproxy/certs/discover/ crt /etc/haproxy/certs/
+    mode http
+    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i somehost.com.br }
+    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i somehost.com }
+    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i www.somehost.com }
+    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i byjg.ca }
+    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i www.byjg.ca }
+
+    acl is_rule_node-exporter_quantum_example_org_443_1 hdr(host) -i node-exporter.quantum.example.org
+    acl is_rule_node-exporter_quantum_example_org_443_2 hdr(host) -i node-exporter.quantum.example.org:443
+    use_backend srv_node-exporter_quantum_example_org_443 if is_rule_node-exporter_quantum_example_org_443_1 OR is_rule_node-exporter_quantum_example_org_443_2
+
+    acl is_rule_www_somehost_com_br_443_1 hdr(host) -i www.somehost.com.br
+    acl is_rule_www_somehost_com_br_443_2 hdr(host) -i www.somehost.com.br:443
+    use_backend srv_www_somehost_com_br_443 if is_rule_www_somehost_com_br_443_1 OR is_rule_www_somehost_com_br_443_2
+
+backend srv_node-exporter_quantum_example_org_443
+    balance roundrobin
+    mode http
+    option forwardfor
+    http-request set-header X-Forwarded-Port %[dst_port]
+    http-request add-header X-Forwarded-Proto https if { ssl_fc }
+    server srv-0 my-stack_node-exporter:9100 check weight 1
+backend srv_www_somehost_com_br_443
+    balance roundrobin
+    mode http
+    option forwardfor
+    http-request set-header X-Forwarded-Port %[dst_port]
+    http-request add-header X-Forwarded-Proto https if { ssl_fc }
+    server srv-0 some-service:80 check weight 1
+
+frontend http_in_80
     bind *:80
     mode http
     redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i somehost.com.br }
@@ -63,32 +95,11 @@ frontend http_in_80_3
     redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i byjg.ca }
     redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i www.byjg.ca }
 
-    acl is_rule_www_somehost_com_br_80_3_1 hdr(host) -i www.somehost.com.br
-    acl is_rule_www_somehost_com_br_80_3_2 hdr(host) -i www.somehost.com.br:80
-    use_backend srv_www_somehost_com_br_80_3 if is_rule_www_somehost_com_br_80_3_1 OR is_rule_www_somehost_com_br_80_3_2
+    acl is_rule_www_somehost_com_br_80_1 hdr(host) -i www.somehost.com.br
+    acl is_rule_www_somehost_com_br_80_2 hdr(host) -i www.somehost.com.br:80
+    use_backend srv_www_somehost_com_br_80 if is_rule_www_somehost_com_br_80_1 OR is_rule_www_somehost_com_br_80_2
 
-backend srv_www_somehost_com_br_80_3
-    balance roundrobin
-    mode http
-    option forwardfor
-    http-request set-header X-Forwarded-Port %[dst_port]
-    http-request add-header X-Forwarded-Proto https if { ssl_fc }
-    server srv-0 some-service:80 check weight 1
-
-frontend http_in_443_4
-    bind *:443  ssl crt /tmp/www.somehost.com.br.1.pem
-    mode http
-    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i somehost.com.br }
-    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i somehost.com }
-    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i www.somehost.com }
-    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i byjg.ca }
-    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i www.byjg.ca }
-
-    acl is_rule_www_somehost_com_br_443_4_1 hdr(host) -i www.somehost.com.br
-    acl is_rule_www_somehost_com_br_443_4_2 hdr(host) -i www.somehost.com.br:443
-    use_backend srv_www_somehost_com_br_443_4 if is_rule_www_somehost_com_br_443_4_1 OR is_rule_www_somehost_com_br_443_4_2
-
-backend srv_www_somehost_com_br_443_4
+backend srv_www_somehost_com_br_80
     balance roundrobin
     mode http
     option forwardfor
@@ -97,4 +108,5 @@ backend srv_www_somehost_com_br_443_4
     server srv-0 some-service:80 check weight 1
 
 backend letsencrypt_backend
+    mode http
     server certbot 127.0.0.1:2080
