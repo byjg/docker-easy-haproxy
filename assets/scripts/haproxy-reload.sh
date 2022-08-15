@@ -47,6 +47,14 @@ if [[ ! -z "$1" ]]; then
     RELOAD="false"
 fi
 
+/scripts/certbot.sh
+
+# If Certbot reloads successfully will create the file /tmp/force-reload
+if [ -f /tmp/force-reload ]; then
+    RELOAD="true"
+    rm /tmp/force-reload
+fi
+
 if [[ "$RELOAD" == "true" ]]; then
     echo "Reloading..."
     /usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid -x /var/run/haproxy.sock -sf $(cat /run/haproxy.pid) &

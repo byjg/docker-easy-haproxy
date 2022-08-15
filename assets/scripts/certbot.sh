@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+# Semaphore
+if [ -f /tmp/certbot-lock ]; then
+    exit 0
+fi
+
+touch /tmp/certbot-lock
+
 mkdir -p /var/log/letsencrypt
 ln -sf /dev/stdout  /var/log/letsencrypt/letsencrypt.log
 
@@ -34,3 +41,5 @@ fi
 if [ -n "$RENEW_CERTS" ]; then
     certbot renew --post-hook "/scripts/certbot_to_haproxy.sh"
 fi
+
+rm /tmp/certbot-lock
