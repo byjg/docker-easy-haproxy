@@ -62,8 +62,11 @@ backend srv_{{ host }}
     option tcp-check
     tcp-check connect{{ " ssl" if o["health-check"] == "ssl" }}
         {% endif %}
-        {% for c in o["hosts"][k] %}
+        {% for c in o["hosts"][k]["containers"] %}
     server srv-{{ loop.index0 }} {{ c }} check weight 1{{ " verify none" if o["health-check"] == "ssl" }}
         {% endfor %}
     {% endfor %}
 {% endfor %}
+
+backend letsencrypt_backend
+    server certbot 127.0.0.1:2080

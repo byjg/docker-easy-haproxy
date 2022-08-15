@@ -10,3 +10,6 @@ defaults
     timeout client    10s
     timeout server    10m
 
+
+backend letsencrypt_backend
+    server certbot 127.0.0.1:2080

@@ -14,4 +14,6 @@ easymapping:
   - port: 443
     ssl_cert: /etc/certs/host1.local.pem
     hosts:
-      host1.local: container:8080
+      host1.local:
+        containers:
+          - container:8080

@@ -27,3 +27,6 @@ backend srv_www_helloworld_com_19901_1
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
     server srv-0 test_nginx.2.t5r94mjlced7m3t5orfjbowmm:80 check weight 1
     server srv-1 test_nginx.1.p552hqxkdx88narjrp5kouwb2:80 check weight 1
+
+backend letsencrypt_backend
+    server certbot 127.0.0.1:2080

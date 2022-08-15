@@ -88,13 +88,14 @@ Important: easyhaproxy needs to be in the same network of the containers or othe
 
 | Tag                                   | Description                                                                                             | Example      |
 |---------------------------------------|---------------------------------------------------------------------------------------------------------|--------------|
+| easyhaproxy.[definition].host         | Host HAProxy is listening                                                                               | somehost.com |
 | easyhaproxy.[definition].mode         | (Optional) Is this `http` or `tcp` mode in HAProxy. (Defaults to http)                                  | http         |
-| easyhaproxy.[definition].port         | (Optional) What is the port that the HAProxy will listen to. (Defaults to 80)                           | 80           |
-| easyhaproxy.[definition].localport.   | (Optional) What is the port that the container is listening. (Defaults to 80)                           | 8080         |
-| easyhaproxy.[definition].host         | What is the host that the HAProxy will listen to.                                                       | somehost.com |
+| easyhaproxy.[definition].port         | (Optional) Port HAProxy will listen for the host. (Defaults to 80)                                      | 80           |
+| easyhaproxy.[definition].localport    | (Optional) Port container is listening. (Defaults to 80)                                                | 8080         |
 | easyhaproxy.[definition].redirect     | (Optional) Host redirects from connections in the port defined above.                                   | foo.com--https://bla.com,bar.com--https://bar.org |
-| easyhaproxy.[definition].sslcert      | (Optional) Cert PEM Base64 encoded.                                                                     |              |
+| easyhaproxy.[definition].sslcert      | (Optional) Cert PEM Base64 encoded. Do not use this if letsencrypt is enabled.                          |              |
 | easyhaproxy.[definition].health-check | (Optional) `ssl`, enable health check via SSL in `mode tcp` (Defaults to "empty")                       |              |
+| easyhaproxy.[definition].letsencrypt  | (Optional) Generate certificate with letsencrypt. Do not use with sslcert                               | true, yes    |
 
 ### Defining the labels in Docker Swarm
 
@@ -171,19 +172,28 @@ customerrors: true   # Optional (default false)
 easymapping:
   - port: 80
     hosts:
-      host1.com.br: container:5000
-      host2.com.br: other:3000
+      host1.com.br: 
+        containers:
+          - container:5000
+        letsencrypt: true
+      host2.com.br: 
+        containers:
+          - other:3000
     redirect:
       www.host1.com.br: http://host1.com.br
 
   - port: 443
     ssl_cert: /path/to/ssl/certificate
     hosts:
-      host1.com.br: container:80
+      host1.com.br: 
+        containers:
+          - container:80
 
   - port: 8080
     hosts:
-      host3.com.br: domain:8181
+      host3.com.br: 
+        containers: 
+          - domain:8181
 ```
 
 Running:

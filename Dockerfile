@@ -2,7 +2,7 @@ FROM alpine:3.16
 
 WORKDIR /scripts
 
-RUN apk add --no-cache haproxy bash python3 py3-pip py-yaml supervisor docker \
+RUN apk add --no-cache haproxy bash python3 py3-pip py-yaml supervisor docker certbot \
  && ln -s /usr/bin/python3 /usr/bin/python
 
 COPY requirements.txt /scripts

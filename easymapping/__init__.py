@@ -25,6 +25,12 @@ class DockerLabelHandler:
         return default_value
 
 
+    def get_bool(self, label, default_value = False):
+        if self.has_label(label):
+            return self.__data[label].lower() in ["True", "true", "1", "yes"]
+        return default_value
+
+
     def set_data(self, data):
         self.__data = data
 
@@ -41,21 +47,16 @@ class HaproxyConfigGenerator:
         self.label = DockerLabelHandler(mapping['lookup_label'] if 'lookup_label' in mapping else "easyhaproxy")
         self.ssl_cert_folder = ssl_cert_folder
         self.ssl_cert_increment = 0
+        self.letsencrypt_hosts = []
         os.makedirs(self.ssl_cert_folder, exist_ok=True)
 
 
     def generate(self, line_list = []):
+        self.mapping.setdefault("easymapping", [])
+        
         # static?
         if len(line_list) > 0:
             self.mapping["easymapping"] = self.parse(line_list)
-        else:
-            for d in self.mapping["easymapping"]:
-                for name, hosts in d.get('hosts', {}).items():
-                    if type(hosts) != list:
-                        d['hosts'][name] = [hosts]
-        # still 'None' -> default to [] for jinja2
-        if self.mapping["easymapping"] is None:
-            self.mapping["easymapping"] = []
 
         file_loader = FileSystemLoader('templates')
         env = Environment(loader=file_loader)
@@ -105,6 +106,12 @@ class HaproxyConfigGenerator:
                     "80"
                 )
 
+                letsencrypt = self.label.get_bool(
+                    self.label.create([definition, "letsencrypt"]),
+                    False
+                )
+                self.letsencrypt_hosts.append(d[host_label]) if letsencrypt and d[host_label] not in self.letsencrypt_hosts else self.letsencrypt_hosts
+
                 hash = ""
                 if self.label.create([definition, "sslcert"]) in d:
                     hash = hashlib.md5(
@@ -133,8 +140,11 @@ class HaproxyConfigGenerator:
                     ""
                 )
 
-                easymapping[key]["hosts"].setdefault(d[host_label], [])
-                easymapping[key]["hosts"][d[host_label]] += ["{}:{}".format(container, ct_port)]
+                easymapping[key]["hosts"].setdefault(d[host_label], {})
+                easymapping[key]["hosts"][d[host_label]].setdefault("containers", [])
+                easymapping[key]["hosts"][d[host_label]].setdefault("letsencrypt", False)
+                easymapping[key]["hosts"][d[host_label]]["containers"] += ["{}:{}".format(container, ct_port)]
+                easymapping[key]["hosts"][d[host_label]]["letsencrypt"] = letsencrypt
 
                 # handle SSL
                 ssl_label = self.label.create([definition, "sslcert"])

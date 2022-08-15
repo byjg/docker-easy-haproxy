@@ -8,16 +8,24 @@ customerrors: true   # Optional (default false)
 easymapping:
   - port: 80
     hosts:                                     
-      host1.com.br: container:5000
-      host2.com.br: other:3000
+      host1.com.br:
+        containers:
+          - container:5000
+        letsencrypt: true
+      host2.com.br:
+        containers: 
+          - other:3000
     redirect:
       www.host1.com.br: http://host1.com.br
       
   - port: 443
     ssl_cert: /etc/haproxy/certs/mycert.pem
     hosts:
-      host1.com.br: container:80
+      host1.com.br: 
+        containers: 
+          - container:80
 
   - port: 8080
     hosts:
-      host3.com.br: domain:8181
+      host3.com.br: 
+        containers: [ "domain:8181" ]
