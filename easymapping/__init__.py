@@ -30,6 +30,10 @@ class DockerLabelHandler:
             return self.__data[label].lower() in ["True", "true", "1", "yes"]
         return default_value
 
+    def get_json(self, label, default_value = {}):
+        if self.has_label(label):
+            return json.loads(self.__data[label])
+        return default_value
 
     def set_data(self, data):
         self.__data = data
@@ -165,12 +169,8 @@ class HaproxyConfigGenerator:
                         )
 
                 # handle redirects
-                redirect = self.label.get(
+                easymapping[port]["redirect"] = self.label.get_json(
                     self.label.create([definition, "redirect"])
                 )
-                if len(redirect) > 0:
-                    for r in redirect.split(","):
-                        r_parts = r.split("--")
-                        easymapping[port]["redirect"][r_parts[0]] = r_parts[1]
 
         return easymapping.values()
