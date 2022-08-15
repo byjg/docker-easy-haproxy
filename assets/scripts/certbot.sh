@@ -35,11 +35,12 @@ if [ -n "$REQUEST_CERTS" ]; then
         --non-interactive \
         --max-log-backups=0 \
         --post-hook "/scripts/certbot_to_haproxy.sh" \
-        $REQUEST_CERTS --email info@xpto.us 
+        $REQUEST_CERTS --email $EASYHAPROXY_LETSENCRYPT_EMAIL
 fi
 
 if [ -n "$RENEW_CERTS" ]; then
     certbot renew --post-hook "/scripts/certbot_to_haproxy.sh"
 fi
 
+# Release semaphore
 rm /tmp/certbot-lock

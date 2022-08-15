@@ -3,6 +3,9 @@ import pytest
 import os
 import yaml
 
+CERTS_FOLDER="/tmp/certs"
+CERT_FILE="/tmp/certs/www.somehost.com.br.pem"
+LETSENCRYPT_EMAIL="some@email.com"
 
 def load_fixture(file):
     path = os.path.dirname(os.path.realpath(__file__))
@@ -19,7 +22,7 @@ def test_parser_doesnt_crash():
         "customerrors": False
     }
 
-    cfg = easymapping.HaproxyConfigGenerator(result, "/tmp/certs")
+    cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
     haproxy_config = cfg.generate(line_list)
 
     assert len(haproxy_config) > 0
@@ -35,11 +38,11 @@ def test_parser_finds_services():
         "customerrors": False
     }
 
-    cert_file = "/tmp/certs/www.somehost.com.br.pem"
-    if os.path.exists(cert_file):
-        os.remove(cert_file)
+    if os.path.exists(CERT_FILE):
+        os.remove(CERT_FILE)
 
-    cfg = easymapping.HaproxyConfigGenerator(result, "/tmp/certs")
+    cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
+    cfg.letsencrypt_email = LETSENCRYPT_EMAIL
     haproxy_config = cfg.generate(line_list)
 
     assert len(haproxy_config) > 0
@@ -47,7 +50,7 @@ def test_parser_finds_services():
     with open(path + "/expected/services.txt", 'r') as expected_file:
         assert expected_file.read() == haproxy_config
 
-    with open(cert_file, 'r') as expected_file:
+    with open(CERT_FILE, 'r') as expected_file:
         assert expected_file.read() == "Some PEM Certificate"
 
     assert ['node-exporter.quantum.example.org'] == cfg.letsencrypt_hosts
@@ -60,11 +63,11 @@ def test_parser_finds_services_changed_label():
         "lookup_label": "haproxy"
     }
 
-    cert_file = "/tmp/certs/www.somehost.com.br.pem"
-    if os.path.exists(cert_file):
-        os.remove(cert_file)
+    if os.path.exists(CERT_FILE):
+        os.remove(CERT_FILE)
 
-    cfg = easymapping.HaproxyConfigGenerator(result, "/tmp/certs")
+    cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
+    cfg.letsencrypt_email = LETSENCRYPT_EMAIL
     haproxy_config = cfg.generate(line_list)
 
     assert len(haproxy_config) > 0
@@ -72,7 +75,7 @@ def test_parser_finds_services_changed_label():
     with open(path + "/expected/services.txt", 'r') as expected_file:
         assert expected_file.read() == haproxy_config
 
-    with open(cert_file, 'r') as expected_file:
+    with open(CERT_FILE, 'r') as expected_file:
         assert expected_file.read() == "Some PEM Certificate"
 
     assert ['node-exporter.quantum.example.org'] == cfg.letsencrypt_hosts
@@ -84,11 +87,11 @@ def test_parser_finds_services_raw():
         "customerrors": False
     }
 
-    cert_file = "/tmp/certs/www.somehost.com.br.pem"
-    if os.path.exists(cert_file):
-        os.remove(cert_file)
+    if os.path.exists(CERT_FILE):
+        os.remove(CERT_FILE)
 
-    cfg = easymapping.HaproxyConfigGenerator(result, "/tmp/certs")
+    cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
+    cfg.letsencrypt_email = LETSENCRYPT_EMAIL
 
     parsed_object = [
         {
@@ -154,7 +157,7 @@ def test_parser_finds_services_raw():
                 "byjg.ca":"https://www.somehost.com.br",
                 "www.byjg.ca":"https://www.somehost.com.br"
             },
-            "ssl_cert":"/tmp/certs/www.somehost.com.br.pem"
+            "ssl_cert":CERT_FILE
         },
         {
             "mode":"http",
@@ -190,7 +193,7 @@ def test_parser_static():
     with open(path + "/fixtures/static.yml", 'r') as content_file:
         parsed = yaml.load(content_file.read(), Loader=yaml.FullLoader)
 
-    cfg = easymapping.HaproxyConfigGenerator(parsed, "/tmp/certs")
+    cfg = easymapping.HaproxyConfigGenerator(parsed, CERTS_FOLDER)
     haproxy_config = cfg.generate()
     assert len(haproxy_config) > 0
 
@@ -265,7 +268,7 @@ def test_parser_tcp():
         "customerrors": False
     }
 
-    cfg = easymapping.HaproxyConfigGenerator(result, "/tmp/certs")
+    cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
     haproxy_config = cfg.generate(line_list)
     # print(haproxy_config)
 
@@ -282,7 +285,7 @@ def test_parser_multi_containers():
         "customerrors": False
     }
 
-    cfg = easymapping.HaproxyConfigGenerator(result, "/tmp/certs")
+    cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
     haproxy_config = cfg.generate(line_list)
 
     assert len(haproxy_config) > 0

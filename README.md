@@ -9,7 +9,7 @@
 Service discovery for HAProxy.
 
 This Docker image will create dynamically the `haproxy.cfg` based on the labels defined in docker containers or from
-a simple Yaml instead docker
+a simple Yaml.
 
 ## Features
 
@@ -38,14 +38,15 @@ The mapping to `/var/run/docker.sock` is necessary to discover the docker contai
 
 The environment variables will setup the HAProxy.
 
-| Environment Variable     | Description                                                                   |
-|--------------------------|-------------------------------------------------------------------------------|
-| EASYHAPROXY_DISCOVER     | How `haproxy.cfg` will be created: `static`, `docker` or `swarm`              |
-| EASYHAPROXY_LABEL_PREFIX | (Optional) The key will search to match resources. Default: `easyhaproxy`.    |
-| HAPROXY_USERNAME         | (Optional) The HAProxy username to the statistics. Default: `admin`           |
-| HAPROXY_PASSWORD         | The HAProxy password to the statistics. If not set disable stats.             |
-| HAPROXY_STATS_PORT       | (Optional) The HAProxy port to the statistics. Default: `1936`                |
-| HAPROXY_CUSTOMERRORS.    | (Optional) If HAProxy will use custom HTML errors. true/false. Default: false |
+| Environment Variable          | Description                                                                   |
+|-------------------------------|-------------------------------------------------------------------------------|
+| EASYHAPROXY_DISCOVER          | How `haproxy.cfg` will be created: `static`, `docker` or `swarm`              |
+| EASYHAPROXY_LABEL_PREFIX      | (Optional) The key will search to match resources. Default: `easyhaproxy`.    |
+[ EASYHAPROXY_LETSENCRYPT_EMAIL | (Optional) The email will be used to request certificate to letsencrypt       |      
+| HAPROXY_USERNAME              | (Optional) The HAProxy username to the statistics. Default: `admin`           |
+| HAPROXY_PASSWORD              | The HAProxy password to the statistics. If not set disable stats.             |
+| HAPROXY_STATS_PORT            | (Optional) The HAProxy port to the statistics. Default: `1936`                |
+| HAPROXY_CUSTOMERRORS.         | (Optional) If HAProxy will use custom HTML errors. true/false. Default: false |
 
 The environment variable `EASYHAPROXY_DISCOVER` will define where is located your containers (see below more details):
 
@@ -201,6 +202,38 @@ Running:
 ```bash
 docker run -v /my/config.yml:/etc/haproxy/easyconfig.yml .... byjg/easyhaproxy
 ```
+
+## Letsencrypt
+
+This HAProxy can issue a letsencrypt certificate. The command is as below:
+
+Run the EasyHAProxy:
+
+```bash
+docker run \
+    -e EASYHAPROXY_LETSENCRYPT_EMAIL=john@doe.com
+    .... \
+    byjg/easy-haproxy
+```
+
+Run your container:
+```bash
+docker run \
+    -l easyhaproxy.express.port=80 \
+    -l easyhaproxy.express.localport=3000 \
+    -l easyhaproxy.express.host=example.org \
+    -l easyhaproxy.express.letsencrypt=true \
+    .... \
+    some/myimage
+```
+
+Caveats:
+
+- Your container **must** listen to the port 80. Besides no error, the certificate won't be issued if in a different port.
+- The port 2080 is reserved for the certbot
+- You cannot set the port 443 for the container with the Letsencrypt. EasyHAProxy will handle this automatically once the certificate is issued. 
+- If you don't run the EasyHAProxy with the parameter `EASYHAPROXY_LETSENCRYPT_EMAIL` no certificate will be issued. 
+
 
 ## Mapping custom .cfg files
 
