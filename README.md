@@ -89,7 +89,7 @@ Important: easyhaproxy needs to be in the same network of the containers or othe
 
 | Tag                                   | Description                                                                                             | Example      |
 |---------------------------------------|---------------------------------------------------------------------------------------------------------|--------------|
-| easyhaproxy.[definition].host         | Host HAProxy is listening                                                                               | somehost.com |
+| easyhaproxy.[definition].host         | Host(s) HAProxy is listening. More than one host use comma as delimiter                                 | somehost.com OR host1.com,host2.com |
 | easyhaproxy.[definition].mode         | (Optional) Is this `http` or `tcp` mode in HAProxy. (Defaults to http)                                  | http         |
 | easyhaproxy.[definition].port         | (Optional) Port HAProxy will listen for the host. (Defaults to 80)                                      | 80           |
 | easyhaproxy.[definition].localport    | (Optional) Port container is listening. (Defaults to 80)                                                | 8080         |
