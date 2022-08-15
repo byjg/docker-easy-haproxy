@@ -11,7 +11,7 @@
     acl is_rule_{{ host }}_2 hdr(host) -i {{ k }}:{{ o["port"] }}
     {% if letsencrypt %}
     acl is_letsencrypt_{{ host }} path_beg /.well-known/acme-challenge/
-    use_backend letsencrypt_backend if (is_rule_{{ host }}_1 OR is_rule_{{ host }}_2) AND is_letsencrypt_{{ host }}
+    use_backend letsencrypt_backend if is_letsencrypt_{{ host }} is_rule_{{ host }}_1 OR is_letsencrypt_{{ host }} is_rule_{{ host }}_2
     {% endif %}
     use_backend srv_{{ host }} if is_rule_{{ host }}_1 OR is_rule_{{ host }}_2
     {% endfor %}

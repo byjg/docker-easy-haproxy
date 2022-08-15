@@ -42,7 +42,7 @@ frontend http_in_80_1
     acl is_rule_host1_com_br_80_1_1 hdr(host) -i host1.com.br
     acl is_rule_host1_com_br_80_1_2 hdr(host) -i host1.com.br:80
     acl is_letsencrypt_host1_com_br_80_1 path_beg /.well-known/acme-challenge/
-    use_backend letsencrypt_backend if (is_rule_host1_com_br_80_1_1 OR is_rule_host1_com_br_80_1_2) AND is_letsencrypt_host1_com_br_80_1
+    use_backend letsencrypt_backend if is_letsencrypt_host1_com_br_80_1 is_rule_host1_com_br_80_1_1 OR is_letsencrypt_host1_com_br_80_1 is_rule_host1_com_br_80_1_2
     use_backend srv_host1_com_br_80_1 if is_rule_host1_com_br_80_1_1 OR is_rule_host1_com_br_80_1_2
 
     acl is_rule_host2_com_br_80_1_1 hdr(host) -i host2.com.br

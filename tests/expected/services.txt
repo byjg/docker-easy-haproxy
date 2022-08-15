@@ -36,7 +36,7 @@ frontend http_in_31337_2
     acl is_rule_node-exporter_quantum_example_org_31337_2_1 hdr(host) -i node-exporter.quantum.example.org
     acl is_rule_node-exporter_quantum_example_org_31337_2_2 hdr(host) -i node-exporter.quantum.example.org:31337
     acl is_letsencrypt_node-exporter_quantum_example_org_31337_2 path_beg /.well-known/acme-challenge/
-    use_backend letsencrypt_backend if (is_rule_node-exporter_quantum_example_org_31337_2_1 OR is_rule_node-exporter_quantum_example_org_31337_2_2) AND is_letsencrypt_node-exporter_quantum_example_org_31337_2
+    use_backend letsencrypt_backend if is_letsencrypt_node-exporter_quantum_example_org_31337_2 is_rule_node-exporter_quantum_example_org_31337_2_1 OR is_letsencrypt_node-exporter_quantum_example_org_31337_2 is_rule_node-exporter_quantum_example_org_31337_2_2
     use_backend srv_node-exporter_quantum_example_org_31337_2 if is_rule_node-exporter_quantum_example_org_31337_2_1 OR is_rule_node-exporter_quantum_example_org_31337_2_2
 
 backend srv_cadvisor_quantum_example_org_31337_2
