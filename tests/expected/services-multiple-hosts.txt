@@ -20,7 +20,6 @@ defaults
     timeout connect    3s
     timeout client    10s
     timeout server    10m
-{% if data["customerrors"] %}
     errorfile 400 /etc/haproxy/errors-custom/400.http
     errorfile 403 /etc/haproxy/errors-custom/403.http
     errorfile 408 /etc/haproxy/errors-custom/408.http
@@ -28,17 +27,15 @@ defaults
     errorfile 502 /etc/haproxy/errors-custom/502.http
     errorfile 503 /etc/haproxy/errors-custom/503.http
     errorfile 504 /etc/haproxy/errors-custom/504.http
-{% endif %}
 
-{% if "stats" in data %}
 frontend stats
-    bind *:{{ data["stats"]["port"] | default(1936) }}
+    bind *:1937
     mode http
     stats enable
     stats hide-version
     stats realm Haproxy\ Statistics
     stats uri /
-    stats auth {{ data["stats"]["username"] }}:{{ data["stats"]["password"] }}
+    stats auth joe:s3cr3t
 #    acl is_proxystats hdr(host) -i some.host.com
 #    default_backend srv_stats
 #    use_backend srv_stats if is_proxystats
@@ -46,37 +43,37 @@ frontend stats
 
 backend srv_stats
     mode http
-    server Local 127.0.0.1:{{ data["stats"]["port"] | default(1936) }}
-{% endif %}
-{% for o in data["easymapping"] -%}
-    {% set mode = o["mode"] or "http" %}
+    server Local 127.0.0.1:1937
 
-frontend {{ mode }}_in_{{ o["port"] }}
-    {% include "bind.j2" %}
-    {% if mode == "http" %}
-        {% include "frontend-mode-http.j2" %}
-    {% else %}
-        {% include "frontend-mode-tcp.j2" %}
-    {% endif %}
+frontend http_in_19901
+    bind *:19901
+    mode http
+    redirect prefix www.google.com code 301 if { hdr(host) -i google.helloworld.com }
 
-    {% for k in o["hosts"] -%}
-        {% set host = k.replace(".", "_") + "_{0}".format(o["port"]) %}
-backend srv_{{ host }}
+    acl is_rule_hello_com_19901_1 hdr(host) -i hello.com
+    acl is_rule_hello_com_19901_2 hdr(host) -i hello.com:19901
+    use_backend srv_hello_com_19901 if is_rule_hello_com_19901_1 OR is_rule_hello_com_19901_2
+
+    acl is_rule_www_helloworld_com_19901_1 hdr(host) -i www.helloworld.com
+    acl is_rule_www_helloworld_com_19901_2 hdr(host) -i www.helloworld.com:19901
+    use_backend srv_www_helloworld_com_19901 if is_rule_www_helloworld_com_19901_1 OR is_rule_www_helloworld_com_19901_2
+
+backend srv_hello_com_19901
     balance roundrobin
-    mode {{ mode }}
-        {% if mode == "http" %}
+    mode http
     option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
-        {% elif mode == "tcp" %}
-    option tcp-check
-    tcp-check connect{{ " ssl" if o["health-check"] == "ssl" }}
-        {% endif %}
-        {% for c in o["hosts"][k]["containers"] %}
-    server srv-{{ loop.index0 }} {{ c }} check weight 1{{ " verify none" if o["health-check"] == "ssl" }}
-        {% endfor %}
-    {% endfor %}
-{% endfor %}
+    server srv-0 3e63154954b0:80 check weight 1
+    server srv-1 eb294c110eb1:80 check weight 1
+backend srv_www_helloworld_com_19901
+    balance roundrobin
+    mode http
+    option forwardfor
+    http-request set-header X-Forwarded-Port %[dst_port]
+    http-request add-header X-Forwarded-Proto https if { ssl_fc }
+    server srv-0 3e63154954b0:80 check weight 1
+    server srv-1 eb294c110eb1:80 check weight 1
 
 backend letsencrypt_backend
     mode http

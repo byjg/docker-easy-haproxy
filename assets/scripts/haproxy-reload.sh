@@ -35,6 +35,7 @@ else
         RELOAD="false"
     else
         python3 swarm.py > /etc/haproxy/haproxy.cfg
+	echo "[CONF_CHECK] New configuration found"
     fi
 fi
 
@@ -43,11 +44,21 @@ if cmp -s ${CONTROL_FILE} ${CONTROL_FILE}.old ; then
 fi
 
 if [[ ! -z "$1" ]]; then
-    echo "Initial configuration"
+    echo "[CONF_CHECK] Initial configuration"
     RELOAD="false"
+else
+    /scripts/certbot.sh
+fi
+
+
+# If Certbot reloads successfully will create the file /tmp/force-reload
+if [ -f /tmp/force-reload ]; then
+    echo "[CONF_CHECK] New certificates found..."
+    RELOAD="true"
+    rm /tmp/force-reload
 fi
 
 if [[ "$RELOAD" == "true" ]]; then
-    echo "Reloading..."
+    echo "[CONF_CHECK] Reloading..."
     /usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid -x /var/run/haproxy.sock -sf $(cat /run/haproxy.pid) &
 fi

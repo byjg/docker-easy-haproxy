@@ -25,6 +25,16 @@ class DockerLabelHandler:
         return default_value
 
 
+    def get_bool(self, label, default_value = False):
+        if self.has_label(label):
+            return self.__data[label].lower() in ["True", "true", "1", "yes"]
+        return default_value
+
+    def get_json(self, label, default_value = {}):
+        if self.has_label(label):
+            return json.loads(self.__data[label])
+        return default_value
+
     def set_data(self, data):
         self.__data = data
 
@@ -36,26 +46,21 @@ class DockerLabelHandler:
 
 
 class HaproxyConfigGenerator:
-    def __init__(self, mapping, ssl_cert_folder="/etc/haproxy/certs"):
+    def __init__(self, mapping, ssl_cert_folder="/etc/haproxy/certs/discover"):
         self.mapping = mapping
         self.label = DockerLabelHandler(mapping['lookup_label'] if 'lookup_label' in mapping else "easyhaproxy")
         self.ssl_cert_folder = ssl_cert_folder
-        self.ssl_cert_increment = 0
+        self.letsencrypt_hosts = []
+        self.letsencrypt_email = os.getenv("EASYHAPROXY_LETSENCRYPT_EMAIL", "")
         os.makedirs(self.ssl_cert_folder, exist_ok=True)
 
 
     def generate(self, line_list = []):
+        self.mapping.setdefault("easymapping", [])
+        
         # static?
         if len(line_list) > 0:
             self.mapping["easymapping"] = self.parse(line_list)
-        else:
-            for d in self.mapping["easymapping"]:
-                for name, hosts in d.get('hosts', {}).items():
-                    if type(hosts) != list:
-                        d['hosts'][name] = [hosts]
-        # still 'None' -> default to [] for jinja2
-        if self.mapping["easymapping"] is None:
-            self.mapping["easymapping"] = []
 
         file_loader = FileSystemLoader('templates')
         env = Environment(loader=file_loader)
@@ -105,16 +110,13 @@ class HaproxyConfigGenerator:
                     "80"
                 )
 
-                hash = ""
-                if self.label.create([definition, "sslcert"]) in d:
-                    hash = hashlib.md5(
-                        d[self.label.create([definition, "sslcert"])].encode('utf-8')
-                    ).hexdigest()
+                letsencrypt = self.label.get_bool(
+                    self.label.create([definition, "letsencrypt"]),
+                    False
+                ) and self.letsencrypt_email != "" 
 
-                key = port if not hash else port + "_" + hash
-
-                if key not in easymapping:
-                    easymapping[key] = {
+                if port not in easymapping:
+                    easymapping[port] = {
                         "mode": mode,
                         "health-check": "",
                         "port": port,
@@ -128,34 +130,47 @@ class HaproxyConfigGenerator:
                     "80"
                 )
 
-                easymapping[key]["health-check"] = self.label.get(
+                easymapping[port]["health-check"] = self.label.get(
                     self.label.create([definition, "health-check"]),
                     ""
                 )
 
-                easymapping[key]["hosts"].setdefault(d[host_label], [])
-                easymapping[key]["hosts"][d[host_label]] += ["{}:{}".format(container, ct_port)]
-
-                # handle SSL
-                ssl_label = self.label.create([definition, "sslcert"])
-                if self.label.has_label(ssl_label):
-                    self.ssl_cert_increment += 1
-                    filename = "{}/{}.{}.pem".format(
-                        self.ssl_cert_folder, d[host_label], str(self.ssl_cert_increment)
+                for hostname in d[host_label].split(","):
+                    hostname = hostname.strip()
+                    easymapping[port]["hosts"].setdefault(hostname, {})
+                    easymapping[port]["hosts"][hostname].setdefault("containers", [])
+                    easymapping[port]["hosts"][hostname].setdefault("letsencrypt", False)
+                    easymapping[port]["hosts"][hostname]["containers"] += ["{}:{}".format(container, ct_port)]
+                    easymapping[port]["hosts"][hostname]["letsencrypt"] = letsencrypt
+                    easymapping[port]["redirect"] = self.label.get_json(
+                        self.label.create([definition, "redirect"])
                     )
-                    easymapping[key]["ssl_cert"] = filename
-                    with open(filename, 'wb') as file:
-                        file.write(
-                            base64.b64decode(d[ssl_label])
-                        )
 
-                # handle redirects
-                redirect = self.label.get(
-                    self.label.create([definition, "redirect"])
-                )
-                if len(redirect) > 0:
-                    for r in redirect.split(","):
-                        r_parts = r.split("--")
-                        easymapping[key]["redirect"][r_parts[0]] = r_parts[1]
+                    if letsencrypt:
+                        if "443" not in easymapping:
+                            easymapping["443"] = {
+                                "mode": "http",
+                                "health-check": "ssl",
+                                "port": "443",
+                                "hosts": dict(),
+                                "redirect": dict(),
+                            }
+                        easymapping["443"]["hosts"][hostname] = dict(easymapping[port]["hosts"][hostname])
+                        easymapping["443"]["hosts"][hostname]["letsencrypt"] = False
+                        easymapping["443"]["ssl_cert"] = "/etc/haproxy/certs"
+                        self.letsencrypt_hosts.append(hostname) if hostname not in self.letsencrypt_hosts else self.letsencrypt_hosts
+                        
+
+                    # handle SSL
+                    ssl_label = self.label.create([definition, "sslcert"])
+                    if self.label.has_label(ssl_label):
+                        filename = "{}/{}.pem".format(
+                            self.ssl_cert_folder, d[host_label]
+                        )
+                        easymapping[port]["ssl_cert"] = filename
+                        with open(filename, 'wb') as file:
+                            file.write(
+                                base64.b64decode(d[ssl_label])
+                            )
 
         return easymapping.values()

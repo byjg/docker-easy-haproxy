@@ -9,7 +9,7 @@
 Service discovery for HAProxy.
 
 This Docker image will create dynamically the `haproxy.cfg` based on the labels defined in docker containers or from
-a simple Yaml instead docker
+a simple Yaml.
 
 ## Features
 
@@ -38,14 +38,15 @@ The mapping to `/var/run/docker.sock` is necessary to discover the docker contai
 
 The environment variables will setup the HAProxy.
 
-| Environment Variable     | Description                                                                   |
-|--------------------------|-------------------------------------------------------------------------------|
-| EASYHAPROXY_DISCOVER     | How `haproxy.cfg` will be created: `static`, `docker` or `swarm`              |
-| EASYHAPROXY_LABEL_PREFIX | (Optional) The key will search to match resources. Default: `easyhaproxy`.    |
-| HAPROXY_USERNAME         | (Optional) The HAProxy username to the statistics. Default: `admin`           |
-| HAPROXY_PASSWORD         | The HAProxy password to the statistics. If not set disable stats.             |
-| HAPROXY_STATS_PORT       | (Optional) The HAProxy port to the statistics. Default: `1936`                |
-| HAPROXY_CUSTOMERRORS.    | (Optional) If HAProxy will use custom HTML errors. true/false. Default: false |
+| Environment Variable          | Description                                                                   |
+|-------------------------------|-------------------------------------------------------------------------------|
+| EASYHAPROXY_DISCOVER          | How `haproxy.cfg` will be created: `static`, `docker` or `swarm`              |
+| EASYHAPROXY_LABEL_PREFIX      | (Optional) The key will search to match resources. Default: `easyhaproxy`.    |
+| EASYHAPROXY_LETSENCRYPT_EMAIL | (Optional) The email will be used to request certificate to letsencrypt       |      
+| HAPROXY_USERNAME              | (Optional) The HAProxy username to the statistics. Default: `admin`           |
+| HAPROXY_PASSWORD              | The HAProxy password to the statistics. If not set disable stats.             |
+| HAPROXY_STATS_PORT            | (Optional) The HAProxy port to the statistics. Default: `1936`                |
+| HAPROXY_CUSTOMERRORS          | (Optional) If HAProxy will use custom HTML errors. true/false. Default: false |
 
 The environment variable `EASYHAPROXY_DISCOVER` will define where is located your containers (see below more details):
 
@@ -88,13 +89,14 @@ Important: easyhaproxy needs to be in the same network of the containers or othe
 
 | Tag                                   | Description                                                                                             | Example      |
 |---------------------------------------|---------------------------------------------------------------------------------------------------------|--------------|
+| easyhaproxy.[definition].host         | Host(s) HAProxy is listening. More than one host use comma as delimiter                                 | somehost.com OR host1.com,host2.com |
 | easyhaproxy.[definition].mode         | (Optional) Is this `http` or `tcp` mode in HAProxy. (Defaults to http)                                  | http         |
-| easyhaproxy.[definition].port         | (Optional) What is the port that the HAProxy will listen to. (Defaults to 80)                           | 80           |
-| easyhaproxy.[definition].localport.   | (Optional) What is the port that the container is listening. (Defaults to 80)                           | 8080         |
-| easyhaproxy.[definition].host         | What is the host that the HAProxy will listen to.                                                       | somehost.com |
-| easyhaproxy.[definition].redirect     | (Optional) Host redirects from connections in the port defined above.                                   | foo.com--https://bla.com,bar.com--https://bar.org |
-| easyhaproxy.[definition].sslcert      | (Optional) Cert PEM Base64 encoded.                                                                     |              |
+| easyhaproxy.[definition].port         | (Optional) Port HAProxy will listen for the host. (Defaults to 80)                                      | 80           |
+| easyhaproxy.[definition].localport    | (Optional) Port container is listening. (Defaults to 80)                                                | 8080         |
+| easyhaproxy.[definition].redirect     | (Optional) JSON containing key/value pair from host/to url redirect.                                    | {"foo.com":"https://bla.com", "bar.com":"https://bar.org"} |
+| easyhaproxy.[definition].sslcert      | (Optional) Cert PEM Base64 encoded. Do not use this if letsencrypt is enabled.                          |              |
 | easyhaproxy.[definition].health-check | (Optional) `ssl`, enable health check via SSL in `mode tcp` (Defaults to "empty")                       |              |
+| easyhaproxy.[definition].letsencrypt  | (Optional) Generate certificate with letsencrypt. Do not use with sslcert                               | true OR yes OR false OR no    |
 
 ### Defining the labels in Docker Swarm
 
@@ -151,7 +153,7 @@ docker run \
 
 ```bash
 docker run \
-    -l easyhaproxy.[definition].redirect=www.byjg.com.br--http://byjg.com.br,byjg.com--http://byjg.com.br
+    -l easyhaproxy.[definition].redirect='{"www.byjg.com.br":"http://byjg.com.br","byjg.com":"http://byjg.com.br"}'
 ```
 
 ## EASYHAPROXY_DISCOVER: static
@@ -171,19 +173,28 @@ customerrors: true   # Optional (default false)
 easymapping:
   - port: 80
     hosts:
-      host1.com.br: container:5000
-      host2.com.br: other:3000
+      host1.com.br: 
+        containers:
+          - container:5000
+        letsencrypt: true
+      host2.com.br: 
+        containers:
+          - other:3000
     redirect:
       www.host1.com.br: http://host1.com.br
 
   - port: 443
     ssl_cert: /path/to/ssl/certificate
     hosts:
-      host1.com.br: container:80
+      host1.com.br: 
+        containers:
+          - container:80
 
   - port: 8080
     hosts:
-      host3.com.br: domain:8181
+      host3.com.br: 
+        containers: 
+          - domain:8181
 ```
 
 Running:
@@ -191,6 +202,57 @@ Running:
 ```bash
 docker run -v /my/config.yml:/etc/haproxy/easyconfig.yml .... byjg/easyhaproxy
 ```
+
+## Letsencrypt
+
+This HAProxy can issue a letsencrypt certificate. The command is as below:
+
+Run the EasyHAProxy:
+
+```bash
+docker run \
+    -e EASYHAPROXY_LETSENCRYPT_EMAIL=john@doe.com
+    .... \
+    byjg/easy-haproxy
+```
+
+Run your container:
+```bash
+docker run \
+    -l easyhaproxy.express.port=80 \
+    -l easyhaproxy.express.localport=3000 \
+    -l easyhaproxy.express.host=example.org \
+    -l easyhaproxy.express.letsencrypt=true \
+    .... \
+    some/myimage
+```
+
+Caveats:
+
+- Your container **must** listen to the port 80. Besides no error, the certificate won't be issued if in a different port.
+- The port 2080 is reserved for the certbot and should not be exposed.
+- You cannot set the port 443 for the container with the Letsencrypt. EasyHAProxy will handle this automatically once the certificate is issued. 
+- If you don't run the EasyHAProxy with the parameter `EASYHAPROXY_LETSENCRYPT_EMAIL` no certificate will be issued. 
+- Be aware about the issue limits - https://letsencrypt.org/docs/rate-limits/
+
+## Exposing Ports
+
+- You need to expose at least the ports `80` and `443` when you run the `byjg/easy-haproxy` image. 
+- If you enable the HAProxy statistics you must also expose the port defined in `HAPROXY_STATS_PORT` environment variable. 
+- Every port defined in `easyhaproxy.[definitions].port` also should be enabel. 
+
+e.g.
+
+```bash
+docker run \
+    /* other parameters */
+    -p 80:80 \
+    -p 443:443 \
+    -p 1936:1936 \
+    -d byjg/easy-haproxy
+```
+
+Also, you need to expose these ports in the firewall. 
 
 ## Mapping custom .cfg files
 

@@ -11,7 +11,7 @@ def main():
         headers, payload = childutils.listener.wait()
         childutils.listener.ok()
         events = ['PROCESS_STATE_FATAL', 'PROCESS_STATE_EXITED', 'PROCESS_STATE_STOPPED']
-        if not (headers['eventname'] in events):
+        if headers['eventname'] not in events:
             continue
 
         print(headers)
