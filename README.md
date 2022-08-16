@@ -235,7 +235,7 @@ Caveats:
 - The port 2080 is reserved for the certbot and should not be exposed.
 - You cannot set the port 443 for the container with the Letsencrypt. EasyHAProxy will handle this automatically once the certificate is issued. 
 - If you don't run the EasyHAProxy with the parameter `EASYHAPROXY_LETSENCRYPT_EMAIL` no certificate will be issued. 
-- Be aware about the issue limits - https://letsencrypt.org/docs/rate-limits/
+- Be aware about issue limits - https://letsencrypt.org/docs/duplicate-certificate-limit/ and https://letsencrypt.org/docs/rate-limits/
 
 ## Exposing Ports
 
@@ -264,6 +264,17 @@ Map a folder containing valid HAProxy `.cfg` files to `/etc/haproxy/conf.d`. It 
 docker run \
     /* other parameters */
     -v /your/local/conf.d:/etc/haproxy/conf.d \
+    -d byjg/easy-haproxy
+```
+
+## Mapping ssl certificates volumes
+
+EasyHAProxy stores the certificates inside the folder `/certs/haproxy` and `/certs/letsencrypt`. If you want to preserve the certificates between reloads, just map the folder `/certs` to your volume. 
+
+```bash
+docker run \
+    /* other parameters */
+    -v /your/certs/folder:/certs \
     -d byjg/easy-haproxy
 ```
 

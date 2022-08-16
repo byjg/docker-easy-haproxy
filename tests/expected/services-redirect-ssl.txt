@@ -50,7 +50,7 @@ backend srv_host1_local_80
     server srv-0 78a90f5c2d8a:80 check weight 1
 
 frontend http_in_443
-    bind *:443  ssl crt /etc/haproxy/certs/discover/ alpn http/1.1 crt /etc/haproxy/certs/ alpn http/1.1
+    bind *:443  ssl crt /certs/letsencrypt/ alpn http/1.1 crt /certs/haproxy/ alpn http/1.1
     mode http
 
     acl is_rule_host2_local_443_1 hdr(host) -i host2.local

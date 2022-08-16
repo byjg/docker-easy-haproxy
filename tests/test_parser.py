@@ -4,7 +4,7 @@ import os
 import yaml
 
 CERTS_FOLDER="/tmp/certs"
-CERT_FILE="/tmp/certs/www.somehost.com.br.pem"
+CERT_FILE="/tmp/certs/haproxy/www.somehost.com.br.pem"
 LETSENCRYPT_EMAIL="some@email.com"
 
 def load_fixture(file):
@@ -241,7 +241,7 @@ def test_parser_static_raw():
             },
             {
                 "port": 443,
-                "ssl_cert": "/etc/haproxy/certs/mycert.pem",
+                "ssl_cert": "/certs/haproxy/mycert.pem",
                 "hosts": {
                     "host1.com.br": {
                         "containers": [

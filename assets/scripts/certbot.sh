@@ -15,12 +15,12 @@ REQUEST_CERTS=""
 RENEW_CERTS=""
 
 for domain in $(cat /scripts/letsencrypt_hosts.txt); do
-    if [ ! -f "/etc/haproxy/certs/$domain.pem" ]; then
+    if [ ! -f "/certs/letsencrypt/$domain.pem" ]; then
         REQUEST_CERTS="$REQUES_CERTS -d $domain"
         continue
     fi
 
-    if [[ $(find "/etc/haproxy/certs/$domain.pem" -mtime +30 -print) ]]; then
+    if [[ $(find "/certs/letsencrypt/$domain.pem" -mtime +30 -print) ]]; then
         RENEW_CERTS="$RENEW_CERTS -d $domain"
     fi
 done

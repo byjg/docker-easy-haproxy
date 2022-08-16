@@ -8,7 +8,7 @@ services:
     image: byjg/easy-haproxy
     volumes:
       - ./config.yml:/etc/haproxy/easyconfig.yml
-      - ./host1.local.pem:/etc/certs/host1.local.pem
+      - ./certs:/certs
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       EASYHAPROXY_DISCOVER: static

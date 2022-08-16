@@ -46,17 +46,18 @@ class DockerLabelHandler:
 
 
 class HaproxyConfigGenerator:
-    def __init__(self, mapping, ssl_cert_folder="/etc/haproxy/certs/discover"):
+    def __init__(self, mapping, ssl_cert_folder="/certs"):
         self.mapping = mapping
         self.mapping.setdefault("ssl_mode", 'default')
         self.mapping["ssl_mode"] = self.mapping["ssl_mode"].lower()
         self.label = DockerLabelHandler(mapping['lookup_label'] if 'lookup_label' in mapping else "easyhaproxy")
-        self.ssl_cert_folder = ssl_cert_folder
+        self.ssl_cert_haproxy = ssl_cert_folder + "/haproxy"
+        self.ssl_cert_letsecncrypt = ssl_cert_folder + "/letsencrypt"
         self.letsencrypt_hosts = []
         self.letsencrypt_email = os.getenv("EASYHAPROXY_LETSENCRYPT_EMAIL", "")
-        os.makedirs(self.ssl_cert_folder, exist_ok=True)
-
-
+        os.makedirs(self.ssl_cert_haproxy, exist_ok=True)
+        os.makedirs(self.ssl_cert_letsecncrypt, exist_ok=True)
+ 
     def generate(self, line_list = []):
         self.mapping.setdefault("easymapping", [])
         
@@ -163,7 +164,7 @@ class HaproxyConfigGenerator:
                             }
                         easymapping["443"]["hosts"][hostname] = dict(easymapping[port]["hosts"][hostname])
                         easymapping["443"]["hosts"][hostname]["letsencrypt"] = False
-                        easymapping["443"]["ssl_cert"] = "/etc/haproxy/certs"
+                        easymapping["443"]["ssl_cert"] = self.ssl_cert_letsecncrypt
                         self.letsencrypt_hosts.append(hostname) if hostname not in self.letsencrypt_hosts else self.letsencrypt_hosts
                         
 
@@ -171,7 +172,7 @@ class HaproxyConfigGenerator:
                     ssl_label = self.label.create([definition, "sslcert"])
                     if self.label.has_label(ssl_label):
                         filename = "{}/{}.pem".format(
-                            self.ssl_cert_folder, d[host_label]
+                            self.ssl_cert_haproxy, d[host_label]
                         )
                         easymapping[port]["ssl_cert"] = filename
                         with open(filename, 'wb') as file:
