@@ -32,7 +32,7 @@ frontend http_in_80
 
     acl is_rule_host1_local_80_1 hdr(host) -i host1.local
     acl is_rule_host1_local_80_2 hdr(host) -i host1.local:80
-    http-request redirect scheme https code 301 if is_rule_host1_local_80_1 OR is_rule_host1_local_80_2
+    http-request redirect scheme https code 301 if !is_letsencrypt_host1_local_80 is_rule_host1_local_80_1 OR !is_letsencrypt_host1_local_80 is_rule_host1_local_80_2
 
 backend srv_host2_local_80
     balance roundrobin
