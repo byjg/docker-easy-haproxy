@@ -295,5 +295,28 @@ def test_parser_multi_containers():
     assert [] == cfg.letsencrypt_hosts
 
 
+def test_parser_multiple_hosts():
+    line_list = load_fixture("services-multiple-hosts")
+
+    result = {
+        "customerrors": True,
+        "stats": {
+            "username": "joe",
+            "password": "s3cr3t",
+            "port": "1937"
+        }
+    }
+
+    cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
+    haproxy_config = cfg.generate(line_list)
+
+    assert len(haproxy_config) > 0
+    path = os.path.dirname(os.path.realpath(__file__))
+    with open(path + "/expected/services-multiple-hosts.txt", 'r') as expected_file:
+        assert expected_file.read() == haproxy_config
+    assert [] == cfg.letsencrypt_hosts
+
+
 #test_parser_finds_services_raw()
 #test_parser_tcp()
+#test_parser_multiple_hosts()
