@@ -48,6 +48,8 @@ class DockerLabelHandler:
 class HaproxyConfigGenerator:
     def __init__(self, mapping, ssl_cert_folder="/etc/haproxy/certs/discover"):
         self.mapping = mapping
+        self.mapping.setdefault("ssl_mode", 'default')
+        self.mapping["ssl_mode"] = self.mapping["ssl_mode"].lower()
         self.label = DockerLabelHandler(mapping['lookup_label'] if 'lookup_label' in mapping else "easyhaproxy")
         self.ssl_cert_folder = ssl_cert_folder
         self.letsencrypt_hosts = []
@@ -142,6 +144,10 @@ class HaproxyConfigGenerator:
                     easymapping[port]["hosts"][hostname].setdefault("letsencrypt", False)
                     easymapping[port]["hosts"][hostname]["containers"] += ["{}:{}".format(container, ct_port)]
                     easymapping[port]["hosts"][hostname]["letsencrypt"] = letsencrypt
+                    easymapping[port]["hosts"][hostname]["redirect_ssl"] = self.label.get_bool(
+                        self.label.create([definition, "redirect_ssl"])
+                    )
+
                     easymapping[port]["redirect"] = self.label.get_json(
                         self.label.create([definition, "redirect"])
                     )

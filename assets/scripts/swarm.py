@@ -5,7 +5,8 @@ with open("/tmp/.docker_data", 'r') as content_file:
     line_list = content_file.readlines()
 
 result = {
-    "customerrors": True if os.getenv("HAPROXY_CUSTOMERRORS") == "true" else False
+    "customerrors": True if os.getenv("HAPROXY_CUSTOMERRORS") == "true" else False,
+    "ssl_mode": os.getenv("EASYHAPROXY_SSL_MODE", "default")
 }
 
 if os.getenv("HAPROXY_PASSWORD"):

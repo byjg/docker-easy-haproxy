@@ -1,8 +1,19 @@
 # To test:
 # curl -k -H "Host: host1.local" https://127.0.0.1/
+# curl -k -H "Host: host2.local" https://127.0.0.1/
+# 
+# curl -I -H Host:host1.local http://127.0.0.1
+# HTTP/1.1 301 Moved Permanently
+# content-length: 0
+# location: https://host1.local/
 #
-# or add to /etc/hosts
-# 127.0.0.1 host1.local
+# curl -I -H Host:host2.local http://127.0.0.1
+# HTTP/1.1 200 OK
+# accept-ranges: bytes
+# content-length: 3276
+# content-type: text/html; charset=utf-8
+# last-modified: Tue, 16 Aug 2022 15:48:05 GMT
+# date: Tue, 16 Aug 2022 16:36:35 GMT
 #
 # Test SSL:
 # openssl s_client -showcerts -connect 127.0.0.1:443 --servername host1.local
@@ -16,6 +27,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       EASYHAPROXY_DISCOVER: docker
+      EASYHAPROXY_SSL_MODE: "loose"
       HAPROXY_CUSTOMERRORS: "true"
       HAPROXY_USERNAME: admin
       HAPROXY_PASSWORD: password
@@ -29,7 +41,7 @@ services:
   container:
     image: byjg/static-httpserver
     labels:
-      easyhaproxy.http.redirect: host1.local--https://host1.local
+      easyhaproxy.http.redirect_ssl: true
       easyhaproxy.http.host: host1.local
       easyhaproxy.http.port: 80
 
@@ -41,8 +53,8 @@ services:
   container2:
     image: byjg/static-httpserver
     labels:
-      easyhaproxy.http.redirect: host2.local--https://host2.local
       easyhaproxy.http.host: host2.local
+      easyhaproxy.http.localport: 8080
       easyhaproxy.http.port: 80
 
       easyhaproxy.https.port: 443

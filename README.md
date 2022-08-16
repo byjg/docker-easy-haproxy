@@ -43,6 +43,7 @@ The environment variables will setup the HAProxy.
 | EASYHAPROXY_DISCOVER          | How `haproxy.cfg` will be created: `static`, `docker` or `swarm`              |
 | EASYHAPROXY_LABEL_PREFIX      | (Optional) The key will search to match resources. Default: `easyhaproxy`.    |
 | EASYHAPROXY_LETSENCRYPT_EMAIL | (Optional) The email will be used to request certificate to letsencrypt       |      
+| EASYHAPROXY_SSL_MODE          | (Optional) `STRICT` supports only the most recent TLS version; `DEFAULT` good SSL integration with recent browsers; `LOOSE` support all old SSL protocols for old browsers (not recommended).  |      
 | HAPROXY_USERNAME              | (Optional) The HAProxy username to the statistics. Default: `admin`           |
 | HAPROXY_PASSWORD              | The HAProxy password to the statistics. If not set disable stats.             |
 | HAPROXY_STATS_PORT            | (Optional) The HAProxy port to the statistics. Default: `1936`                |
@@ -97,6 +98,7 @@ Important: easyhaproxy needs to be in the same network of the containers or othe
 | easyhaproxy.[definition].sslcert      | (Optional) Cert PEM Base64 encoded. Do not use this if letsencrypt is enabled.                          |              |
 | easyhaproxy.[definition].health-check | (Optional) `ssl`, enable health check via SSL in `mode tcp` (Defaults to "empty")                       |              |
 | easyhaproxy.[definition].letsencrypt  | (Optional) Generate certificate with letsencrypt. Do not use with sslcert                               | true OR yes OR false OR no    |
+| easyhaproxy.[definition].redirect-ssl | (Optional) Redirect all requests to https                                                               | true OR yes OR false OR no    |
 
 ### Defining the labels in Docker Swarm
 
