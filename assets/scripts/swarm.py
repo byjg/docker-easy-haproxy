@@ -5,7 +5,8 @@ with open("/tmp/.docker_data", 'r') as content_file:
     line_list = content_file.readlines()
 
 result = {
-    "customerrors": True if os.getenv("HAPROXY_CUSTOMERRORS") == "true" else False
+    "customerrors": True if os.getenv("HAPROXY_CUSTOMERRORS") == "true" else False,
+    "ssl_mode": os.getenv("EASYHAPROXY_SSL_MODE", "default")
 }
 
 if os.getenv("HAPROXY_PASSWORD"):
@@ -16,6 +17,11 @@ if os.getenv("HAPROXY_PASSWORD"):
     }
 
 result["lookup_label"] = os.getenv("EASYHAPROXY_LABEL_PREFIX") if os.getenv("EASYHAPROXY_LABEL_PREFIX") else "easyhaproxy"
+if (os.getenv("EASYHAPROXY_LETSENCRYPT_EMAIL")):
+    result["letsencrypt"] = {
+        "email": os.getenv("EASYHAPROXY_LETSENCRYPT_EMAIL")
+    }
+
 
 cfg = HaproxyConfigGenerator(result)
 print(cfg.generate(line_list))

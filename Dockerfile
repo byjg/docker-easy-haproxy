@@ -13,6 +13,7 @@ RUN apk add --no-cache haproxy bash python3 py3-pip py-yaml supervisor docker ce
  && pip3 install --upgrade pip \
  && pip install -r requirements.txt \
  && pytest -s tests/ \
- && openssl dhparam -out /etc/haproxy/dhparam 2048
+ && openssl dhparam -out /etc/haproxy/dhparam 2048 \
+ && openssl dhparam -out /etc/haproxy/dhparam-1024 1024
 
 CMD ["/usr/bin/supervisord",  "-n",  "-c", "/etc/supervisord.conf" ]

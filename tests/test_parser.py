@@ -4,7 +4,7 @@ import os
 import yaml
 
 CERTS_FOLDER="/tmp/certs"
-CERT_FILE="/tmp/certs/www.somehost.com.br.pem"
+CERT_FILE="/tmp/certs/haproxy/www.somehost.com.br.pem"
 LETSENCRYPT_EMAIL="some@email.com"
 
 def load_fixture(file):
@@ -35,14 +35,16 @@ def test_parser_finds_services():
     line_list = load_fixture("services")
 
     result = {
-        "customerrors": False
+        "customerrors": False,
+        "letsencrypt": {
+            "email": LETSENCRYPT_EMAIL
+        }
     }
 
     if os.path.exists(CERT_FILE):
         os.remove(CERT_FILE)
 
     cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
-    cfg.letsencrypt_email = LETSENCRYPT_EMAIL
     haproxy_config = cfg.generate(line_list)
 
     assert len(haproxy_config) > 0
@@ -60,14 +62,16 @@ def test_parser_finds_services_changed_label():
 
     result = {
         "customerrors": False,
-        "lookup_label": "haproxy"
+        "lookup_label": "haproxy",
+        "letsencrypt": {
+            "email": LETSENCRYPT_EMAIL
+        }
     }
 
     if os.path.exists(CERT_FILE):
         os.remove(CERT_FILE)
 
     cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
-    cfg.letsencrypt_email = LETSENCRYPT_EMAIL
     haproxy_config = cfg.generate(line_list)
 
     assert len(haproxy_config) > 0
@@ -84,14 +88,16 @@ def test_parser_finds_services_raw():
     line_list = load_fixture("services")
 
     result = {
-        "customerrors": False
+        "customerrors": False,
+        "letsencrypt": {
+            "email": LETSENCRYPT_EMAIL
+        }
     }
 
     if os.path.exists(CERT_FILE):
         os.remove(CERT_FILE)
 
     cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
-    cfg.letsencrypt_email = LETSENCRYPT_EMAIL
 
     parsed_object = [
         {
@@ -103,7 +109,8 @@ def test_parser_finds_services_raw():
                     "containers": [
                         "my-stack_agent:9001"
                     ],
-                    "letsencrypt": False
+                    "letsencrypt": False,
+                    "redirect_ssl": False
                 }
             },
             "redirect":{
@@ -119,18 +126,20 @@ def test_parser_finds_services_raw():
                     "containers": [
                         "my-stack_cadvisor:8080"
                     ],
-                    "letsencrypt": False
+                    "letsencrypt": False,
+                    "redirect_ssl": False
                 },
                 "node-exporter.quantum.example.org":{
                     "containers": [
                         "my-stack_node-exporter:9100"
                     ],
-                    "letsencrypt": True
+                    "letsencrypt": True,
+                    "redirect_ssl": False
                 }
             },
             "redirect":{
                 
-            }
+            },
         },
         {
             "mode":"http",
@@ -141,13 +150,15 @@ def test_parser_finds_services_raw():
                     "containers": [
                         "my-stack_node-exporter:9100"
                     ],
-                    "letsencrypt": False
+                    "letsencrypt": False,
+                    "redirect_ssl": False
                 },
                 "www.somehost.com.br":{
                     "containers": [
                         "some-service:80"
                     ],
-                    "letsencrypt": False
+                    "letsencrypt": False,
+                    "redirect_ssl": False
                 }
             },
             "redirect":{
@@ -168,7 +179,8 @@ def test_parser_finds_services_raw():
                     "containers": [
                         "some-service:80"
                     ],
-                    "letsencrypt": False
+                    "letsencrypt": False,
+                    "redirect_ssl": False
                 }
             },
             "redirect":{
@@ -177,7 +189,7 @@ def test_parser_finds_services_raw():
                 "www.somehost.com":"https://www.somehost.com.br",
                 "byjg.ca":"https://www.somehost.com.br",
                 "www.byjg.ca":"https://www.somehost.com.br"
-            }
+            },
         }
     ]
 
@@ -235,7 +247,7 @@ def test_parser_static_raw():
             },
             {
                 "port": 443,
-                "ssl_cert": "/etc/haproxy/certs/mycert.pem",
+                "ssl_cert": "/certs/haproxy/mycert.pem",
                 "hosts": {
                     "host1.com.br": {
                         "containers": [
@@ -317,6 +329,81 @@ def test_parser_multiple_hosts():
     assert [] == cfg.letsencrypt_hosts
 
 
+def test_parser_redirect_ssl():
+    line_list = load_fixture("services-redirect-ssl")
+
+    result = {
+        "customerrors": False
+    }
+
+    cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
+    haproxy_config = cfg.generate(line_list)
+
+    assert len(haproxy_config) > 0
+    path = os.path.dirname(os.path.realpath(__file__))
+    with open(path + "/expected/services-redirect-ssl.txt", 'r') as expected_file:
+        assert expected_file.read() == haproxy_config
+    assert [] == cfg.letsencrypt_hosts
+
+
+def test_parser_ssl_strict():
+    line_list = load_fixture("no-services")
+
+    result = {
+        "customerrors": False,
+        "ssl_mode": "strict"
+    }
+
+    cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
+    haproxy_config = cfg.generate(line_list)
+
+    assert len(haproxy_config) > 0
+    path = os.path.dirname(os.path.realpath(__file__))
+    with open(path + "/expected/ssl-strict.txt", 'r') as expected_file:
+        assert expected_file.read() == haproxy_config
+    assert [] == cfg.letsencrypt_hosts
+
+def test_parser_ssl_loose():
+    line_list = load_fixture("no-services")
+
+    result = {
+        "customerrors": False,
+        "ssl_mode": "loose"
+    }
+
+    cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
+    haproxy_config = cfg.generate(line_list)
+
+    assert len(haproxy_config) > 0
+    path = os.path.dirname(os.path.realpath(__file__))
+    with open(path + "/expected/ssl-loose.txt", 'r') as expected_file:
+        assert expected_file.read() == haproxy_config
+    assert [] == cfg.letsencrypt_hosts
+
+def test_parser_ssl_letsencrypt():
+    line_list = load_fixture("services-letsencrypt")
+
+    result = {
+        "customerrors": True,
+        "stats": {
+            "username": "admin",
+            "password": "password"
+        },
+        "letsencrypt": {
+            "email": LETSENCRYPT_EMAIL
+        }
+    }
+
+    cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
+    haproxy_config = cfg.generate(line_list)
+
+    assert len(haproxy_config) > 0
+    path = os.path.dirname(os.path.realpath(__file__))
+    with open(path + "/expected/services-letsencrypt.txt", 'r') as expected_file:
+        assert expected_file.read() == haproxy_config
+    assert ["test.example.org"] == cfg.letsencrypt_hosts
+
 #test_parser_finds_services_raw()
 #test_parser_tcp()
 #test_parser_multiple_hosts()
+#test_parser_ssl_letsencrypt()

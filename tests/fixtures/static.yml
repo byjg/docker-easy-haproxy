@@ -19,7 +19,7 @@ easymapping:
       www.host1.com.br: http://host1.com.br
       
   - port: 443
-    ssl_cert: /etc/haproxy/certs/mycert.pem
+    ssl_cert: /certs/haproxy/mycert.pem
     hosts:
       host1.com.br: 
         containers: 

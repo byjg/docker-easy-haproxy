@@ -35,7 +35,7 @@ frontend stats
     stats hide-version
     stats realm Haproxy\ Statistics
     stats uri /
-    stats auth admin:test123
+    stats auth admin:password
 #    acl is_proxystats hdr(host) -i some.host.com
 #    default_backend srv_stats
 #    use_backend srv_stats if is_proxystats
@@ -48,64 +48,49 @@ backend srv_stats
 frontend http_in_80
     bind *:80
     mode http
-    redirect prefix http://host1.com.br code 301 if { hdr(host) -i www.host1.com.br }
 
-    acl is_rule_host1_com_br_80_1 hdr(host) -i host1.com.br
-    acl is_rule_host1_com_br_80_2 hdr(host) -i host1.com.br:80
-    acl is_letsencrypt_host1_com_br_80 path_beg /.well-known/acme-challenge/
-    use_backend letsencrypt_backend if is_letsencrypt_host1_com_br_80 is_rule_host1_com_br_80_1 OR is_letsencrypt_host1_com_br_80 is_rule_host1_com_br_80_2
-    use_backend srv_host1_com_br_80 if is_rule_host1_com_br_80_1 OR is_rule_host1_com_br_80_2
+    acl is_rule_test_example_org_80_1 hdr(host) -i test.example.org
+    acl is_rule_test_example_org_80_2 hdr(host) -i test.example.org:80
+    acl is_letsencrypt_test_example_org_80 path_beg /.well-known/acme-challenge/
+    use_backend letsencrypt_backend if is_letsencrypt_test_example_org_80 is_rule_test_example_org_80_1 OR is_letsencrypt_test_example_org_80 is_rule_test_example_org_80_2
+    http-request redirect scheme https code 301 if !is_letsencrypt_test_example_org_80 is_rule_test_example_org_80_1 OR !is_letsencrypt_test_example_org_80 is_rule_test_example_org_80_2
 
-    acl is_rule_host2_com_br_80_1 hdr(host) -i host2.com.br
-    acl is_rule_host2_com_br_80_2 hdr(host) -i host2.com.br:80
-    use_backend srv_host2_com_br_80 if is_rule_host2_com_br_80_1 OR is_rule_host2_com_br_80_2
+    acl is_rule_test2_example_org_80_1 hdr(host) -i test2.example.org
+    acl is_rule_test2_example_org_80_2 hdr(host) -i test2.example.org:80
+    use_backend srv_test2_example_org_80 if is_rule_test2_example_org_80_1 OR is_rule_test2_example_org_80_2
 
-backend srv_host1_com_br_80
+backend srv_test_example_org_80
     balance roundrobin
     mode http
     option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
-    server srv-0 container:5000 check weight 1
-backend srv_host2_com_br_80
+    server srv-0 f5c645a0dfc6:80 check weight 1
+    server srv-1 b63438410b6a:80 check weight 1
+backend srv_test2_example_org_80
     balance roundrobin
     mode http
     option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
-    server srv-0 other:3000 check weight 1
+    server srv-0 83d57d592e26:8080 check weight 1
 
 frontend http_in_443
     bind *:443  ssl crt /certs/letsencrypt/ alpn http/1.1 crt /certs/haproxy/ alpn http/1.1
     mode http
 
-    acl is_rule_host1_com_br_443_1 hdr(host) -i host1.com.br
-    acl is_rule_host1_com_br_443_2 hdr(host) -i host1.com.br:443
-    use_backend srv_host1_com_br_443 if is_rule_host1_com_br_443_1 OR is_rule_host1_com_br_443_2
+    acl is_rule_test_example_org_443_1 hdr(host) -i test.example.org
+    acl is_rule_test_example_org_443_2 hdr(host) -i test.example.org:443
+    use_backend srv_test_example_org_443 if is_rule_test_example_org_443_1 OR is_rule_test_example_org_443_2
 
-backend srv_host1_com_br_443
+backend srv_test_example_org_443
     balance roundrobin
     mode http
     option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
-    server srv-0 container:80 check weight 1
-
-frontend http_in_8080
-    bind *:8080
-    mode http
-
-    acl is_rule_host3_com_br_8080_1 hdr(host) -i host3.com.br
-    acl is_rule_host3_com_br_8080_2 hdr(host) -i host3.com.br:8080
-    use_backend srv_host3_com_br_8080 if is_rule_host3_com_br_8080_1 OR is_rule_host3_com_br_8080_2
-
-backend srv_host3_com_br_8080
-    balance roundrobin
-    mode http
-    option forwardfor
-    http-request set-header X-Forwarded-Port %[dst_port]
-    http-request add-header X-Forwarded-Proto https if { ssl_fc }
-    server srv-0 domain:8181 check weight 1
+    server srv-0 f5c645a0dfc6:80 check weight 1 verify none
+    server srv-1 b63438410b6a:80 check weight 1 verify none
 
 backend letsencrypt_backend
     mode http

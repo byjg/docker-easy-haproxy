@@ -8,19 +8,26 @@
 
 Service discovery for HAProxy.
 
-This Docker image will create dynamically the `haproxy.cfg` based on the labels defined in docker containers or from
+This Docker image will dynamically create the `haproxy.cfg` based on the labels defined in docker containers or from
 a simple Yaml.
 
 ## Features
 
-- Enable or disable Stats on port 1936 with custom password
-- Discover and setup haproxy from Docker Tag
-- Discover and setup haproxy redirect from Docker Tag
-- Setup HAProxy CFG from a Yaml file.
+EasyHAProxy will discover the services based on the Docker Tags of the running containers in a Docker host or Docker Swarm cluster and dynamically set up the `haproxy.cfg`. Below, EasyHAProxy main features::
+- Use Letsencrypt with HAProxy.
+- Balance traffic between multiple replicas
+- Set SSL with three different levels of validations and according to the most recent definitions.
+- Include your SSL certificate.
+- Setup HAProxy to listen to TCP.
+- Add redirects.
+- Enable/disable Stats on port 1936 with a custom password.
+- Enable/disable custom errors.
+
+Also, it is possible to set up HAProxy from a simple Yaml file instead of creating `haproxy.cfg` file. 
 
 ## Basic Usage
 
-The Easy HAProxy will create the `haproxy.cfg` automatically based on the containers or from a YAML provided.
+The Easy HAProxy will automatically create the `haproxy.cfg` file based on the containers or a YAML provided.
 
 The basic command line to run is:
 
@@ -41,14 +48,15 @@ The environment variables will setup the HAProxy.
 | Environment Variable          | Description                                                                   |
 |-------------------------------|-------------------------------------------------------------------------------|
 | EASYHAPROXY_DISCOVER          | How `haproxy.cfg` will be created: `static`, `docker` or `swarm`              |
-| EASYHAPROXY_LABEL_PREFIX      | (Optional) The key will search to match resources. Default: `easyhaproxy`.    |
-| EASYHAPROXY_LETSENCRYPT_EMAIL | (Optional) The email will be used to request certificate to letsencrypt       |      
+| EASYHAPROXY_LABEL_PREFIX      | (Optional) The key will search for matching resources. Default: `easyhaproxy`.    |
+| EASYHAPROXY_LETSENCRYPT_EMAIL | (Optional) The email will be used to request the certificate to Letsencrypt       |      
+| EASYHAPROXY_SSL_MODE          | (Optional) `STRICT` supports only the most recent TLS version; `DEFAULT` good SSL integration with recent browsers; `LOOSE` supports all old SSL protocols for old browsers (not recommended).  |      
 | HAPROXY_USERNAME              | (Optional) The HAProxy username to the statistics. Default: `admin`           |
-| HAPROXY_PASSWORD              | The HAProxy password to the statistics. If not set disable stats.             |
+| HAPROXY_PASSWORD              | The HAProxy password to the statistics. If not set, it will disable stats.             |
 | HAPROXY_STATS_PORT            | (Optional) The HAProxy port to the statistics. Default: `1936`                |
 | HAPROXY_CUSTOMERRORS          | (Optional) If HAProxy will use custom HTML errors. true/false. Default: false |
 
-The environment variable `EASYHAPROXY_DISCOVER` will define where is located your containers (see below more details):
+The environment variable `EASYHAPROXY_DISCOVER` will define where is located your containers (see below for more details):
 
 - docker
 - swarm
@@ -56,15 +64,15 @@ The environment variable `EASYHAPROXY_DISCOVER` will define where is located you
 
 ## Automatic Discover Services
 
-Easy HAProxy can discover automatically the container services running in the same network of Docker or in a Docker Swarm cluster. 
+Easy HAProxy can automatically discover the container services running in the same network of Docker or in a Docker Swarm cluster. 
 
 ### EASYHAPROXY_DISCOVER: docker
 
-This method will use a regular docker installation to discover the containers and configure the HAProxy.
+This method will use a standard docker installation to discover the containers and configure the HAProxy.
 
 The only requirement is that containers and easy-haproxy must be in the same docker network.
 
-The discover will occur every minute.
+The discovery will occur every minute.
 
 e.g.:
 
@@ -81,11 +89,11 @@ docker run --network easyhaproxy myimage
 This method requires a functional Docker Swarm Cluster. The system will search for the labels in all containers on all
 swarm nodes.
 
-The discover will occur every minute.
+The discovery will occur every minute.
 
 Important: easyhaproxy needs to be in the same network of the containers or otherwise will not access.
 
-### Tags to be attached in the Docker Container (Swarm or Docker)
+### Docker Container (Swarm or Docker) tags:
 
 | Tag                                   | Description                                                                                             | Example      |
 |---------------------------------------|---------------------------------------------------------------------------------------------------------|--------------|
@@ -93,14 +101,16 @@ Important: easyhaproxy needs to be in the same network of the containers or othe
 | easyhaproxy.[definition].mode         | (Optional) Is this `http` or `tcp` mode in HAProxy. (Defaults to http)                                  | http         |
 | easyhaproxy.[definition].port         | (Optional) Port HAProxy will listen for the host. (Defaults to 80)                                      | 80           |
 | easyhaproxy.[definition].localport    | (Optional) Port container is listening. (Defaults to 80)                                                | 8080         |
-| easyhaproxy.[definition].redirect     | (Optional) JSON containing key/value pair from host/to url redirect.                                    | {"foo.com":"https://bla.com", "bar.com":"https://bar.org"} |
+| easyhaproxy.[definition].redirect     | (Optional) JSON containing key/value pair from host/to URL redirect.                                    | {"foo.com":"https://bla.com", "bar.com":"https://bar.org"} |
 | easyhaproxy.[definition].sslcert      | (Optional) Cert PEM Base64 encoded. Do not use this if letsencrypt is enabled.                          |              |
-| easyhaproxy.[definition].health-check | (Optional) `ssl`, enable health check via SSL in `mode tcp` (Defaults to "empty")                       |              |
-| easyhaproxy.[definition].letsencrypt  | (Optional) Generate certificate with letsencrypt. Do not use with sslcert                               | true OR yes OR false OR no    |
+| easyhaproxy.[definition].ssl          | (Optional) If `true` you need to provide certificate as a file. See below. Do not use with `sslcert`.   | true         |
+| easyhaproxy.[definition].health-check | (Optional) `ssl`, enable health check via SSL in `mode tcp` (Defaults to "empty")                       | ssl          |
+| easyhaproxy.[definition].letsencrypt  | (Optional) Generate certificate with letsencrypt. Do not use with `sslcert`.                            | true OR yes OR false OR no    |
+| easyhaproxy.[definition].redirect-ssl | (Optional) Redirect all requests to https                                                               | true OR yes OR false OR no    |
 
 ### Defining the labels in Docker Swarm
 
-if you are deploying a stack in a Docker Swarm cluster set labels at the `deploy` level:
+if you are deploying a stack in a Docker Swarm cluster, set labels at the `deploy` level:
 
 ```yaml
 services:
@@ -138,7 +148,7 @@ docker run \
 
 ### TLS passthrough
 
-Used to pass on SSL-termination to a backend. Alternatively, you can enable health-check via SSL on the backend with the optional `health-check` label:
+Used to pass on SSL termination to a backend. Alternatively, you can enable health-check via SSL on the backend with the optional `health-check` label:
 
 ```bash
 docker run \
@@ -177,9 +187,11 @@ easymapping:
         containers:
           - container:5000
         letsencrypt: true
+        redirect-ssl: true
       host2.com.br: 
         containers:
           - other:3000
+        ssl: false
     redirect:
       www.host1.com.br: http://host1.com.br
 
@@ -189,6 +201,7 @@ easymapping:
       host1.com.br: 
         containers:
           - container:80
+        redirect-ssl: false
 
   - port: 8080
     hosts:
@@ -231,15 +244,17 @@ Caveats:
 
 - Your container **must** listen to the port 80. Besides no error, the certificate won't be issued if in a different port.
 - The port 2080 is reserved for the certbot and should not be exposed.
-- You cannot set the port 443 for the container with the Letsencrypt. EasyHAProxy will handle this automatically once the certificate is issued. 
+- You cannot set the port 443 for the container with the Letsencrypt because EasyHAProxy will handle this automatically once the certificate is issued. 
 - If you don't run the EasyHAProxy with the parameter `EASYHAPROXY_LETSENCRYPT_EMAIL` no certificate will be issued. 
-- Be aware about the issue limits - https://letsencrypt.org/docs/rate-limits/
+- Be aware of Letsencrypt issue limits - https://letsencrypt.org/docs/duplicate-certificate-limit/ and https://letsencrypt.org/docs/rate-limits/
 
 ## Exposing Ports
 
-- You need to expose at least the ports `80` and `443` when you run the `byjg/easy-haproxy` image. 
-- If you enable the HAProxy statistics you must also expose the port defined in `HAPROXY_STATS_PORT` environment variable. 
-- Every port defined in `easyhaproxy.[definitions].port` also should be enabel. 
+You must expose some ports on the EasyHAProxy container and in the firewall. However, you don't need to expose the other container ports because EasyHAProxy will handle that. 
+
+- The ports `80` and `443`. 
+- If you enable the HAProxy statistics, you must also expose the port defined in `HAPROXY_STATS_PORT` environment variable. 
+- Every port defined in `easyhaproxy.[definitions].port` also should be exposed. 
 
 e.g.
 
@@ -252,11 +267,10 @@ docker run \
     -d byjg/easy-haproxy
 ```
 
-Also, you need to expose these ports in the firewall. 
 
 ## Mapping custom .cfg files
 
-Map a folder containing valid HAProxy `.cfg` files to `/etc/haproxy/conf.d`. It will be concatenated to your HAProxy CFG.
+You can concatenate valid HAProxy `.cfg` files to the dynamically generated `haproxy.cfg` by mapping the folder `/etc/haproxy/conf.d`.
 
 ```bash
 docker run \
@@ -265,11 +279,24 @@ docker run \
     -d byjg/easy-haproxy
 ```
 
+## Mapping SSL certificates volumes
+
+EasyHAProxy stores the certificates inside the folder `/certs/haproxy` and `/certs/letsencrypt`. 
+- If you want to preserve the letsencrypt certificates between reloads, map the folder `/certs/letsencrypt` to your volume. 
+- If you want to provide your certificates as a file instead of a Base64 parameter, map the folder `/certs/haproxy` to your volume, and instead of use `easyhaproxy.[definition].sslcert`, use `easyhaproxy.[definition].ssl: true`
+
+```bash
+docker run \
+    /* other parameters */
+    -v /your/certs/letsencrypt:/certs/letsencrypt \
+    -d byjg/easy-haproxy
+```
+
 ## Handling SSL
 
 You can attach a valid SSL certificate to the request.
 
-1. First Create a single PEM file including CA.
+1. First, Create a single PEM file including CA.
 
 ```bash
 cat example.com.crt example.com.key > single.pem
@@ -298,7 +325,7 @@ cat single.pem | base64 -w0
 ## Setting Custom Errors
 
 If enabled, map the volume : `/etc/haproxy/errors-custom/` to your container and put a file named `ERROR_NUMBER.http`
-where ERROR_NUMBER is the http error code (e.g. 503.http)
+where ERROR_NUMBER is the HTTP error code (e.g., `503.http`)
 
 ## Build
 
@@ -306,6 +333,12 @@ where ERROR_NUMBER is the http error code (e.g. 503.http)
 ```bash
 docker build -t byjg/easy-haproxy .
 ```
+
+## Limitations
+
+EasyHAProxy has some limitations when there is more than one easy-haproxy container running: 
+- Replicas can be out-of-sync for a few seconds because each replica will discover the pods separately. 
+- Each replica will request a Letsencrypt certificate and can fail because the letsencrypt challenge can be directed to the other replica. 
 
 ----
 [Open source ByJG](http://opensource.byjg.com)

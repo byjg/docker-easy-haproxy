@@ -16,7 +16,7 @@ else
     touch ${CONTROL_FILE}
 
     if [[ "$EASYHAPROXY_DISCOVER" == "docker" ]]; then
-        CONTAINERS=$(docker ps -q)
+        CONTAINERS=$(docker ps -q | sort | uniq)
         LABEL_PATH=".Config.Labels"
 
         for container in ${CONTAINERS}; do
