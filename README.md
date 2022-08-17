@@ -13,10 +13,17 @@ a simple Yaml.
 
 ## Features
 
-- Enable or disable Stats on port 1936 with custom password
-- Discover and setup haproxy from Docker Tag
-- Discover and setup haproxy redirect from Docker Tag
-- Setup HAProxy CFG from a Yaml file.
+EasyHAProxy will discover the services based on the Docker Tags of the running containers in a Docker host or Docker Swarm cluster and setup the `haproxy.cfg` dynamically. The configurations can be set are:
+- Use Letsencrypt with HAProxy.
+- Balance traffic between multiple replicas
+- Set SSL according the most recent definitions to improve security and with
+- Include your own SSL certificate.
+- Setup HAProxy to listen TCP.
+- Add redirects.
+- Enable/disable Stats on port 1936 with custom password.
+- Enable/disable custom errors.
+
+Also it is possible setup HAProxy from a simple Yaml file instead of setup `haproxy.cfg` dynamically. 
 
 ## Basic Usage
 
@@ -180,9 +187,11 @@ easymapping:
         containers:
           - container:5000
         letsencrypt: true
+        redirect-ssl: true
       host2.com.br: 
         containers:
           - other:3000
+        ssl: false
     redirect:
       www.host1.com.br: http://host1.com.br
 
@@ -192,6 +201,7 @@ easymapping:
       host1.com.br: 
         containers:
           - container:80
+        redirect-ssl: false
 
   - port: 8080
     hosts:
