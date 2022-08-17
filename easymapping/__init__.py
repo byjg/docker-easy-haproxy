@@ -165,7 +165,7 @@ class HaproxyConfigGenerator:
                         easymapping["443"]["hosts"][hostname] = dict(easymapping[port]["hosts"][hostname])
                         easymapping["443"]["hosts"][hostname]["letsencrypt"] = False
                         easymapping["443"]["hosts"][hostname]["redirect_ssl"] = False
-                        easymapping["443"]["ssl_cert"] = self.ssl_cert_letsecncrypt
+                        easymapping["443"]["ssl"] = True
                         self.letsencrypt_hosts.append(hostname) if hostname not in self.letsencrypt_hosts else self.letsencrypt_hosts
                         
 
@@ -175,12 +175,12 @@ class HaproxyConfigGenerator:
                         filename = "{}/{}.pem".format(
                             self.ssl_cert_haproxy, d[host_label]
                         )
-                        easymapping[port]["ssl_cert"] = filename
+                        easymapping[port]["ssl"] = True
                         with open(filename, 'wb') as file:
                             file.write(
                                 base64.b64decode(d[ssl_label])
                             )
                     if self.label.get_bool(self.label.create([definition, "ssl"])):
-                        easymapping[port]["ssl_cert"] = self.ssl_cert_haproxy
+                        easymapping[port]["ssl"] = True
 
         return easymapping.values()

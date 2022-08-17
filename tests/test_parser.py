@@ -168,7 +168,7 @@ def test_parser_finds_services_raw():
                 "byjg.ca":"https://www.somehost.com.br",
                 "www.byjg.ca":"https://www.somehost.com.br"
             },
-            "ssl_cert":CERT_FILE
+            "ssl": True
         },
         {
             "mode":"http",
@@ -247,7 +247,7 @@ def test_parser_static_raw():
             },
             {
                 "port": 443,
-                "ssl_cert": "/certs/haproxy/mycert.pem",
+                "ssl": True,
                 "hosts": {
                     "host1.com.br": {
                         "containers": [

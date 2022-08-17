@@ -197,7 +197,6 @@ easymapping:
       host2.com.br: 
         containers:
           - other:3000
-        ssl: false
     redirect:
       www.host1.com.br: http://host1.com.br
 
@@ -207,7 +206,7 @@ easymapping:
         containers:
           - container:80
         redirect-ssl: false
-        ssl: true
+      ssl: true
 
   - port: 8080
     hosts:

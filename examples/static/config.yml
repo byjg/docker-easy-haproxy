@@ -12,7 +12,7 @@ easymapping:
       www.host1.local: https://host1.local
 
   - port: 443
-    ssl_cert: /certs/haproxy/host1.local.pem
+    ssl: true
     hosts:
       host1.local:
         containers:
