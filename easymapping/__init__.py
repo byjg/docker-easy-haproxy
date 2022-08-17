@@ -49,12 +49,12 @@ class HaproxyConfigGenerator:
     def __init__(self, mapping, ssl_cert_folder="/certs"):
         self.mapping = mapping
         self.mapping.setdefault("ssl_mode", 'default')
+        self.mapping.setdefault("letsencrypt", {"email": ""})
         self.mapping["ssl_mode"] = self.mapping["ssl_mode"].lower()
         self.label = DockerLabelHandler(mapping['lookup_label'] if 'lookup_label' in mapping else "easyhaproxy")
         self.ssl_cert_haproxy = ssl_cert_folder + "/haproxy"
         self.ssl_cert_letsecncrypt = ssl_cert_folder + "/letsencrypt"
         self.letsencrypt_hosts = []
-        self.letsencrypt_email = os.getenv("EASYHAPROXY_LETSENCRYPT_EMAIL", "")
         os.makedirs(self.ssl_cert_haproxy, exist_ok=True)
         os.makedirs(self.ssl_cert_letsecncrypt, exist_ok=True)
  
@@ -116,7 +116,7 @@ class HaproxyConfigGenerator:
                 letsencrypt = self.label.get_bool(
                     self.label.create([definition, "letsencrypt"]),
                     False
-                ) and self.letsencrypt_email != "" 
+                ) and self.mapping["letsencrypt"]["email"] != "" 
 
                 if port not in easymapping:
                     easymapping[port] = {
@@ -164,6 +164,7 @@ class HaproxyConfigGenerator:
                             }
                         easymapping["443"]["hosts"][hostname] = dict(easymapping[port]["hosts"][hostname])
                         easymapping["443"]["hosts"][hostname]["letsencrypt"] = False
+                        easymapping["443"]["hosts"][hostname]["redirect_ssl"] = False
                         easymapping["443"]["ssl_cert"] = self.ssl_cert_letsecncrypt
                         self.letsencrypt_hosts.append(hostname) if hostname not in self.letsencrypt_hosts else self.letsencrypt_hosts
                         

@@ -35,14 +35,16 @@ def test_parser_finds_services():
     line_list = load_fixture("services")
 
     result = {
-        "customerrors": False
+        "customerrors": False,
+        "letsencrypt": {
+            "email": LETSENCRYPT_EMAIL
+        }
     }
 
     if os.path.exists(CERT_FILE):
         os.remove(CERT_FILE)
 
     cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
-    cfg.letsencrypt_email = LETSENCRYPT_EMAIL
     haproxy_config = cfg.generate(line_list)
 
     assert len(haproxy_config) > 0
@@ -60,14 +62,16 @@ def test_parser_finds_services_changed_label():
 
     result = {
         "customerrors": False,
-        "lookup_label": "haproxy"
+        "lookup_label": "haproxy",
+        "letsencrypt": {
+            "email": LETSENCRYPT_EMAIL
+        }
     }
 
     if os.path.exists(CERT_FILE):
         os.remove(CERT_FILE)
 
     cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
-    cfg.letsencrypt_email = LETSENCRYPT_EMAIL
     haproxy_config = cfg.generate(line_list)
 
     assert len(haproxy_config) > 0
@@ -84,14 +88,16 @@ def test_parser_finds_services_raw():
     line_list = load_fixture("services")
 
     result = {
-        "customerrors": False
+        "customerrors": False,
+        "letsencrypt": {
+            "email": LETSENCRYPT_EMAIL
+        }
     }
 
     if os.path.exists(CERT_FILE):
         os.remove(CERT_FILE)
 
     cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
-    cfg.letsencrypt_email = LETSENCRYPT_EMAIL
 
     parsed_object = [
         {
@@ -374,7 +380,30 @@ def test_parser_ssl_loose():
         assert expected_file.read() == haproxy_config
     assert [] == cfg.letsencrypt_hosts
 
+def test_parser_ssl_letsencrypt():
+    line_list = load_fixture("services-letsencrypt")
+
+    result = {
+        "customerrors": True,
+        "stats": {
+            "username": "admin",
+            "password": "password"
+        },
+        "letsencrypt": {
+            "email": LETSENCRYPT_EMAIL
+        }
+    }
+
+    cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
+    haproxy_config = cfg.generate(line_list)
+
+    assert len(haproxy_config) > 0
+    path = os.path.dirname(os.path.realpath(__file__))
+    with open(path + "/expected/services-letsencrypt.txt", 'r') as expected_file:
+        assert expected_file.read() == haproxy_config
+    assert ["test.example.org"] == cfg.letsencrypt_hosts
 
 #test_parser_finds_services_raw()
 #test_parser_tcp()
 #test_parser_multiple_hosts()
+#test_parser_ssl_letsencrypt()
