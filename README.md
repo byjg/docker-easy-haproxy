@@ -323,5 +323,11 @@ where ERROR_NUMBER is the http error code (e.g. 503.http)
 docker build -t byjg/easy-haproxy .
 ```
 
+## Limitations
+
+EasyHAProxy has some limitations when there is more than one easy-haproxy container running: 
+- Replicas can be out-of-sync for a few seconds, because each replica will discover the pods separatedly. 
+- Each replica will request a Letsencrypt certificate and it can fail because the letsencrypt challenge can be directed to the other replica. 
+
 ----
 [Open source ByJG](http://opensource.byjg.com)
