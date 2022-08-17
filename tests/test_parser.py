@@ -333,7 +333,8 @@ def test_parser_redirect_ssl():
     line_list = load_fixture("services-redirect-ssl")
 
     result = {
-        "customerrors": False
+        "customerrors": False,
+        "ssl_mode": "loose"
     }
 
     cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
