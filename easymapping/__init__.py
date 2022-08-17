@@ -180,5 +180,7 @@ class HaproxyConfigGenerator:
                             file.write(
                                 base64.b64decode(d[ssl_label])
                             )
+                    if self.label.get_bool(self.label.create([definition, "ssl"])):
+                        easymapping[port]["ssl_cert"] = self.ssl_cert_haproxy
 
         return easymapping.values()

@@ -96,8 +96,9 @@ Important: easyhaproxy needs to be in the same network of the containers or othe
 | easyhaproxy.[definition].localport    | (Optional) Port container is listening. (Defaults to 80)                                                | 8080         |
 | easyhaproxy.[definition].redirect     | (Optional) JSON containing key/value pair from host/to url redirect.                                    | {"foo.com":"https://bla.com", "bar.com":"https://bar.org"} |
 | easyhaproxy.[definition].sslcert      | (Optional) Cert PEM Base64 encoded. Do not use this if letsencrypt is enabled.                          |              |
-| easyhaproxy.[definition].health-check | (Optional) `ssl`, enable health check via SSL in `mode tcp` (Defaults to "empty")                       |              |
-| easyhaproxy.[definition].letsencrypt  | (Optional) Generate certificate with letsencrypt. Do not use with sslcert                               | true OR yes OR false OR no    |
+| easyhaproxy.[definition].ssl          | (Optional) If `true` you need to provide certificate as a file. See below. Do not use with `sslcert`.   | true         |
+| easyhaproxy.[definition].health-check | (Optional) `ssl`, enable health check via SSL in `mode tcp` (Defaults to "empty")                       | ssl          |
+| easyhaproxy.[definition].letsencrypt  | (Optional) Generate certificate with letsencrypt. Do not use with `sslcert`.                            | true OR yes OR false OR no    |
 | easyhaproxy.[definition].redirect-ssl | (Optional) Redirect all requests to https                                                               | true OR yes OR false OR no    |
 
 ### Defining the labels in Docker Swarm
@@ -269,12 +270,14 @@ docker run \
 
 ## Mapping ssl certificates volumes
 
-EasyHAProxy stores the certificates inside the folder `/certs/haproxy` and `/certs/letsencrypt`. If you want to preserve the certificates between reloads, just map the folder `/certs` to your volume. 
+EasyHAProxy stores the certificates inside the folder `/certs/haproxy` and `/certs/letsencrypt`. 
+- If you want to preserve the letsencrypt certificates between reloads, just map the folder `/certs/letsencrypt` to your volume. 
+- If you want to provide your own certificates as a file instead a Base64 parameter, just map the folder `/certs/haproxy` to your volume and instead of use `easyhaproxy.[definition].sslcert` use `easyhaproxy.[definition].ssl: true`
 
 ```bash
 docker run \
     /* other parameters */
-    -v /your/certs/folder:/certs \
+    -v /your/certs/letsencrypt:/certs/letsencrypt \
     -d byjg/easy-haproxy
 ```
 
