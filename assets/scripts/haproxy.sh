@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-source /scripts/haproxy-reload.sh initial
+/usr/sbin/haproxy -v
 
-/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid -S /var/run/haproxy.sock
+source /scripts/haproxy-reload.sh initial
 
 while true; do
     sleep 60

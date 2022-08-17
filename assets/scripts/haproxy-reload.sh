@@ -44,12 +44,10 @@ if cmp -s ${CONTROL_FILE} ${CONTROL_FILE}.old ; then
 fi
 
 if [[ ! -z "$1" ]]; then
-    echo "[CONF_CHECK] Initial configuration"
-    RELOAD="false"
+    echo "[CONF_CHECK] Initial configuration. Skip certbot."
 else
     /scripts/certbot.sh
 fi
-
 
 # If Certbot reloads successfully will create the file /tmp/force-reload
 if [ -f /tmp/force-reload ]; then
@@ -58,7 +56,12 @@ if [ -f /tmp/force-reload ]; then
     rm /tmp/force-reload
 fi
 
+if [[ ! -z "$1" ]]; then
+    echo "[CONF_CHECK] Start haproxy"
+    /usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid -S /var/run/haproxy.sock
+fi
+
 if [[ "$RELOAD" == "true" ]]; then
     echo "[CONF_CHECK] Reloading..."
-    /usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid -x /var/run/haproxy.sock -sf $(cat /run/haproxy.pid) &
+    /usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg $(ls /etc/haproxy/conf.d/*.cfg 2>/dev/null | xargs -I{} echo -f {}) -p /run/haproxy.pid -x /var/run/haproxy.sock -sf $(cat /run/haproxy.pid) &
 fi

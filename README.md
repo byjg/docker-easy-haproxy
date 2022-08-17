@@ -180,6 +180,12 @@ stats:
 
 customerrors: true   # Optional (default false)
 
+ssl_mode: default
+
+letsencrypt: {
+  "email": "acme@example.org"
+}
+
 easymapping:
   - port: 80
     hosts:
@@ -191,17 +197,16 @@ easymapping:
       host2.com.br: 
         containers:
           - other:3000
-        ssl: false
     redirect:
       www.host1.com.br: http://host1.com.br
 
   - port: 443
-    ssl_cert: /path/to/ssl/certificate
     hosts:
       host1.com.br: 
         containers:
           - container:80
         redirect-ssl: false
+      ssl: true
 
   - port: 8080
     hosts:

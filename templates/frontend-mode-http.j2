@@ -14,7 +14,7 @@
     use_backend letsencrypt_backend if is_letsencrypt_{{ host }} is_rule_{{ host }}_1 OR is_letsencrypt_{{ host }} is_rule_{{ host }}_2
     {% endif %}
     {% if o["hosts"][k]["redirect_ssl"] %}
-    http-request redirect scheme https code 301 if !is_letsencrypt_{{ host }} is_rule_{{ host }}_1 OR !is_letsencrypt_{{ host }} is_rule_{{ host }}_2
+    http-request redirect scheme https code 301 if {% if letsencrypt %}!is_letsencrypt_{{ host }} {% endif %}is_rule_{{ host }}_1 OR {% if letsencrypt %}!is_letsencrypt_{{ host }} {% endif %}is_rule_{{ host }}_2
     {% else %}
     use_backend srv_{{ host }} if is_rule_{{ host }}_1 OR is_rule_{{ host }}_2
     {% endif %}

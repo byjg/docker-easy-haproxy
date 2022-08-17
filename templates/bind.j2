@@ -1,4 +1,4 @@
-    {% if "ssl_cert" in o %}
+    {% if "ssl" in o %}
     bind *:{{ o["port"] }}  ssl crt /certs/letsencrypt/ alpn http/1.1 crt /certs/haproxy/ alpn http/1.1
     {% elif "h2" in o and o["h2"] %}
     bind *:{{ o["port"] }} proto h2
