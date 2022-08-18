@@ -45,16 +45,16 @@ The mapping to `/var/run/docker.sock` is necessary to discover the docker contai
 
 The environment variables will setup the HAProxy.
 
-| Environment Variable          | Description                                                                   |
-|-------------------------------|-------------------------------------------------------------------------------|
-| EASYHAPROXY_DISCOVER          | How `haproxy.cfg` will be created: `static`, `docker` or `swarm`              |
-| EASYHAPROXY_LABEL_PREFIX      | (Optional) The key will search for matching resources. Default: `easyhaproxy`.    |
-| EASYHAPROXY_LETSENCRYPT_EMAIL | (Optional) The email will be used to request the certificate to Letsencrypt       |      
+| Environment Variable          | Description                                                                                                   |
+|-------------------------------|---------------------------------------------------------------------------------------------------------------|
+| EASYHAPROXY_DISCOVER          | How `haproxy.cfg` will be created: `static`, `docker` or `swarm`                                              |
+| EASYHAPROXY_LABEL_PREFIX      | (Optional) The key will search for matching resources. Default: `easyhaproxy`.                                |
+| EASYHAPROXY_LETSENCRYPT_EMAIL | (Optional) The email will be used to request the certificate to Letsencrypt                                   |      
 | EASYHAPROXY_SSL_MODE          | (Optional) `STRICT` supports only the most recent TLS version; `DEFAULT` good SSL integration with recent browsers; `LOOSE` supports all old SSL protocols for old browsers (not recommended).  |      
-| HAPROXY_USERNAME              | (Optional) The HAProxy username to the statistics. Default: `admin`           |
-| HAPROXY_PASSWORD              | The HAProxy password to the statistics. If not set, it will disable stats.             |
-| HAPROXY_STATS_PORT            | (Optional) The HAProxy port to the statistics. Default: `1936`                |
-| HAPROXY_CUSTOMERRORS          | (Optional) If HAProxy will use custom HTML errors. true/false. Default: false |
+| HAPROXY_USERNAME              | (Optional) The HAProxy username to the statistics. Default: `admin`                                           |
+| HAPROXY_PASSWORD              | (Optional) The HAProxy password to the statistics. If not set, statistics will be available with no password  |
+| HAPROXY_STATS_PORT            | (Optional) The HAProxy port to the statistics. Default: `1936`. If set to `false`, disable statistics         |
+| HAPROXY_CUSTOMERRORS          | (Optional) If HAProxy will use custom HTML errors. true/false. Default: `false`                               |
 
 The environment variable `EASYHAPROXY_DISCOVER` will define where is located your containers (see below for more details):
 
@@ -258,7 +258,7 @@ Caveats:
 You must expose some ports on the EasyHAProxy container and in the firewall. However, you don't need to expose the other container ports because EasyHAProxy will handle that. 
 
 - The ports `80` and `443`. 
-- If you enable the HAProxy statistics, you must also expose the port defined in `HAPROXY_STATS_PORT` environment variable. 
+- If you enable the HAProxy statistics, you must also expose the port defined in `HAPROXY_STATS_PORT` environment variable (default 1936). Be aware that statististics are enabled by default with no password.
 - Every port defined in `easyhaproxy.[definitions].port` also should be exposed. 
 
 e.g.

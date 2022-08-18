@@ -19,6 +19,18 @@ defaults
     timeout client    10s
     timeout server    10m
 
+frontend stats
+    bind *:1936
+    mode http
+    stats enable
+    stats hide-version
+    stats realm Haproxy\ Statistics
+    stats uri /
+    default_backend srv_stats
+
+backend srv_stats
+    mode http
+    server Local 127.0.0.1:1936
 
 backend letsencrypt_backend
     mode http

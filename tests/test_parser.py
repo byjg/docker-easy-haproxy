@@ -19,7 +19,10 @@ def test_parser_doesnt_crash():
     line_list = load_fixture("no-services")
 
     result = {
-        "customerrors": False
+        "customerrors": False,
+        "stats": {
+            "port": "false"
+        }
     }
 
     cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
@@ -38,6 +41,9 @@ def test_parser_finds_services():
         "customerrors": False,
         "letsencrypt": {
             "email": LETSENCRYPT_EMAIL
+        },
+        "stats": {
+            "port": 0
         }
     }
 
@@ -65,6 +71,9 @@ def test_parser_finds_services_changed_label():
         "lookup_label": "haproxy",
         "letsencrypt": {
             "email": LETSENCRYPT_EMAIL
+        },
+        "stats": {
+            "port": 0
         }
     }
 
@@ -91,6 +100,9 @@ def test_parser_finds_services_raw():
         "customerrors": False,
         "letsencrypt": {
             "email": LETSENCRYPT_EMAIL
+        },
+        "stats": {
+            "port": 0
         }
     }
 
@@ -277,7 +289,10 @@ def test_parser_tcp():
     line_list = load_fixture("services-tcp")
 
     result = {
-        "customerrors": False
+        "customerrors": False,
+        "stats": {
+            "port": 0
+        }
     }
 
     cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
@@ -294,7 +309,10 @@ def test_parser_multi_containers():
     line_list = load_fixture("services-multi-containers")
 
     result = {
-        "customerrors": False
+        "customerrors": False,
+        "stats": {
+            "port": 0
+        }
     }
 
     cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
@@ -334,7 +352,10 @@ def test_parser_redirect_ssl():
 
     result = {
         "customerrors": False,
-        "ssl_mode": "loose"
+        "ssl_mode": "loose",
+        "stats": {
+            "port": 0
+        }
     }
 
     cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
@@ -352,7 +373,10 @@ def test_parser_ssl_strict():
 
     result = {
         "customerrors": False,
-        "ssl_mode": "strict"
+        "ssl_mode": "strict",
+        "stats": {
+            "port": False
+        }
     }
 
     cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
@@ -369,7 +393,7 @@ def test_parser_ssl_loose():
 
     result = {
         "customerrors": False,
-        "ssl_mode": "loose"
+        "ssl_mode": "loose",
     }
 
     cfg = easymapping.HaproxyConfigGenerator(result, CERTS_FOLDER)
@@ -387,7 +411,6 @@ def test_parser_ssl_letsencrypt():
     result = {
         "customerrors": True,
         "stats": {
-            "username": "admin",
             "password": "password"
         },
         "letsencrypt": {

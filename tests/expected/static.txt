@@ -36,9 +36,6 @@ frontend stats
     stats realm Haproxy\ Statistics
     stats uri /
     stats auth admin:test123
-#    acl is_proxystats hdr(host) -i some.host.com
-#    default_backend srv_stats
-#    use_backend srv_stats if is_proxystats
     default_backend srv_stats
 
 backend srv_stats
