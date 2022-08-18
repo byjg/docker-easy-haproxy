@@ -16,6 +16,7 @@ global
 
 defaults
     log global
+    option httplog
 
     timeout connect    3s
     timeout client    10s
@@ -36,9 +37,6 @@ frontend stats
     stats realm Haproxy\ Statistics
     stats uri /
     stats auth admin:password
-#    acl is_proxystats hdr(host) -i some.host.com
-#    default_backend srv_stats
-#    use_backend srv_stats if is_proxystats
     default_backend srv_stats
 
 backend srv_stats

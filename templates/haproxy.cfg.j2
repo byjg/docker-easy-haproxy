@@ -12,6 +12,7 @@ global
 
 defaults
     log global
+    option httplog
 
     timeout connect    3s
     timeout client    10s
@@ -26,23 +27,23 @@ defaults
     errorfile 504 /etc/haproxy/errors-custom/504.http
 {% endif %}
 
-{% if "stats" in data %}
+{% set data_stats = data["stats"] | default({}) %}
+{% if data_stats["port"] | default(1936) | int > 0 %}
 frontend stats
-    bind *:{{ data["stats"]["port"] | default(1936) }}
+    bind *:{{ data_stats["port"] | default(1936) }}
     mode http
     stats enable
     stats hide-version
     stats realm Haproxy\ Statistics
     stats uri /
-    stats auth {{ data["stats"]["username"] }}:{{ data["stats"]["password"] }}
-#    acl is_proxystats hdr(host) -i some.host.com
-#    default_backend srv_stats
-#    use_backend srv_stats if is_proxystats
+    {% if data_stats["password"] | default("") != "" %}
+    stats auth {{ data_stats["username"] | default("admin") }}:{{ data_stats["password"] }}
+    {% endif %}
     default_backend srv_stats
 
 backend srv_stats
     mode http
-    server Local 127.0.0.1:{{ data["stats"]["port"] | default(1936) }}
+    server Local 127.0.0.1:{{ data_stats["port"] | default(1936) }}
 {% endif %}
 {% for o in data["easymapping"] -%}
     {% set mode = o["mode"] or "http" %}

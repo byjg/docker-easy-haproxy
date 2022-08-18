@@ -8,7 +8,7 @@ COPY easymapping /scripts/easymapping/
 COPY tests/ /scripts/tests/
 COPY assets /
 
-RUN apk add --no-cache haproxy bash python3 py3-pip py-yaml supervisor docker certbot openssl \
+RUN apk add --no-cache haproxy bash python3 py3-pip py-yaml docker certbot openssl \
  && ln -s /usr/bin/python3 /usr/bin/python \
  && pip3 install --upgrade pip \
  && pip install -r requirements.txt \
@@ -16,4 +16,4 @@ RUN apk add --no-cache haproxy bash python3 py3-pip py-yaml supervisor docker ce
  && openssl dhparam -out /etc/haproxy/dhparam 2048 \
  && openssl dhparam -out /etc/haproxy/dhparam-1024 1024
 
-CMD ["/usr/bin/supervisord",  "-n",  "-c", "/etc/supervisord.conf" ]
+CMD ["/bin/bash", "-c", "/scripts/haproxy.sh" ]
