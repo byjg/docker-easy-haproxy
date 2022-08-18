@@ -57,11 +57,10 @@ if [ -f /tmp/force-reload ]; then
 fi
 
 if [[ ! -z "$1" ]]; then
-    echo "[CONF_CHECK] Start haproxy"
-    /usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid -S /var/run/haproxy.sock
-fi
+    echo "[CONF_CHECK] Starting haproxy..."
+    /usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg $(ls /etc/haproxy/conf.d/*.cfg 2>/dev/null | xargs -I{} echo -f {}) -p /run/haproxy.pid -S /var/run/haproxy.sock &
 
-if [[ "$RELOAD" == "true" ]]; then
+elif [[ "$RELOAD" == "true" ]]; then
     echo "[CONF_CHECK] Reloading..."
     /usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg $(ls /etc/haproxy/conf.d/*.cfg 2>/dev/null | xargs -I{} echo -f {}) -p /run/haproxy.pid -x /var/run/haproxy.sock -sf $(cat /run/haproxy.pid) &
 fi
