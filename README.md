@@ -50,7 +50,8 @@ The environment variables will setup the HAProxy.
 | EASYHAPROXY_DISCOVER          | How `haproxy.cfg` will be created: `static`, `docker` or `swarm`                                              |
 | EASYHAPROXY_LABEL_PREFIX      | (Optional) The key will search for matching resources. Default: `easyhaproxy`.                                |
 | EASYHAPROXY_LETSENCRYPT_EMAIL | (Optional) The email will be used to request the certificate to Letsencrypt                                   |      
-| EASYHAPROXY_SSL_MODE          | (Optional) `STRICT` supports only the most recent TLS version; `DEFAULT` good SSL integration with recent browsers; `LOOSE` supports all old SSL protocols for old browsers (not recommended).  |      
+| EASYHAPROXY_SSL_MODE          | (Optional) `STRICT` supports only the most recent TLS version; `DEFAULT` good SSL integration with recent browsers; `LOOSE` supports all old SSL protocols for old browsers (not recommended).  |    
+| EASYHAPROXY_REFRESH_CONF      | (Optional) Check configuration every N seconds. Default: 10                                                  |  
 | HAPROXY_USERNAME              | (Optional) The HAProxy username to the statistics. Default: `admin`                                           |
 | HAPROXY_PASSWORD              | (Optional) The HAProxy password to the statistics. If not set, statistics will be available with no password  |
 | HAPROXY_STATS_PORT            | (Optional) The HAProxy port to the statistics. Default: `1936`. If set to `false`, disable statistics         |

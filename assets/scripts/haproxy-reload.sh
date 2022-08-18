@@ -35,7 +35,7 @@ else
         RELOAD="false"
     else
         python3 swarm.py > /etc/haproxy/haproxy.cfg
-	echo "[CONF_CHECK] New configuration found"
+	echo "[CONF_CHECK] $(date +"$EASYHAPROXY_DATEFORMAT") New configuration found"
     fi
 fi
 
@@ -44,23 +44,23 @@ if cmp -s ${CONTROL_FILE} ${CONTROL_FILE}.old ; then
 fi
 
 if [[ ! -z "$1" ]]; then
-    echo "[CONF_CHECK] Initial configuration. Skip certbot."
+    echo "[CONF_CHECK] $(date +"$EASYHAPROXY_DATEFORMAT") Initial configuration. Skip certbot."
 else
     /scripts/certbot.sh
 fi
 
 # If Certbot reloads successfully will create the file /tmp/force-reload
 if [ -f /tmp/force-reload ]; then
-    echo "[CONF_CHECK] New certificates found..."
+    echo "[CONF_CHECK] $(date +"$EASYHAPROXY_DATEFORMAT") New certificates found..."
     RELOAD="true"
     rm /tmp/force-reload
 fi
 
 if [[ ! -z "$1" ]]; then
-    echo "[CONF_CHECK] Starting haproxy..."
+    echo "[CONF_CHECK] $(date +"$EASYHAPROXY_DATEFORMAT") Starting haproxy..."
     /usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg $(ls /etc/haproxy/conf.d/*.cfg 2>/dev/null | xargs -I{} echo -f {}) -p /run/haproxy.pid -S /var/run/haproxy.sock &
 
 elif [[ "$RELOAD" == "true" ]]; then
-    echo "[CONF_CHECK] Reloading..."
+    echo "[CONF_CHECK] $(date +"$EASYHAPROXY_DATEFORMAT") Reloading..."
     /usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg $(ls /etc/haproxy/conf.d/*.cfg 2>/dev/null | xargs -I{} echo -f {}) -p /run/haproxy.pid -x /var/run/haproxy.sock -sf $(cat /run/haproxy.pid) &
 fi
