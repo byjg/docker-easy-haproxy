@@ -146,6 +146,33 @@ docker run \
     some/myimage
 ```
 
+### Multiples hosts on the same container
+
+```bash
+docker run \
+    -l easyhaproxy.express.port=80 \
+    -l easyhaproxy.express.localport=3000 \
+    -l easyhaproxy.express.host=express.byjg.com.br,admin.byjg.com.br \
+    .... \
+    some/myimage
+```
+
+If you are using docker-compose you can use this way:
+
+```yaml
+version: "3"
+
+services:
+  mycontainer:
+    image: some/myimage
+    labels:
+      easyhaproxy.express.port: 80
+      easyhaproxy.express.localport: 3000
+      easyhaproxy.express.host: >-
+        express.byjg.com.br,
+        admin.byjg.com.br
+```
+
 ### TLS passthrough
 
 Used to pass on SSL termination to a backend. Alternatively, you can enable health-check via SSL on the backend with the optional `health-check` label:
