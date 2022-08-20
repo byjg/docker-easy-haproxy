@@ -1,0 +1,34 @@
+# To test:
+# curl -k -H "Host: host1.local" https://127.0.0.1/
+# curl -k -H "Host: host2.local" https://127.0.0.1/
+# 
+# curl -I -H Host:host1.local http://127.0.0.1
+# HTTP/1.1 301 Moved Permanently
+# content-length: 0
+# location: https://host1.local/
+#
+# curl -I -H Host:host2.local http://127.0.0.1
+# HTTP/1.1 301 Moved Permanently
+# content-length: 0
+# location: https://host1.local/
+#
+# Test SSL:
+# openssl s_client -showcerts -connect 127.0.0.1:443 --servername host1.local
+
+version: "3"
+
+services:
+  container:
+    image: byjg/static-httpserver
+    labels:
+      easyhaproxy.http.redirect_ssl: true
+      easyhaproxy.http.host: test.xpto.us
+      easyhaproxy.http.port: 80
+      easyhaproxy.http.localport: 8080
+      easyhaproxy.http.letsencrypt: true
+
+
+networks:
+   default:
+     name: easyhaproxy
+     external: true

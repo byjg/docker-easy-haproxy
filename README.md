@@ -107,7 +107,7 @@ Important: easyhaproxy needs to be in the same network of the containers or othe
 | easyhaproxy.[definition].ssl          | (Optional) If `true` you need to provide certificate as a file. See below. Do not use with `sslcert`.   | true         |
 | easyhaproxy.[definition].health-check | (Optional) `ssl`, enable health check via SSL in `mode tcp` (Defaults to "empty")                       | ssl          |
 | easyhaproxy.[definition].letsencrypt  | (Optional) Generate certificate with letsencrypt. Do not use with `sslcert`.                            | true OR yes OR false OR no    |
-| easyhaproxy.[definition].redirect-ssl | (Optional) Redirect all requests to https                                                               | true OR yes OR false OR no    |
+| easyhaproxy.[definition].redirect_ssl | (Optional) Redirect all requests to https                                                               | true OR yes OR false OR no    |
 
 ### Defining the labels in Docker Swarm
 
@@ -221,7 +221,7 @@ easymapping:
         containers:
           - container:5000
         letsencrypt: true
-        redirect-ssl: true
+        redirect_ssl: true
       host2.com.br: 
         containers:
           - other:3000
@@ -233,7 +233,7 @@ easymapping:
       host1.com.br: 
         containers:
           - container:80
-        redirect-ssl: false
+        redirect_ssl: false
       ssl: true
 
   - port: 8080
