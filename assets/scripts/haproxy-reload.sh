@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 
+source /scripts/functions.sh
+
 cd /scripts
 
 RELOAD="true"
 
 if [[ "static|docker|swarm" != *"$EASYHAPROXY_DISCOVER"* ]];then
-    echo "[CONF_CHECK] $(date +"$EASYHAPROXY_DATEFORMAT") ERROR: EASYHAPROXY_DISCOVER should be 'static', 'docker', or 'swarm'. I got '$EASYHAPROXY_DISCOVER' instead."
+    log "info" "CONF_CHECK" "ERROR: EASYHAPROXY_DISCOVER should be 'static', 'docker', or 'swarm'. I got '$EASYHAPROXY_DISCOVER' instead."
     exit 1
 fi
 
@@ -40,7 +42,7 @@ else
         RELOAD="false"
     else
         python3 swarm.py > /etc/haproxy/haproxy.cfg
-	echo "[CONF_CHECK] $(date +"$EASYHAPROXY_DATEFORMAT") New configuration found"
+	log "info" "CONF_CHECK" "New configuration found"
     fi
 fi
 
@@ -49,23 +51,23 @@ if cmp -s ${CONTROL_FILE} ${CONTROL_FILE}.old ; then
 fi
 
 if [[ ! -z "$1" ]]; then
-    echo "[CONF_CHECK] $(date +"$EASYHAPROXY_DATEFORMAT") Initial configuration. Skip certbot."
+    log "info" "CONF_CHECK" "Initial configuration. Skip certbot."
 else
     /scripts/certbot.sh
 fi
 
 # If Certbot reloads successfully will create the file /tmp/force-reload
 if [ -f /tmp/force-reload ]; then
-    echo "[CONF_CHECK] $(date +"$EASYHAPROXY_DATEFORMAT") New certificates found..."
+    log "info" "CONF_CHECK" "New certificates found..."
     RELOAD="true"
     rm /tmp/force-reload
 fi
 
 if [[ ! -z "$1" ]]; then
-    echo "[CONF_CHECK] $(date +"$EASYHAPROXY_DATEFORMAT") Starting haproxy..."
+    log "info" "CONF_CHECK" "Starting haproxy..."
     /usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg $(ls /etc/haproxy/conf.d/*.cfg 2>/dev/null | xargs -I{} echo -f {}) -p /run/haproxy.pid -S /var/run/haproxy.sock &
 
 elif [[ "$RELOAD" == "true" ]]; then
-    echo "[CONF_CHECK] $(date +"$EASYHAPROXY_DATEFORMAT") Reloading..."
+    log "info" "CONF_CHECK" "Reloading..."
     /usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg $(ls /etc/haproxy/conf.d/*.cfg 2>/dev/null | xargs -I{} echo -f {}) -p /run/haproxy.pid -x /var/run/haproxy.sock -sf $(cat /run/haproxy.pid) &
 fi

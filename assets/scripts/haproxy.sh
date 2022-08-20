@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+source /scripts/functions.sh
+
 /usr/sbin/haproxy -v
 
 if [ -z "$EASYHAPROXY_DATEFORMAT" ]; then
@@ -22,6 +24,6 @@ echo
 
 while true; do
     sleep $EASYHAPROXY_REFRESH_CONF
-    echo "[CONF_CHECK] $(date +"$EASYHAPROXY_DATEFORMAT") - Heartbeat."
+    log "info" "CONF_CHECK" "Heartbeat."
     /scripts/haproxy-reload.sh
 done
