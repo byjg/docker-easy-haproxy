@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+source /scripts/functions.sh
+
 /usr/sbin/haproxy -v
 
 if [ -z "$EASYHAPROXY_DATEFORMAT" ]; then
@@ -10,10 +12,18 @@ if [ -z "$EASYHAPROXY_REFRESH_CONF" ]; then
     export EASYHAPROXY_REFRESH_CONF=10
 fi
 
+
+cat banner.txt
+echo Release: $RELEASE_VERSION
+echo
+echo "Environment"
+env | sort | grep 'HAPROXY' | xargs -I{} echo " - {} "
+echo
+
 /scripts/haproxy-reload.sh initial
 
 while true; do
     sleep $EASYHAPROXY_REFRESH_CONF
-    echo "[CONF_CHECK] $(date +"$EASYHAPROXY_DATEFORMAT") - Heartbeat."
+    log "info" "CONF_CHECK" "Heartbeat."
     /scripts/haproxy-reload.sh
 done

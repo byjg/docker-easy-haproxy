@@ -1,0 +1,32 @@
+version: "3"
+
+services:
+  easyhaproxy:
+    image: byjg/easy-haproxy:4.1.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - certs_letsencrypt:/certs/letsencrypt
+      - certs_haproxy:/certs/haproxy
+
+    environment:
+      EASYHAPROXY_DISCOVER: docker
+      EASYHAPROXY_LABEL_PREFIX: easyhaproxy
+      EASYHAPROXY_LETSENCRYPT_EMAIL: changeme@example.org
+      EASYHAPROXY_SSL_MODE: "default"
+      HAPROXY_CUSTOMERRORS: "true"
+      HAPROXY_USERNAME: admin
+      HAPROXY_PASSWORD: password
+      HAPROXY_STATS_PORT: 1936
+
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+      - "1936:1936/tcp"
+
+volumes:
+  certs_letsencrypt:
+  certs_haproxy:
+
+networks:
+  easyhaproxy:
+    driver: bridge

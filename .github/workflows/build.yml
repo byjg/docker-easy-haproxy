@@ -62,6 +62,23 @@ jobs:
         with:
           images: ${{ secrets.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}
 
+      - uses: actions/github-script@v6
+        id: tags
+        with:
+          script: |
+            tags = "${{ join(steps.meta.outputs.tags, ',') }}"
+            result = []
+            tags.split(",").forEach(function (item) {
+              short_tag = item.trim().split(":")[1]; 
+              if (short_tag != "latest") {
+                result.push(short_tag);
+              }
+            })
+            return result.join(",");
+          result-encoding: string
+      - name: Get result
+        run: echo "${{steps.set-result.outputs.result}}"          
+
       # Build and push Docker image with Buildx (don't push on PR)
       # https://github.com/docker/build-push-action
       - name: Build and push Docker image
@@ -69,6 +86,8 @@ jobs:
         with:
           context: .
           file: Dockerfile
+          build-args: |
+            RELEASE_VERSION_ARG="${{ join(steps.tags.outputs.result, ',') }}"
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' || github.event.inputs.push == 'true' }}
           tags: ${{ steps.meta.outputs.tags }}
