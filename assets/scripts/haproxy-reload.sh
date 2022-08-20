@@ -4,6 +4,11 @@ cd /scripts
 
 RELOAD="true"
 
+if [[ "static|docker|swarm" != *"$EASYHAPROXY_DISCOVER"* ]];then
+    echo "[CONF_CHECK] $(date +"$EASYHAPROXY_DATEFORMAT") ERROR: EASYHAPROXY_DISCOVER should be 'static', 'docker', or 'swarm'. I got '$EASYHAPROXY_DISCOVER' instead."
+    exit 1
+fi
+
 if [[ "$EASYHAPROXY_DISCOVER" == "static" ]]; then
     CONTROL_FILE="/etc/haproxy/haproxy.cfg"
     touch ${CONTROL_FILE}

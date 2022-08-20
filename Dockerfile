@@ -1,5 +1,9 @@
 FROM alpine:3.16
 
+ARG RELEASE_VERSION_ARG
+
+ENV RELEASE_VERSION=$RELEASE_VERSION_ARG
+
 WORKDIR /scripts
 
 COPY requirements.txt /scripts

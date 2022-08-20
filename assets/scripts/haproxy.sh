@@ -10,6 +10,14 @@ if [ -z "$EASYHAPROXY_REFRESH_CONF" ]; then
     export EASYHAPROXY_REFRESH_CONF=10
 fi
 
+
+cat banner.txt
+echo Release: $RELEASE_VERSION
+echo
+echo "Environment"
+env | sort | grep 'HAPROXY' | xargs -I{} echo " - {} "
+echo
+
 /scripts/haproxy-reload.sh initial
 
 while true; do

@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+if [ ! -f /scripts/letsencrypt_hosts.txt ]; then
+    exit 0
+fi
+
 # Semaphore
 if [ -f /tmp/certbot-lock ]; then
     echo "[CERTBOT_JOB] $(date +"$EASYHAPROXY_DATEFORMAT") Another process is running"

@@ -69,6 +69,8 @@ jobs:
         with:
           context: .
           file: Dockerfile
+          build-args: |
+            RELEASE_VERSION_ARG="${{ join(steps.meta.outputs.tags, ',') }} - ${{ env.GITHUB_SHA }}"
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' || github.event.inputs.push == 'true' }}
           tags: ${{ steps.meta.outputs.tags }}

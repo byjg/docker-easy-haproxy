@@ -85,6 +85,12 @@ docker run --network easyhaproxy byjg/easyhaproxy
 docker run --network easyhaproxy myimage
 ```
 
+or, if the container is already created you can join it using the command:
+
+```
+docker network connect easyhaproxy mycontainer
+```
+
 ### EASYHAPROXY_DISCOVER: swarm
 
 This method requires a functional Docker Swarm Cluster. The system will search for the labels in all containers on all
