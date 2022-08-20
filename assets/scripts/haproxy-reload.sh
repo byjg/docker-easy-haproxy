@@ -7,7 +7,7 @@ cd /scripts
 RELOAD="true"
 
 if [[ "static|docker|swarm" != *"$EASYHAPROXY_DISCOVER"* ]];then
-    log "info" "CONF_CHECK" "ERROR: EASYHAPROXY_DISCOVER should be 'static', 'docker', or 'swarm'. I got '$EASYHAPROXY_DISCOVER' instead."
+    log "error" "CONF_CHECK" "EASYHAPROXY_DISCOVER should be 'static', 'docker', or 'swarm'. I got '$EASYHAPROXY_DISCOVER' instead."
     exit 1
 fi
 
