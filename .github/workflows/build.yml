@@ -66,9 +66,9 @@ jobs:
         id: tags
         with:
           script: |
-            tags = "${{ join(steps.meta.outputs.tags, ',') }}"
+            tags = `${{ join(steps.meta.outputs.tags, ',') }}`
             result = []
-            tags.split(",").forEach(function (item) {
+            tags.split("\n").forEach(function (item) {
               short_tag = item.trim().split(":")[1]; 
               if (short_tag != "latest") {
                 result.push(short_tag);
