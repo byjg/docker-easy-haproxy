@@ -22,7 +22,7 @@ spec:
       #serviceAccountName: easyhaproxy-ingress
       containers:
       - image: byjg/easy-haproxy:test
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         name: easyhaproxy-ingress
         ports:
         - name: http
@@ -59,7 +59,7 @@ spec:
         - name: EASYHAPROXY_REFRESH_CONF
           value: "10"
         - name: HAPROXY_CUSTOMERRORS
-          value: true
+          value: "true"
         - name: EASYHAPROXY_SSL_MODE
           value: loose
 
