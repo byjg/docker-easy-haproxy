@@ -47,7 +47,7 @@ The environment variables will setup the HAProxy.
 
 | Environment Variable          | Description                                                                                                   |
 |-------------------------------|---------------------------------------------------------------------------------------------------------------|
-| EASYHAPROXY_DISCOVER          | How `haproxy.cfg` will be created: `static`, `docker` or `swarm`                                              |
+| EASYHAPROXY_DISCOVER          | How `haproxy.cfg` will be created: `static`, `docker`, `swarm` or `kubernetes`                                  |
 | EASYHAPROXY_LABEL_PREFIX      | (Optional) The key will search for matching resources. Default: `easyhaproxy`.                                |
 | EASYHAPROXY_LETSENCRYPT_EMAIL | (Optional) The email will be used to request the certificate to Letsencrypt                                   |      
 | EASYHAPROXY_SSL_MODE          | (Optional) `STRICT` supports only the most recent TLS version; `DEFAULT` good SSL integration with recent browsers; `LOOSE` supports all old SSL protocols for old browsers (not recommended).  |    
@@ -100,7 +100,48 @@ The discovery will occur every minute.
 
 Important: easyhaproxy needs to be in the same network of the containers or otherwise will not access.
 
-### Docker Container (Swarm or Docker) tags:
+### EASYHAPROXY_DISCOVER: kubernetes (experimental and limited)
+
+This will query all `ingress` in the kubernetes cluster and check the annotation `kubernetes.io/ingress.class: easyhaproxy-ingress`. 
+
+e.g.:
+```
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: easyhaproxy-ingress
+  name: example-ingress
+  namespace: example
+spec:
+  rules:
+  - host: example.org
+    http:
+      paths:
+      - backend:
+          service:
+            name: example-service
+            port:
+              number: 8080
+        pathType: ImplementationSpecific
+  - host: www.example.org
+    http:
+      paths:
+      - backend:
+          service:
+            name: example-service
+            port:
+              number: 8080
+        pathType: ImplementationSpecific
+```
+
+At this point the implementation is very limited and doesn't support all ingress properties nor wildcard domains. 
+
+The system will read only `host` and `port.number`
+
+There is no necessary to add labels or annotations.
+
+
+### Container (Docker or Swarm) labels:
 
 | Tag                                   | Description                                                                                             | Example      |
 |---------------------------------------|---------------------------------------------------------------------------------------------------------|--------------|

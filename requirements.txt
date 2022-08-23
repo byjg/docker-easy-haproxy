@@ -2,3 +2,4 @@ pyyaml
 docker
 jinja2
 pytest
+kubernetes

@@ -6,11 +6,6 @@ cd /scripts
 
 RELOAD="true"
 
-if [[ "static|docker|swarm" != *"$EASYHAPROXY_DISCOVER"* ]];then
-    log "error" "CONF_CHECK" "EASYHAPROXY_DISCOVER should be 'static', 'docker', or 'swarm'. I got '$EASYHAPROXY_DISCOVER' instead."
-    exit 1
-fi
-
 if [[ "$EASYHAPROXY_DISCOVER" == "static" ]]; then
     CONTROL_FILE="/etc/haproxy/haproxy.cfg"
     touch ${CONTROL_FILE}
@@ -22,27 +17,40 @@ else
     mv ${CONTROL_FILE} ${CONTROL_FILE}.old
     touch ${CONTROL_FILE}
 
-    if [[ "$EASYHAPROXY_DISCOVER" == "docker" ]]; then
-        CONTAINERS=$(docker ps -q | sort | uniq)
-        LABEL_PATH=".Config.Labels"
+    case "$EASYHAPROXY_DISCOVER" in
+        docker)
+            CONTAINERS=$(docker ps -q | sort | uniq)
+            LABEL_PATH=".Config.Labels"
 
-        for container in ${CONTAINERS}; do
-            docker inspect --format "{{ json $LABEL_PATH }}" ${container} | xargs -I % echo ${container}=% >> ${CONTROL_FILE}
-        done
-    else
-        CONTAINERS=$(docker node ps $(docker node ls -q) --format "{{ .Name }}" --filter desired-state=running | cut -d. -f1 | sort | uniq)
-        LABEL_PATH=".Spec.Labels"
+            for container in ${CONTAINERS}; do
+                docker inspect --format "{{ json $LABEL_PATH }}" ${container} | xargs -I % echo ${container}=% >> ${CONTROL_FILE}
+            done
+            ;;
 
-        for container in ${CONTAINERS}; do
-            docker service inspect --format "{{ json $LABEL_PATH }}" ${container} | xargs -I % echo ${container}=% >> ${CONTROL_FILE}
-        done
-    fi
+        swarm)
+            CONTAINERS=$(docker node ps $(docker node ls -q) --format "{{ .Name }}" --filter desired-state=running | cut -d. -f1 | sort | uniq)
+            LABEL_PATH=".Spec.Labels"
+
+            for container in ${CONTAINERS}; do
+                docker service inspect --format "{{ json $LABEL_PATH }}" ${container} | xargs -I % echo ${container}=% >> ${CONTROL_FILE}
+            done
+            ;;
+
+        kubernetes)
+            python3 /scripts/k8s.py > ${CONTROL_FILE}
+            ;;
+
+        *)
+            log "error" "CONF_CHECK" "EASYHAPROXY_DISCOVER should be 'static', 'docker', 'swarm' or kubernetes. I got '$EASYHAPROXY_DISCOVER' instead."
+            exit 1
+            ;;
+    esac
 
     if cmp -s ${CONTROL_FILE} ${CONTROL_FILE}.old ; then
         RELOAD="false"
     else
         python3 swarm.py > /etc/haproxy/haproxy.cfg
-	log "info" "CONF_CHECK" "New configuration found"
+	    log "info" "CONF_CHECK" "New configuration found"
     fi
 fi
 
