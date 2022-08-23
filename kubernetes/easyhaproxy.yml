@@ -19,9 +19,9 @@ spec:
       labels:
         app: easyhaproxy-ingress
     spec:
-      serviceAccountName: easyhaproxy-ingress
+      #serviceAccountName: easyhaproxy-ingress
       containers:
-      - image: byjg/easy-haproxy:kubernetes
+      - image: byjg/easy-haproxy:test
         imagePullPolicy: IfNotPresent
         name: easyhaproxy-ingress
         ports:
@@ -41,14 +41,14 @@ spec:
          #limits:
          #  cpu: "1"
          #  memory: "1Gi"
-        securityContext:
-          allowPrivilegeEscalation: true
-          #runAsUser: 101 #nginx
-          capabilities:
-            drop:
-            - ALL
-            add:
-            - NET_BIND_SERVICE
+         #securityContext:
+         # allowPrivilegeEscalation: true
+         # #runAsUser: 101 #nginx
+         # capabilities:
+         #   drop:
+         #   - ALL
+         #   add:
+         #   - NET_BIND_SERVICE
         env:
         - name: EASYHAPROXY_DISCOVER
           value: kubernetes
@@ -57,5 +57,5 @@ spec:
         - name: HAPROXY_PASSWORD
           value: password
         - name: EASYHAPROXY_REFRESH_CONF
-          value: 10
+          value: "10"
 
