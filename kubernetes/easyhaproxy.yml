@@ -58,4 +58,8 @@ spec:
           value: password
         - name: EASYHAPROXY_REFRESH_CONF
           value: "10"
+        - name: HAPROXY_CUSTOMERRORS
+          value: true
+        - name: EASYHAPROXY_SSL_MODE
+          value: loose
 
