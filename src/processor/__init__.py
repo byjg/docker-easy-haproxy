@@ -45,7 +45,7 @@ class ProcessorInterface:
         elif mode == "swarm":
             return Swarm()
         elif mode == "kubernetes":
-            return Swarm()
+            return Kubernetes()
         else:
             Functions.log("FACTORY", "error", "Expected mode to be 'static', 'docker', 'swarm' or 'kubernetes'. I got '%s'" % (mode))
             return None
