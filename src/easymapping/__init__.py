@@ -52,9 +52,8 @@ class HaproxyConfigGenerator:
         self.mapping.setdefault("letsencrypt", {"email": ""})
         self.mapping["ssl_mode"] = self.mapping["ssl_mode"].lower()
         self.label = DockerLabelHandler(mapping['lookup_label'] if 'lookup_label' in mapping else "easyhaproxy")
-        self.ssl_cert_haproxy = ssl_cert_folder + "/haproxy"
-        self.ssl_cert_letsecncrypt = ssl_cert_folder + "/letsencrypt"
         self.letsencrypt_hosts = []
+        self.serving_hosts = []
         self.certs = {}
  
     def generate(self, container_metadata = None):
@@ -134,6 +133,7 @@ class HaproxyConfigGenerator:
 
                 for hostname in d[host_label].split(","):
                     hostname = hostname.strip()
+                    self.serving_hosts.append("%s:%s" % (hostname, port))
                     easymapping[port]["hosts"].setdefault(hostname, {})
                     easymapping[port]["hosts"][hostname].setdefault("containers", [])
                     easymapping[port]["hosts"][hostname].setdefault("letsencrypt", False)
@@ -166,11 +166,9 @@ class HaproxyConfigGenerator:
                     # handle SSL
                     ssl_label = self.label.create([definition, "sslcert"])
                     if self.label.has_label(ssl_label):
-                        filename = "{}/{}.pem".format(
-                            self.ssl_cert_haproxy, d[host_label]
-                        )
+                        filename = "{}.pem".format(d[host_label])
                         easymapping[port]["ssl"] = True
-                        self.certs[filename] = base64.b64decode(d[ssl_label])
+                        self.certs[filename] = base64.b64decode(d[ssl_label]).decode('ascii')
 
                     if self.label.get_bool(self.label.create([definition, "ssl"])):
                         easymapping[port]["ssl"] = True

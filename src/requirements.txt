@@ -3,4 +3,4 @@ docker
 jinja2
 pytest
 kubernetes
-numpy
+deepdiff

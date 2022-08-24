@@ -1,7 +1,6 @@
 from datetime import datetime
 import subprocess
 import shlex
-import numpy as np
 
 class Functions:
     @staticmethod
@@ -19,7 +18,7 @@ class Functions:
         if message is None or message == "":
             return
 
-        if not isinstance(message, (list, tuple, np.ndarray)):
+        if not isinstance(message, (list, tuple)):
             message = [message]
         
         for line in message:
@@ -27,7 +26,7 @@ class Functions:
 
     @staticmethod
     def run_bash(source, command, log_output=True, return_result=True):
-        if not isinstance(command, (list, tuple, np.ndarray)):
+        if not isinstance(command, (list, tuple)):
             command = shlex.split(command)
 
         try:

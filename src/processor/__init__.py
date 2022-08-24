@@ -34,11 +34,7 @@ class ContainerEnv:
 class ProcessorInterface:
     def __init__(self, filename = None):
         self.filename = filename
-        self.letsencrypt_hosts = None
-        self.parsed_object = None
-        self.cfg = None
-        self.inspect_network()
-        self.parse()
+        self.refresh()
 
     @staticmethod
     def factory(mode):
@@ -51,8 +47,16 @@ class ProcessorInterface:
         elif mode == "kubernetes":
             return Swarm()
         else:
-            Functions.log("FACTORY", "error", "Expected mode to be 'static', 'docker', 'swarm' or 'kubernetes'. I got " + mode)
+            Functions.log("FACTORY", "error", "Expected mode to be 'static', 'docker', 'swarm' or 'kubernetes'. I got '%s'" % (mode))
             return None
+
+    def refresh(self):
+        self.letsencrypt_hosts = None
+        self.parsed_object = None
+        self.cfg = None
+        self.hosts = None
+        self.inspect_network()
+        self.parse()
 
     def inspect_network(self):
         #Abstract
@@ -64,6 +68,9 @@ class ProcessorInterface:
 
     def get_letsencrypt_hosts(self):
         return self.letsencrypt_hosts
+
+    def get_hosts(self):
+        return self.hosts
 
     def get_parsed_object(self):
         return self.parsed_object
@@ -77,7 +84,15 @@ class ProcessorInterface:
     def get_haproxy_conf(self):
         conf = self.cfg.generate(self.parsed_object)
         self.letsencrypt_hosts = self.cfg.letsencrypt_hosts
+        self.hosts = self.cfg.serving_hosts
         return conf
+
+    def save_config(self, filename):
+        Functions.save(filename, self.get_haproxy_conf())
+
+    def save_certs(self, path):
+        for cert in self.get_certs():
+            Functions.save("{0}/{1}".format(path, cert), self.get_certs(cert))
 
 
 
@@ -125,13 +140,15 @@ class Swarm(ProcessorInterface):
 
 
 class Kubernetes(ProcessorInterface):
-    def inspect_network(self):
+    def __init__(self, filename = None):
         config.load_incluster_config()
-
-        api_instance = client.CoreV1Api()
-        v1 = client.NetworkingV1Api()
+        self.api_instance = client.CoreV1Api()
+        self.v1 = client.NetworkingV1Api()
+        super().__init__()
         
-        ret = v1.list_ingress_for_all_namespaces(watch=False)
+    def inspect_network(self):
+        
+        ret = self.v1.list_ingress_for_all_namespaces(watch=False)
 
         self.parsed_object = {}
         for i in ret.items:
@@ -152,7 +169,7 @@ class Kubernetes(ProcessorInterface):
                 rule_data["easyhaproxy.%s_%s.localport" % (definition, port_number)] = port_number
                 service_name = rule.http.paths[0].backend.service.name
                 try:
-                    api_response = api_instance.read_namespaced_service(service_name, i.metadata.namespace)
+                    api_response = self.api_instance.read_namespaced_service(service_name, i.metadata.namespace)
                     cluster_ip = api_response.spec.cluster_ip
                 except ApiException as e:
                     cluster_ip = None
