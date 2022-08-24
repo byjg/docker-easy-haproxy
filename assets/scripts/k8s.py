@@ -4,6 +4,11 @@ import json
 
 # https://github.com/kubernetes-client/python/tree/master/kubernetes/docs
 
+
+# Fix error:
+#     raise MaxRetryError(_pool, url, error or ResponseError(cause))
+# urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='10.152.183.1', port=443): Max retries exceeded with url: /api/v1/namespaces/parking/services/parking-valida-me (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:997)')))
+
 def main():
     config.load_incluster_config()
 

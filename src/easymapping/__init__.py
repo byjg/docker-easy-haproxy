@@ -55,15 +55,13 @@ class HaproxyConfigGenerator:
         self.ssl_cert_haproxy = ssl_cert_folder + "/haproxy"
         self.ssl_cert_letsecncrypt = ssl_cert_folder + "/letsencrypt"
         self.letsencrypt_hosts = []
-        os.makedirs(self.ssl_cert_haproxy, exist_ok=True)
-        os.makedirs(self.ssl_cert_letsecncrypt, exist_ok=True)
+        self.certs = {}
  
-    def generate(self, line_list = []):
+    def generate(self, container_metadata = None):
         self.mapping.setdefault("easymapping", [])
         
-        # static?
-        if len(line_list) > 0:
-            self.mapping["easymapping"] = self.parse(line_list)
+        if container_metadata is not None:
+            self.mapping["easymapping"] = self.parse(container_metadata)
 
         file_loader = FileSystemLoader('templates')
         env = Environment(loader=file_loader)
@@ -74,15 +72,11 @@ class HaproxyConfigGenerator:
         return template.render(data=self.mapping)
 
 
-    def parse(self, line_list):
+    def parse(self, container_metadata):
         easymapping = dict()
 
-        for line in line_list:
-            line = line.strip()
-            i = line.find("=")
-            container = line[:i]
-            json_str = line[i+1:]
-            d = json.loads(json_str)
+        for container in container_metadata:
+            d = container_metadata[container]
 
             # Extract the definitions dynamically
             definitions = {}
@@ -176,10 +170,8 @@ class HaproxyConfigGenerator:
                             self.ssl_cert_haproxy, d[host_label]
                         )
                         easymapping[port]["ssl"] = True
-                        with open(filename, 'wb') as file:
-                            file.write(
-                                base64.b64decode(d[ssl_label])
-                            )
+                        self.certs[filename] = base64.b64decode(d[ssl_label])
+
                     if self.label.get_bool(self.label.create([definition, "ssl"])):
                         easymapping[port]["ssl"] = True
 
