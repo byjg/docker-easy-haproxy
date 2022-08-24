@@ -1,8 +1,7 @@
-from functions import Functions
+from functions import Functions, DaemonizeHAProxy
 from processor import ProcessorInterface
 import os
 import time
-from threading import Thread
 from deepdiff import DeepDiff
 
 easyhaproxy_config = "/etc/haproxy/easyconfig.yml"
@@ -22,23 +21,27 @@ def start():
     processor_obj.save_certs(certs_haproxy)
     Functions.log('EASYHAPROXY', 'info', 'Found hosts: %s' % ", ".join(processor_obj.get_hosts())) # Needs to after save_config
 
-    #configs = Functions.run_bash('HAPROXY', 'ls /etc/haproxy/conf.d/*.cfg', log_output=False)
-    x = Thread(target=Functions.run_bash, args=("HAPROXY", "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid -S /var/run/haproxy.sock", True, False))
-    x.start()
+    old_haproxy = None
+    haproxy = DaemonizeHAProxy()
+    haproxy.haproxy("start")
 
     while True:
         time.sleep(10)
+        if old_haproxy is not None:
+            old_haproxy.kill()
+            old_haproxy = None
         try:
             old_parsed = processor_obj.get_parsed_object()
             processor_obj.refresh()
-            if DeepDiff(old_parsed, processor_obj.get_parsed_object()) != {} or not x.is_alive():
+            if DeepDiff(old_parsed, processor_obj.get_parsed_object()) != {} or not haproxy.is_alive():
                 Functions.log('EASYHAPROXY', 'info', 'New configuration found. Reloading...')
                 processor_obj.save_config(haproxy_config)
                 processor_obj.save_certs(certs_haproxy)
                 Functions.log('EASYHAPROXY', 'info', 'Found hosts: %s' % ", ".join(processor_obj.get_hosts())) # Needs to after save_config
-                pid = "".join(Functions().run_bash("HAPROXY", "cat /run/haproxy.pid", log_output=False))
-                x = Thread(target=Functions.run_bash, args=("HAPROXY", "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid -x /var/run/haproxy.sock -sf %s" % (pid), True, False))
-                x.start()
+                old_haproxy = haproxy
+                haproxy = DaemonizeHAProxy()
+                haproxy.haproxy("reload")
+                old_haproxy.terminate()
         except Exception as e:
             Functions.log('EASYHAPROXY', 'error', "Err: %s" % (e))
         Functions.log('EASYHAPROXY', 'info', 'Heartbeat')
