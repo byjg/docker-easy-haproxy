@@ -23,14 +23,15 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./host2.local.pem:/certs/haproxy/host2.local.pem
+    deploy:
+      replicas: 1
     environment:
-      EASYHAPROXY_DISCOVER: docker
+      EASYHAPROXY_DISCOVER: swarm
       EASYHAPROXY_SSL_MODE: "loose"
       HAPROXY_CUSTOMERRORS: "true"
       HAPROXY_USERNAME: admin
       HAPROXY_PASSWORD: password
       HAPROXY_STATS_PORT: 1936
-
     ports:
       - "80:80/tcp"
       - "443:443/tcp"
@@ -39,6 +40,7 @@ services:
   container:
     image: byjg/static-httpserver
     deploy:
+      replicas: 1
       labels:
         easyhaproxy.http.redirect_ssl: "true"
         easyhaproxy.http.host: host1.local
@@ -52,6 +54,7 @@ services:
   container2:
     image: byjg/static-httpserver
     deploy:
+      replicas: 1
       labels:
         easyhaproxy.http.host: host2.local
         easyhaproxy.http.port: 80

@@ -9,7 +9,7 @@ WORKDIR /scripts
 COPY src/ /scripts/
 COPY assets /
 
-RUN apk add --no-cache haproxy bash python3 py3-pip py-yaml docker certbot openssl \
+RUN apk add --no-cache haproxy bash python3 py3-pip py-yaml certbot openssl \
  && ln -s /usr/bin/python3 /usr/bin/python \
  && pip3 install --upgrade pip \
  && pip install -r requirements.txt \

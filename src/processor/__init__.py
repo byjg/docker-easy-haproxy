@@ -4,6 +4,7 @@ import yaml
 import sys
 import os
 import json
+import docker
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 
@@ -106,34 +107,28 @@ class Static(ProcessorInterface):
 
 
 class Docker(ProcessorInterface):
+    def __init__(self, filename = None):
+        self.client = docker.from_env()
+        super().__init__()
+    
     def inspect_network(self):
-        docker = "/usr/bin/docker"
-
-        containers_list = Functions.run_bash('DOCKER_PROCESSOR', docker + " ps -q", log_output=False)
-        containers_list.sort()
-        containers = list(set(containers_list))
         self.parsed_object = {}
-        for container in containers:
-            self.parsed_object[container] = json.loads(''.join(Functions.run_bash('DOCKER_PROCESSOR', docker + ' inspect --format "{{ json .Config.Labels }}" ' + container, log_output=False)))
+        for container in self.client.containers.list():
+            self.parsed_object[container.name] = container.labels
 
     def parse(self):
         self.cfg = HaproxyConfigGenerator(ContainerEnv.read())
 
 
 class Swarm(ProcessorInterface):
-    def inspect_network(self):
-        docker = "/usr/bin/docker"
+    def __init__(self, filename = None):
+        self.client = docker.from_env()
+        super().__init__()
 
-        node_list = ' '.join(Functions.run_bash('SWARM_PROCESSOR', docker + ' node ls -q', False))
-        containers_list_raw = Functions.run_bash('SWARM_PROCESSOR', docker + ' node ps ' + node_list + ' --format "{{ .Name }}" --filter desired-state=running', log_output=False)
-        containers_list = []
-        for container in containers_list_raw:
-            containers_list.append(container.split('.')[0])
-        containers_list.sort()
-        containers = list(set(containers_list))
+    def inspect_network(self):
         self.parsed_object = {}
-        for container in containers:
-            self.parsed_object[container] = json.loads(''.join(Functions.run_bash('SWARM_PROCESSOR', docker + ' service inspect --format "{{ json .Spec.Labels }}" ' + container, log_output=False)))
+        for container in self.client.services.list():
+            self.parsed_object[container.attrs["Spec"]["Name"]] = container.attrs["Spec"]["Labels"]
 
     def parse(self):
         self.cfg = HaproxyConfigGenerator(ContainerEnv.read())
