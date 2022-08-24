@@ -64,8 +64,7 @@ class ProcessorInterface:
         pass
 
     def parse(self):
-        # Abstract
-        pass
+        self.cfg = HaproxyConfigGenerator(ContainerEnv.read())
 
     def get_letsencrypt_hosts(self):
         return self.letsencrypt_hosts
@@ -116,9 +115,6 @@ class Docker(ProcessorInterface):
         for container in self.client.containers.list():
             self.parsed_object[container.name] = container.labels
 
-    def parse(self):
-        self.cfg = HaproxyConfigGenerator(ContainerEnv.read())
-
 
 class Swarm(ProcessorInterface):
     def __init__(self, filename = None):
@@ -129,9 +125,6 @@ class Swarm(ProcessorInterface):
         self.parsed_object = {}
         for container in self.client.services.list():
             self.parsed_object[container.attrs["Spec"]["Name"]] = container.attrs["Spec"]["Labels"]
-
-    def parse(self):
-        self.cfg = HaproxyConfigGenerator(ContainerEnv.read())
 
 
 class Kubernetes(ProcessorInterface):
@@ -175,8 +168,6 @@ class Kubernetes(ProcessorInterface):
                         self.parsed_object[cluster_ip] = data
                     self.parsed_object[cluster_ip].update(rule_data)
 
-    def parse(self):
-        self.cfg = HaproxyConfigGenerator(ContainerEnv.read())
 
 
 
