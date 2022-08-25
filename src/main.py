@@ -1,4 +1,4 @@
-from functions import Functions, DaemonizeHAProxy
+from functions import Functions, DaemonizeHAProxy, Certbot
 from processor import ProcessorInterface
 import os
 import time
@@ -25,6 +25,8 @@ def start():
     haproxy = DaemonizeHAProxy()
     haproxy.haproxy("start")
 
+    certbot = Certbot(certs_letsencrypt, os.getenv("EASYHAPROXY_LETSENCRYPT_EMAIL"))
+
     while True:
         time.sleep(10)
         if old_haproxy is not None:
@@ -42,6 +44,8 @@ def start():
                 haproxy = DaemonizeHAProxy()
                 haproxy.haproxy("reload")
                 old_haproxy.terminate()
+
+            certbot.check_certificates(processor_obj.get_letsencrypt_hosts())
         except Exception as e:
             Functions.log('EASYHAPROXY', 'error', "Err: %s" % (e))
         Functions.log('EASYHAPROXY', 'info', 'Heartbeat')
