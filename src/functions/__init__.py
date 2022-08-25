@@ -157,7 +157,6 @@ class Certbot:
                                 '    --no-eff-email'
                                 '    --non-interactive'
                                 '    --max-log-backups=0'
-                                '    --post-hook "/scripts/certbot_to_haproxy.sh"'
                                 '    %s --email %s' % (' '.join(request_certs), self.email)
                             )
 
@@ -167,7 +166,7 @@ class Certbot:
                 ret_reload = True
 
             if len(renew_certs) > 0:
-                Functions.run_bash("CERTBOT", "/usb/bin/certbot renew --post-hook /scripts/certbot_to_haproxy.sh", return_result=False)
+                Functions.run_bash("CERTBOT", "/usb/bin/certbot renew", return_result=False)
                 ret_reload = True
 
             if ret_reload:
