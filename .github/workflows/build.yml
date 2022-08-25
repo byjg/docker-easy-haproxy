@@ -26,8 +26,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - run: pip install -r requirements.txt
-      - run: pytest -s tests/ -vv
+      - run: |
+          cd src/
+          pip install -r requirements.txt
+          pytest -s tests/ -vv
 
   Build:
     runs-on: ubuntu-latest
