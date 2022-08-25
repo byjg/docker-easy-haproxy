@@ -20,7 +20,7 @@ def start():
     processor_obj.save_config(haproxy_config)
     processor_obj.save_certs(certs_haproxy)
     letsencrypt_certs_found = processor_obj.get_letsencrypt_hosts()
-    Functions.log('EASYHAPROXY', 'info', 'Found hosts: %s' % ", ".join(processor_obj.get_hosts())) # Needs to after save_config
+    Functions.log('EASYHAPROXY', 'debug', 'Found hosts: %s' % ", ".join(processor_obj.get_hosts())) # Needs to after save_config
 
     old_haproxy = None
     haproxy = DaemonizeHAProxy()
@@ -37,11 +37,11 @@ def start():
             old_parsed = processor_obj.get_parsed_object()
             processor_obj.refresh()
             if DeepDiff(old_parsed, processor_obj.get_parsed_object()) != {} or not haproxy.is_alive():
-                Functions.log('EASYHAPROXY', 'info', 'New configuration found. Reloading...')
+                Functions.log('EASYHAPROXY', 'debug', 'New configuration found. Reloading...')
                 processor_obj.save_config(haproxy_config)
                 processor_obj.save_certs(certs_haproxy)
                 letsencrypt_certs_found = processor_obj.get_letsencrypt_hosts()
-                Functions.log('EASYHAPROXY', 'info', 'Found hosts: %s' % ", ".join(processor_obj.get_hosts())) # Needs to after save_config
+                Functions.log('EASYHAPROXY', 'debug', 'Found hosts: %s' % ", ".join(processor_obj.get_hosts())) # Needs to after save_config
                 old_haproxy = haproxy
                 haproxy = DaemonizeHAProxy()
                 haproxy.haproxy("reload")
@@ -49,8 +49,8 @@ def start():
 
             certbot.check_certificates(letsencrypt_certs_found)
         except Exception as e:
-            Functions.log('EASYHAPROXY', 'error', "Err: %s" % (e))
-        Functions.log('EASYHAPROXY', 'info', 'Heartbeat')
+            Functions.log('EASYHAPROXY', 'fatal', "Err: %s" % (e))
+        Functions.log('EASYHAPROXY', 'debug', 'Heartbeat')
 
 
 
@@ -65,10 +65,10 @@ def main():
     Functions.log('INIT', 'info', "             |__/              |_|               |__/ ")
 
     Functions.log('INIT', 'info', "Release: %s" % (os.getenv("RELEASE_VERSION")))
-    Functions.log('INIT', 'info', 'Environment:')
+    Functions.log('INIT', 'debug', 'Environment:')
     for name, value in os.environ.items():
         if "HAPROXY" in name:
-            Functions.log('INIT', 'info', "- {0}: {1}".format(name, value))
+            Functions.log('INIT', 'debug', "- {0}: {1}".format(name, value))
 
     start()
 

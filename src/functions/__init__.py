@@ -103,7 +103,7 @@ class DaemonizeHAProxy:
                     Functions.log(source, "info", line)
 
             returncode = self.process.wait() 
-            Functions.log(source, "info", "Return code %s" % (returncode))
+            Functions.log(source, "debug", "Return code %s" % (returncode))
 
         except Exception as e:
             Functions.log(source, 'error', "%s" % (e))
@@ -137,15 +137,15 @@ class Certbot:
                 filename = "%s/%s.pem" % (self.certs, host)
                 host_arg = '-d %s' % (host)
                 if not os.path.exists(filename):
-                    Functions.log("CERTBOT", "info", "Request new certificate for %s" % (host))
+                    Functions.log("CERTBOT", "debug", "Request new certificate for %s" % (host))
                     request_certs.append(host_arg)
                 else:
                     creation_time = os.path.getctime(filename)
                     if (current_time - creation_time) // (24 * 3600) > 90:
-                        Functions.log("CERTBOT", "info", "Request expired certificate for %s" % (host))
+                        Functions.log("CERTBOT", "debug", "Request expired certificate for %s" % (host))
                         request_certs.append(host_arg)
                     if (current_time - creation_time) // (24 * 3600) >= 45:
-                        Functions.log("CERTBOT", "info", "Renew certificate for %s" % (host))
+                        Functions.log("CERTBOT", "debug", "Renew certificate for %s" % (host))
                         renew_certs.append(host_arg)
 
             certbot_certonly = ('/usr/bin/certbot certonly '
