@@ -46,7 +46,7 @@ class DockerLabelHandler:
 
 
 class HaproxyConfigGenerator:
-    def __init__(self, mapping, ssl_cert_folder="/certs"):
+    def __init__(self, mapping):
         self.mapping = mapping
         self.mapping.setdefault("ssl_mode", 'default')
         self.mapping.setdefault("letsencrypt", {"email": ""})
