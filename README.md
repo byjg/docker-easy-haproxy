@@ -6,18 +6,23 @@
 [![GitHub license](https://img.shields.io/github/license/byjg/docker-easy-haproxy.svg)](https://opensource.byjg.com/opensource/licensing.html)
 [![GitHub release](https://img.shields.io/github/release/byjg/docker-easy-haproxy.svg)](https://github.com/byjg/docker-easy-haproxy/releases/)
 
-Service discovery for HAProxy.
+## Service discovery for HAProxy
 
 This Docker image will dynamically create the `haproxy.cfg` based on the labels defined in docker containers or from
 a simple Yaml.
+
+EasyHAProxy can detect and configure automatically HAProxy on the folowing platforms:
+- Docker
+- Docker Swarm
+- Kubernetes
 
 ## Features
 
 EasyHAProxy will discover the services based on the Docker Tags of the running containers in a Docker host or Docker Swarm cluster and dynamically set up the `haproxy.cfg`. Below, EasyHAProxy main features::
 - Use Letsencrypt with HAProxy.
+- Set your custom SSL certificates
 - Balance traffic between multiple replicas
 - Set SSL with three different levels of validations and according to the most recent definitions.
-- Include your SSL certificate.
 - Setup HAProxy to listen to TCP.
 - Add redirects.
 - Enable/disable Stats on port 1936 with a custom password.
@@ -78,7 +83,7 @@ The discovery will occur every minute.
 e.g.:
 
 ```bash
-docker create networkd easyhaproxy
+docker create network easyhaproxy
 
 docker run --network easyhaproxy byjg/easyhaproxy
 
