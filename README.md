@@ -52,15 +52,21 @@ The environment variables will setup the HAProxy.
 
 | Environment Variable          | Description                                                                                                   |
 |-------------------------------|---------------------------------------------------------------------------------------------------------------|
-| EASYHAPROXY_DISCOVER          | How `haproxy.cfg` will be created: `static`, `docker`, `swarm` or `kubernetes`                                  |
+| EASYHAPROXY_DISCOVER          | How `haproxy.cfg` will be created: `static`, `docker`, `swarm` or `kubernetes`                                |
 | EASYHAPROXY_LABEL_PREFIX      | (Optional) The key will search for matching resources. Default: `easyhaproxy`.                                |
-| EASYHAPROXY_LETSENCRYPT_EMAIL | (Optional) The email will be used to request the certificate to Letsencrypt                                   |      
+| EASYHAPROXY_LETSENCRYPT_EMAIL | (Optional) The email will be used to request the certificate to Letsencrypt                                   |
 | EASYHAPROXY_SSL_MODE          | (Optional) `STRICT` supports only the most recent TLS version; `DEFAULT` good SSL integration with recent browsers; `LOOSE` supports all old SSL protocols for old browsers (not recommended).  |    
-| EASYHAPROXY_REFRESH_CONF      | (Optional) Check configuration every N seconds. Default: 10                                                  |  
+| EASYHAPROXY_REFRESH_CONF      | (Optional) Check configuration every N seconds. Default: 10                                                   |  
+| EASYHAPROXY_LOG_LEVEL         | (Optional) The log level for EasyHAproxy messages. Available: TRACE,DEBUG,INFO,WARN,ERROR,FATAL Default: TRACE |  
+| CERTBOT_LOG_LEVEL             | (Optional) The log level for Certbot messages. Available: TRACE,DEBUG,INFO,WARN,ERROR,FATAL Default: TRACE |  
+| HAPROXY_LOG_LEVEL             | (Optional) The log level for HAProxy messages. Available: TRACE,DEBUG,INFO,WARN,ERROR,FATAL Default: TRACE |  
 | HAPROXY_USERNAME              | (Optional) The HAProxy username to the statistics. Default: `admin`                                           |
 | HAPROXY_PASSWORD              | (Optional) The HAProxy password to the statistics. If not set, statistics will be available with no password  |
 | HAPROXY_STATS_PORT            | (Optional) The HAProxy port to the statistics. Default: `1936`. If set to `false`, disable statistics         |
 | HAPROXY_CUSTOMERRORS          | (Optional) If HAProxy will use custom HTML errors. true/false. Default: `false`                               |
+
+
+
 
 The environment variable `EASYHAPROXY_DISCOVER` will define where is located your containers (see below for more details):
 

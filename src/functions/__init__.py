@@ -6,6 +6,35 @@ import time
 import os
 
 class Functions:
+    HAPROXY_LOG="HAPROXY"
+    EASYHAPROXY_LOG="EASYHAPROXY"
+    CERTBOT_LOG="CERTBOT"
+    INIT_LOG="INIT"
+
+    TRACE = "TRACE"
+    DEBUG = "DEBUG"
+    INFO = "INFO"
+    WARN = "WARN"
+    ERROR = "ERROR"
+    FATAL = "FATAL"
+
+    debug_log = None
+
+    @staticmethod
+    def skip_log(source, log_level_str):
+        level = os.getenv("%s_LOG_LEVEL" % (source.upper()), "").upper()
+        level_importance = {
+            Functions.TRACE: 0,
+            Functions.DEBUG: 1,
+            Functions.INFO: 2, 
+            Functions.WARN: 3,
+            Functions.ERROR: 4,
+            Functions.FATAL: 5
+        }
+        level_required = 0 if level not in level_importance else level_importance[level]
+        level_asked = 0 if log_level_str.upper() not in level_importance else level_importance[log_level_str.upper()]
+        return level_asked < level_required
+
     @staticmethod
     def load(filename):
         with open(filename, 'r') as content_file:
@@ -21,11 +50,17 @@ class Functions:
         if message is None or message == "":
             return
 
+        if Functions.skip_log(source, level):
+            return
+
         if not isinstance(message, (list, tuple)):
             message = [message]
         
         for line in message:
-            print("[%s] %s [%s]: %s" % (source, datetime.now().strftime("%x %X"), level, line.rstrip()))
+            log = "[%s] %s [%s]: %s" % (source, datetime.now().strftime("%x %X"), level, line.rstrip())
+            print(log)
+            if Functions.debug_log is not None:
+                Functions.debug_log.append(log)
 
     @staticmethod
     def run_bash(source, command, log_output=True, return_result=True):
@@ -43,21 +78,21 @@ class Functions:
             while True:
                 line = process.stdout.readline().rstrip()
                 output.append(line) if return_result else None
-                Functions.log(source, "info", line) if log_output else None
-                Functions.log(source, "warning", process.stderr.readline())
+                Functions.log(source, Functions.INFO, line) if log_output else None
+                Functions.log(source, Functions.WARN, process.stderr.readline())
                 return_code = process.poll()
                 if return_code is not None:
                     lines = []
                     for line in process.stdout.readlines():
                         output.append(line.rstrip()) if return_result else None
                         lines.append(line.rstrip())
-                    Functions.log(source, "info", lines) if log_output else None
-                    Functions.log(source, "warning", process.stderr.readlines())
+                    Functions.log(source, Functions.INFO, lines) if log_output else None
+                    Functions.log(source, Functions.WARN, process.stderr.readlines())
                     break
 
             return output
         except Exception as e:
-            Functions.log(source, 'error', "%s" % (e))
+            Functions.log(source, Functions.ERROR, "%s" % (e))
 
 
 class DaemonizeHAProxy:
@@ -69,7 +104,7 @@ class DaemonizeHAProxy:
         if action == "start":
             self.__prepare("/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid -S /var/run/haproxy.sock")
         else:
-            pid = "".join(Functions().run_bash("HAPROXY", "cat /run/haproxy.pid", log_output=False))
+            pid = "".join(Functions().run_bash(Functions.HAPROXY_LOG, "cat /run/haproxy.pid", log_output=False))
             self.__prepare("/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid -x /var/run/haproxy.sock -sf %s" % (pid))
 
         if self.process is None:
@@ -79,7 +114,7 @@ class DaemonizeHAProxy:
         self.thread.start()
 
     def __prepare(self, command):
-        source = "HAPROXY"
+        source = Functions.HAPROXY_LOG
         if not isinstance(command, (list, tuple)):
             command = shlex.split(command)
 
@@ -92,21 +127,21 @@ class DaemonizeHAProxy:
                             universal_newlines=True)
 
         except Exception as e:
-            Functions.log(source, 'error', "%s" % (e))
+            Functions.log(source, Functions.ERROR, "%s" % (e))
 
 
     def __start(self):
-        source = "HAPROXY"
+        source = Functions.HAPROXY_LOG
         try:
             with self.process.stdout:
                 for line in iter(self.process.stdout.readline, b''): 
-                    Functions.log(source, "info", line)
+                    Functions.log(source, Functions.INFO, line)
 
             returncode = self.process.wait() 
-            Functions.log(source, "debug", "Return code %s" % (returncode))
+            Functions.log(source, Functions.DEBUG, "Return code %s" % (returncode))
 
         except Exception as e:
-            Functions.log(source, 'error', "%s" % (e))
+            Functions.log(source, Functions.ERROR, "%s" % (e))
 
     def is_alive(self):
         return self.thread.is_alive()
@@ -137,15 +172,15 @@ class Certbot:
                 filename = "%s/%s.pem" % (self.certs, host)
                 host_arg = '-d %s' % (host)
                 if not os.path.exists(filename):
-                    Functions.log("CERTBOT", "debug", "Request new certificate for %s" % (host))
+                    Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "Request new certificate for %s" % (host))
                     request_certs.append(host_arg)
                 else:
                     creation_time = os.path.getctime(filename)
                     if (current_time - creation_time) // (24 * 3600) > 90:
-                        Functions.log("CERTBOT", "debug", "Request expired certificate for %s" % (host))
+                        Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "Request expired certificate for %s" % (host))
                         request_certs.append(host_arg)
                     if (current_time - creation_time) // (24 * 3600) >= 45:
-                        Functions.log("CERTBOT", "debug", "Renew certificate for %s" % (host))
+                        Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "Renew certificate for %s" % (host))
                         renew_certs.append(host_arg)
 
             certbot_certonly = ('/usr/bin/certbot certonly '
@@ -162,11 +197,11 @@ class Certbot:
 
             ret_reload = False
             if len(request_certs) > 0:
-                Functions.run_bash("CERTBOT", certbot_certonly, return_result=False)
+                Functions.run_bash(Functions.CERTBOT_LOG, certbot_certonly, return_result=False)
                 ret_reload = True
 
             if len(renew_certs) > 0:
-                Functions.run_bash("CERTBOT", "/usb/bin/certbot renew", return_result=False)
+                Functions.run_bash(Functions.CERTBOT_LOG, "/usb/bin/certbot renew", return_result=False)
                 ret_reload = True
 
             if ret_reload:
@@ -174,7 +209,7 @@ class Certbot:
 
             return ret_reload
         except Exception as e:
-            Functions.log("CERTBOT", "error", "%s" % (e))
+            Functions.log(Functions.CERTBOT_LOG, Functions.ERROR, "%s" % (e))
             return False
         
     def merge_certificate(self, cert, key, filename):

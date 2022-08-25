@@ -48,7 +48,7 @@ class ProcessorInterface:
         elif mode == "kubernetes":
             return Kubernetes()
         else:
-            Functions.log("FACTORY", "fatal", "Expected mode to be 'static', 'docker', 'swarm' or 'kubernetes'. I got '%s'" % (mode))
+            Functions.log("EASYHAPROXY", Functions.FATAL, "Expected mode to be 'static', 'docker', 'swarm' or 'kubernetes'. I got '%s'" % (mode))
             return None
 
     def refresh(self):
