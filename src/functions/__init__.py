@@ -174,7 +174,7 @@ class Certbot:
                 self.find_live_certificates()
 
             return ret_reload
-        except Excepton as e:
+        except Exception as e:
             Functions.log("CERTBOT", "error", "%s" % (e))
             return False
         
