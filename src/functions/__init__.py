@@ -164,11 +164,11 @@ class Certbot:
             ret_reload = False
             if len(request_certs) > 0:
                 Functions.run_bash("CERTBOT", certbot_certonly, return_result=False)
-                ret_reload = true
+                ret_reload = True
 
             if len(renew_certs) > 0:
-                Functions.run_bash("CERTBOT", "/usb/bin/certbot renew", return_result=False)
-                ret_reload = true
+                Functions.run_bash("CERTBOT", "/usb/bin/certbot renew --post-hook /scripts/certbot_to_haproxy.sh", return_result=False)
+                ret_reload = True
 
             if ret_reload:
                 self.find_live_certificates()
