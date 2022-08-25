@@ -1,0 +1,5 @@
+{"swarm-prom_caddy": {"com.docker.stack.image":"stefanprodan/caddy","com.docker.stack.namespace":"swarm-prom"},
+"swarm-prom_cadvisor": {"com.docker.stack.image":"google/cadvisor","com.docker.stack.namespace":"swarm-prom"},
+"swarm-prom_dockerd-exporter": {"com.docker.stack.image":"stefanprodan/caddy","com.docker.stack.namespace":"swarm-prom"},
+"swarm-prom_unsee": {"com.docker.stack.image":"cloudflare/unsee:v0.8.0","com.docker.stack.namespace":"swarm-prom"},
+"test_proxy": {"com.docker.stack.image":"byjg/easy-haproxy","com.docker.stack.namespace":"test"}}
