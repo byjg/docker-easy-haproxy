@@ -19,6 +19,7 @@ def start():
 
     processor_obj.save_config(haproxy_config)
     processor_obj.save_certs(certs_haproxy)
+    letsencrypt_certs_found = processor_obj.get_letsencrypt_hosts()
     Functions.log('EASYHAPROXY', 'info', 'Found hosts: %s' % ", ".join(processor_obj.get_hosts())) # Needs to after save_config
 
     old_haproxy = None
@@ -39,13 +40,14 @@ def start():
                 Functions.log('EASYHAPROXY', 'info', 'New configuration found. Reloading...')
                 processor_obj.save_config(haproxy_config)
                 processor_obj.save_certs(certs_haproxy)
+                letsencrypt_certs_found = processor_obj.get_letsencrypt_hosts()
                 Functions.log('EASYHAPROXY', 'info', 'Found hosts: %s' % ", ".join(processor_obj.get_hosts())) # Needs to after save_config
                 old_haproxy = haproxy
                 haproxy = DaemonizeHAProxy()
                 haproxy.haproxy("reload")
                 old_haproxy.terminate()
 
-            certbot.check_certificates(processor_obj.get_letsencrypt_hosts())
+            certbot.check_certificates(letsencrypt_certs_found)
         except Exception as e:
             Functions.log('EASYHAPROXY', 'error', "Err: %s" % (e))
         Functions.log('EASYHAPROXY', 'info', 'Heartbeat')
