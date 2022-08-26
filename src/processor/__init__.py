@@ -13,7 +13,7 @@ class ContainerEnv:
     def read():
         env_vars = {
             "customerrors": True if os.getenv("HAPROXY_CUSTOMERRORS") == "true" else False,
-            "ssl_mode": os.getenv("EASYHAPROXY_SSL_MODE", "default")
+            "ssl_mode": os.getenv("EASYHAPROXY_SSL_MODE") if os.getenv("EASYHAPROXY_SSL_MODE") else 'default'
         }
 
         if os.getenv("HAPROXY_PASSWORD"):
@@ -33,6 +33,8 @@ class ContainerEnv:
 
 
 class ProcessorInterface:
+    static_file = "/etc/haproxy/easyconfig.yml"
+    
     def __init__(self, filename = None):
         self.filename = filename
         self.refresh()
@@ -40,7 +42,7 @@ class ProcessorInterface:
     @staticmethod
     def factory(mode):
         if mode == "static":
-            return Static("/etc/haproxy/easyconfig.yml")
+            return Static(ProcessorInterface.static_file)
         elif mode == "docker":
             return Docker()
         elif mode == "swarm":
@@ -93,7 +95,6 @@ class ProcessorInterface:
     def save_certs(self, path):
         for cert in self.get_certs():
             Functions.save("{0}/{1}".format(path, cert), self.get_certs(cert))
-
 
 
 class Static(ProcessorInterface):

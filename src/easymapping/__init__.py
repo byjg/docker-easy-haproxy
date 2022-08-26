@@ -56,10 +56,10 @@ class HaproxyConfigGenerator:
         self.serving_hosts = []
         self.certs = {}
  
-    def generate(self, container_metadata = None):
+    def generate(self, container_metadata = {}):
         self.mapping.setdefault("easymapping", [])
         
-        if container_metadata is not None:
+        if container_metadata != {}:
             self.mapping["easymapping"] = self.parse(container_metadata)
 
         file_loader = FileSystemLoader('templates')
