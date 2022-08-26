@@ -132,7 +132,7 @@ class Swarm(ProcessorInterface):
 class Kubernetes(ProcessorInterface):
     def __init__(self, filename = None):
         config.load_incluster_config()
-        #config.verify_ssl=False
+        config.verify_ssl = False
         self.api_instance = client.CoreV1Api()
         self.v1 = client.NetworkingV1Api()
         self.cert_cache = {}
@@ -163,6 +163,8 @@ class Kubernetes(ProcessorInterface):
             data["resource_version"] = ingress.metadata.resource_version
             data["namespace"] = ingress.metadata.namespace
 
+            ingress_name = ingress.metadata.namespace
+
             if ingress.spec.tls is not None:
                 for tls in ingress.spec.tls:
                     try:
@@ -179,7 +181,9 @@ class Kubernetes(ProcessorInterface):
 
                         ssl_hosts.extend(tls.hosts)
                     except Exception as e:
-                        pass
+                        Functions.log("EASYHAPROXY", Functions.WARN, "Ingress %s - Get secret failed: '%s'" % (ingress_name, e))
+
+            Functions.log("EASYHAPROXY", Functions.TRACE, "Ingress %s - SSL Hosts found '%s'" % (ingress_name, ssl_hosts))
 
             for rule in ingress.spec.rules:
                 rule_data = {}
@@ -197,13 +201,13 @@ class Kubernetes(ProcessorInterface):
                 if redirect is not None:
                     rule_data["%s.redirect" % (definition)] = redirect
 
-                service_name = rule.http.paths[0].backend.service.name
+                service_name = rule.http.paths[0].backend.service.ingress_name
                 try:
                     api_response = self.api_instance.read_namespaced_service(service_name, ingress.metadata.namespace)
                     cluster_ip = api_response.spec.cluster_ip
                 except ApiException as e:
                     cluster_ip = None
-                    # print("Exception when calling CoreV1Api->read_namespaced_service: %s\n" % e)
+                    Functions.log("EASYHAPROXY", Functions.WARN, "Ingress %s - Service %s - Failed: '%s'" % (ingress_name, service_name, e))
                 
                 if cluster_ip is not None:
                     if cluster_ip not in self.parsed_object.keys():

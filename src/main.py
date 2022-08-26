@@ -16,6 +16,7 @@ def start():
     processor_obj.save_certs(Consts.certs_haproxy)
     letsencrypt_certs_found = processor_obj.get_letsencrypt_hosts()
     Functions.log(Functions.EASYHAPROXY_LOG, Functions.DEBUG, 'Found hosts: %s' % ", ".join(processor_obj.get_hosts())) # Needs to after save_config
+    Functions.log(Functions.EASYHAPROXY_LOG, Functions.TRACE, 'Object Found: %s' % (processor_obj.get_parsed_object()))
 
     old_haproxy = None
     haproxy = DaemonizeHAProxy()
@@ -33,6 +34,7 @@ def start():
             processor_obj.refresh()
             if DeepDiff(old_parsed, processor_obj.get_parsed_object()) != {} or not haproxy.is_alive():
                 Functions.log(Functions.EASYHAPROXY_LOG, Functions.DEBUG, 'New configuration found. Reloading...')
+                Functions.log(Functions.EASYHAPROXY_LOG, Functions.TRACE, 'Object Found: %s' % (processor_obj.get_parsed_object()))
                 processor_obj.save_config(Consts.haproxy_config)
                 processor_obj.save_certs(Consts.certs_haproxy)
                 letsencrypt_certs_found = processor_obj.get_letsencrypt_hosts()
