@@ -12,13 +12,15 @@ This Docker image will dynamically create the `haproxy.cfg` based on the labels 
 a simple Yaml.
 
 EasyHAProxy can detect and configure automatically HAProxy on the folowing platforms:
+
 - Docker
 - Docker Swarm
 - Kubernetes
 
 ## Features
 
-EasyHAProxy will discover the services based on the Docker Tags of the running containers in a Docker host or Docker Swarm cluster and dynamically set up the `haproxy.cfg`. Below, EasyHAProxy main features::
+EasyHAProxy will discover the services based on the Docker Tags of the running containers in a Docker host or Docker Swarm cluster and dynamically set up the `haproxy.cfg`. Below, EasyHAProxy main features:
+
 - Use Letsencrypt with HAProxy.
 - Set your custom SSL certificates
 - Balance traffic between multiple replicas
@@ -113,6 +115,7 @@ Important: easyhaproxy needs to be in the same network of the containers or othe
 This will query all `ingress` in the kubernetes cluster and check the annotation `kubernetes.io/ingress.class: easyhaproxy-ingress`.
 
 e.g.:
+
 ```yaml
 kind: Ingress
 metadata:
@@ -150,7 +153,7 @@ Caveats:
 - Only the first path `spec.rules[].http.paths[0]` will be parsed.
 - There are specific annotations can be added as described bellow.
 
-### Kubernetes annotations:
+### Kubernetes annotations
 
 | annotation                  | Description                                                                             | Default      | Example      |
 |-----------------------------|-----------------------------------------------------------------------------------------|--------------|--------------|
@@ -180,7 +183,7 @@ spec:
 
 Make sure your cluster is accessible both through ports 80 and 443.
 
-### Kubernetes and SSL:
+### Kubernetes and SSL
 
 You need to create a secret with your certificate and key, and associate them in your ingress.
 
@@ -213,7 +216,7 @@ spec:
     ...
 ```
 
-### Container (Docker or Swarm) labels:
+### Container (Docker or Swarm) labels
 
 | Tag                                   | Description                                                                                           | Default               | Example      |
 |---------------------------------------|-------------------------------------------------------------------------------------------------------|----------------|--------------|
@@ -387,6 +390,7 @@ docker run \
 ```
 
 Run your container:
+
 ```bash
 docker run \
     -l easyhaproxy.express.port=80 \
@@ -401,15 +405,15 @@ Caveats:
 
 - Your container **must** listen to the port 80. Besides no error, the certificate won't be issued if in a different port.
 - The port 2080 is reserved for the certbot and should not be exposed.
-- You cannot set the port 443 for the container with the Letsencrypt because EasyHAProxy will handle this automatically once the certificate is issued. 
+- You cannot set the port 443 for the container with the Letsencrypt because EasyHAProxy will handle this automatically once the certificate is issued.
 - If you don't run the EasyHAProxy with the parameter `EASYHAPROXY_LETSENCRYPT_EMAIL` no certificate will be issued. 
 - Be aware of Letsencrypt issue limits - https://letsencrypt.org/docs/duplicate-certificate-limit/ and https://letsencrypt.org/docs/rate-limits/
 
 ## Exposing Ports
 
-You must expose some ports on the EasyHAProxy container and in the firewall. However, you don't need to expose the other container ports because EasyHAProxy will handle that. 
+You must expose some ports on the EasyHAProxy container and in the firewall. However, you don't need to expose the other container ports because EasyHAProxy will handle that.
 
-- The ports `80` and `443`. 
+- The ports `80` and `443`.
 - If you enable the HAProxy statistics, you must also expose the port defined in `HAPROXY_STATS_PORT` environment variable (default 1936). Be aware that statististics are enabled by default with no password.
 - Every port defined in `easyhaproxy.[definitions].port` also should be exposed. 
 
@@ -424,7 +428,6 @@ docker run \
     -d byjg/easy-haproxy
 ```
 
-
 ## Mapping custom .cfg files
 
 You can concatenate valid HAProxy `.cfg` files to the dynamically generated `haproxy.cfg` by mapping the folder `/etc/haproxy/conf.d`.
@@ -438,7 +441,8 @@ docker run \
 
 ## Mapping SSL certificates volumes
 
-EasyHAProxy stores the certificates inside the folder `/certs/haproxy` and `/certs/letsencrypt`. 
+EasyHAProxy stores the certificates inside the folder `/certs/haproxy` and `/certs/letsencrypt`.
+
 - If you want to preserve the letsencrypt certificates between reloads, map the folder `/certs/letsencrypt` to your volume. 
 - If you want to provide your certificates as a file instead of a Base64 parameter, map the folder `/certs/haproxy` to your volume, and instead of use `easyhaproxy.[definition].sslcert`, use `easyhaproxy.[definition].ssl: true`
 
@@ -486,14 +490,14 @@ where ERROR_NUMBER is the HTTP error code (e.g., `503.http`)
 
 ## Build
 
-
 ```bash
 docker build -t byjg/easy-haproxy .
 ```
 
 ## Limitations
 
-EasyHAProxy has some limitations when there is more than one easy-haproxy container running: 
+EasyHAProxy has some limitations when there is more than one easy-haproxy container running:
+
 - Replicas can be out-of-sync for a few seconds because each replica will discover the pods separately. 
 - Each replica will request a Letsencrypt certificate and can fail because the letsencrypt challenge can be directed to the other replica. 
 

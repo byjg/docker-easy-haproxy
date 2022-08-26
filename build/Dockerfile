@@ -8,7 +8,7 @@ ENV TZ="Etc/UTC"
 WORKDIR /scripts
 
 COPY src/ /scripts/
-COPY assets /
+COPY build/assets /
 
 RUN apk add --no-cache haproxy bash python3 py3-pip py-yaml certbot openssl \
  && ln -s /usr/bin/python3 /usr/bin/python \

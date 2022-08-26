@@ -17,7 +17,7 @@ podman run --rm --events-backend=file --cgroup-manager=cgroupfs --privileged doc
 
 for VERSION in $VERSIONS
 do
-  DOCKERFILE=Dockerfile
+  DOCKERFILE=build/Dockerfile
 
   buildah manifest create byjg/easy-haproxy:$VERSION
 
@@ -29,4 +29,3 @@ do
 
   buildah manifest push --all --format v2s2 byjg/easy-haproxy:$VERSION docker://byjg/easy-haproxy:$VERSION
 done
-

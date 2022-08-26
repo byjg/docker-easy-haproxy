@@ -23,10 +23,15 @@ services:
       - "443:443/tcp"
       - "1936:1936/tcp"
 
+    networks:
+      - easyhaproxy
+
 volumes:
   certs_letsencrypt:
+    external: true
   certs_haproxy:
+    external: true
 
 networks:
   easyhaproxy:
-    driver: bridge
+    external: true
