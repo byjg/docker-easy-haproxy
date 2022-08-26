@@ -151,6 +151,15 @@ The system will read only `host` and `port.number`
 
 There is no necessary to add labels or annotations.
 
+### Kubernetes annotations:
+
+| annotation                  | Description                                                                                     | Example      |
+|-----------------------------|-------------------------------------------------------------------------------------------------|--------------|
+| kubernetes.io/ingress.class | (required) Activate EasyHAProxy.                                                                | easyhaproxy-ingress
+| easyhaproxy.redirect_ssl    | (optional) Boolean. Force redirect all endpoints to https.                                      | true/false)
+| easyhaproxy.letsencrypt     | (optional) Boolean. It will request letsencript certificates for the ingresses domains          | true/false
+| easyhaproxy.redirect        | (optional) Json. Specific a domain and its destination                                          | {"domain":"redirect_url"}
+
 
 ### Container (Docker or Swarm) labels:
 

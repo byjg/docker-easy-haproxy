@@ -27,7 +27,7 @@ class DockerLabelHandler:
 
     def get_bool(self, label, default_value = False):
         if self.has_label(label):
-            return self.__data[label].lower() in ["True", "true", "1", "yes"]
+            return self.__data[label].lower() in ["true", "1", "yes"]
         return default_value
 
     def get_json(self, label, default_value = {}):

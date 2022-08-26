@@ -34,7 +34,7 @@ class ContainerEnv:
 
 class ProcessorInterface:
     static_file = "/etc/haproxy/easyconfig.yml"
-    
+
     def __init__(self, filename = None):
         self.filename = filename
         self.refresh()
@@ -134,7 +134,12 @@ class Kubernetes(ProcessorInterface):
         self.api_instance = client.CoreV1Api()
         self.v1 = client.NetworkingV1Api()
         super().__init__()
-        
+
+    def _check_annotation(self, annotations, key):
+        if key not in annotations:
+            return None
+        return annotations[key]
+
     def inspect_network(self):
         
         ret = self.v1.list_ingress_for_all_namespaces(watch=False)
@@ -143,6 +148,10 @@ class Kubernetes(ProcessorInterface):
         for i in ret.items:
             if i.metadata.annotations['kubernetes.io/ingress.class'] != "easyhaproxy-ingress":
                 continue
+
+            letsencrypt = self._check_annotation(i.metadata.annotations, "easyhaproxy.letsencrypt")
+            redirect_ssl = self._check_annotation(i.metadata.annotations, "easyhaproxy.redirect_ssl")
+            redirect = self._check_annotation(i.metadata.annotations, "easyhaproxy.redirect")
 
             data = {}
             #ingress_name = i.metadata.name
@@ -156,6 +165,13 @@ class Kubernetes(ProcessorInterface):
                 rule_data["easyhaproxy.%s_%s.host" % (definition, port_number)] = rule.host
                 rule_data["easyhaproxy.%s_%s.port" % (definition, port_number)] = "80"
                 rule_data["easyhaproxy.%s_%s.localport" % (definition, port_number)] = port_number
+                if redirect_ssl is not None:
+                    rule_data["easyhaproxy.%s_%s.redirect_ssl" % (definition, port_number)] = 'true'
+                if letsencrypt is not None:
+                    rule_data["easyhaproxy.%s_%s.letsencrypt" % (definition, port_number)] = 'true'
+                if redirect is not None:
+                    rule_data["easyhaproxy.%s_%s.redirect" % (definition, port_number)] = redirect
+
                 service_name = rule.http.paths[0].backend.service.name
                 try:
                     api_response = self.api_instance.read_namespaced_service(service_name, i.metadata.namespace)
