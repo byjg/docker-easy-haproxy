@@ -95,6 +95,12 @@ class Functions:
             Functions.log(source, Functions.ERROR, "%s" % (e))
 
 
+class Consts:
+    easyhaproxy_config = "/etc/haproxy/easyconfig.yml"
+    haproxy_config = "/etc/haproxy/haproxy.cfg"
+    certs_letsencrypt = "/certs/letsencrypt"
+    certs_haproxy = "/certs/haproxy"
+
 class DaemonizeHAProxy:
     def __init__(self):
         self.process = None

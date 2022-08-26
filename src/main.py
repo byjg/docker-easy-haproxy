@@ -1,24 +1,19 @@
-from functions import Functions, DaemonizeHAProxy, Certbot
+from functions import Functions, DaemonizeHAProxy, Certbot, Consts
 from processor import ProcessorInterface
 import os
 import time
 from deepdiff import DeepDiff
-
-easyhaproxy_config = "/etc/haproxy/easyconfig.yml"
-haproxy_config = "/etc/haproxy/haproxy.cfg"
-certs_letsencrypt = "/certs/letsencrypt"
-certs_haproxy = "/certs/haproxy"
 
 def start():
     processor_obj = ProcessorInterface.factory(os.getenv("EASYHAPROXY_DISCOVER"))
     if processor_obj is None:
         exit(1)
 
-    os.makedirs(certs_letsencrypt, exist_ok=True)
-    os.makedirs(certs_haproxy, exist_ok=True)
+    os.makedirs(Consts.certs_letsencrypt, exist_ok=True)
+    os.makedirs(Consts.certs_haproxy, exist_ok=True)
 
-    processor_obj.save_config(haproxy_config)
-    processor_obj.save_certs(certs_haproxy)
+    processor_obj.save_config(Consts.haproxy_config)
+    processor_obj.save_certs(Consts.certs_haproxy)
     letsencrypt_certs_found = processor_obj.get_letsencrypt_hosts()
     Functions.log(Functions.EASYHAPROXY_LOG, Functions.DEBUG, 'Found hosts: %s' % ", ".join(processor_obj.get_hosts())) # Needs to after save_config
 
@@ -26,7 +21,7 @@ def start():
     haproxy = DaemonizeHAProxy()
     haproxy.haproxy("start")
 
-    certbot = Certbot(certs_letsencrypt, os.getenv("EASYHAPROXY_LETSENCRYPT_EMAIL"))
+    certbot = Certbot(Consts.certs_letsencrypt, os.getenv("EASYHAPROXY_LETSENCRYPT_EMAIL"))
 
     while True:
         time.sleep(10)
@@ -38,8 +33,8 @@ def start():
             processor_obj.refresh()
             if DeepDiff(old_parsed, processor_obj.get_parsed_object()) != {} or not haproxy.is_alive():
                 Functions.log(Functions.EASYHAPROXY_LOG, Functions.DEBUG, 'New configuration found. Reloading...')
-                processor_obj.save_config(haproxy_config)
-                processor_obj.save_certs(certs_haproxy)
+                processor_obj.save_config(Consts.haproxy_config)
+                processor_obj.save_certs(Consts.certs_haproxy)
                 letsencrypt_certs_found = processor_obj.get_letsencrypt_hosts()
                 Functions.log(Functions.EASYHAPROXY_LOG, Functions.DEBUG, 'Found hosts: %s' % ", ".join(processor_obj.get_hosts())) # Needs to after save_config
                 old_haproxy = haproxy

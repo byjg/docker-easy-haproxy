@@ -1,9 +1,10 @@
 from easymapping import HaproxyConfigGenerator
-from functions import Functions
+from functions import Functions, Consts
 import yaml
 import sys
 import os
 import json
+import base64
 import docker
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
@@ -131,8 +132,10 @@ class Swarm(ProcessorInterface):
 class Kubernetes(ProcessorInterface):
     def __init__(self, filename = None):
         config.load_incluster_config()
+        #config.verify_ssl=False
         self.api_instance = client.CoreV1Api()
         self.v1 = client.NetworkingV1Api()
+        self.cert_cache = {}
         super().__init__()
 
     def _check_annotation(self, annotations, key):
@@ -145,36 +148,58 @@ class Kubernetes(ProcessorInterface):
         ret = self.v1.list_ingress_for_all_namespaces(watch=False)
 
         self.parsed_object = {}
-        for i in ret.items:
-            if i.metadata.annotations['kubernetes.io/ingress.class'] != "easyhaproxy-ingress":
+        for ingress in ret.items:
+            if ingress.metadata.annotations['kubernetes.io/ingress.class'] != "easyhaproxy-ingress":
                 continue
 
-            letsencrypt = self._check_annotation(i.metadata.annotations, "easyhaproxy.letsencrypt")
-            redirect_ssl = self._check_annotation(i.metadata.annotations, "easyhaproxy.redirect_ssl")
-            redirect = self._check_annotation(i.metadata.annotations, "easyhaproxy.redirect")
+            ssl_hosts = []
+
+            letsencrypt = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.letsencrypt")
+            redirect_ssl = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.redirect_ssl")
+            redirect = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.redirect")
 
             data = {}
-            #ingress_name = i.metadata.name
-            data["creation_timestamp"] = i.metadata.creation_timestamp.strftime("%x %X")
-            data["resource_version"] = i.metadata.resource_version
-            data["namespace"] = i.metadata.namespace
-            for rule in i.spec.rules:
+            data["creation_timestamp"] = ingress.metadata.creation_timestamp.strftime("%x %X")
+            data["resource_version"] = ingress.metadata.resource_version
+            data["namespace"] = ingress.metadata.namespace
+
+            if ingress.spec.tls is not None:
+                for tls in ingress.spec.tls:
+                    try:
+                        secret = self.api_instance.read_namespaced_secret(tls.secret_name, ingress.metadata.namespace)
+                        if "tls.crt" not in secret.data or "tls.key" not in secret.data:
+                            continue
+
+                        if tls.secret_name not in self.cert_cache or self.cert_cache[tls.secret_name] != secret.data:
+                            self.cert_cache[tls.secret_name] = secret.data
+                            Functions.save(
+                                "{0}/{1}.pem".format(Consts.certs_haproxy, tls.secret_name), 
+                                base64.b64decode(secret.data["tls.crt"]).decode('ascii') + "\n" + base64.b64decode(secret.data["tls.key"]).decode('ascii')
+                            )
+
+                        ssl_hosts.extend(tls.hosts)
+                    except Exception as e:
+                        pass
+
+            for rule in ingress.spec.rules:
                 rule_data = {}
                 port_number = rule.http.paths[0].backend.service.port.number
-                definition = rule.host.replace(".", "-")
-                rule_data["easyhaproxy.%s_%s.host" % (definition, port_number)] = rule.host
-                rule_data["easyhaproxy.%s_%s.port" % (definition, port_number)] = "80"
-                rule_data["easyhaproxy.%s_%s.localport" % (definition, port_number)] = port_number
+                definition = "easyhaproxy.%s_%s" % (rule.host.replace(".", "-"), port_number)
+                rule_data["%s.host" % (definition)] = rule.host
+                rule_data["%s.port" % (definition)] = "80"
+                rule_data["%s.localport" % (definition)] = port_number
+                if rule.host in ssl_hosts:
+                    rule_data["%s.ssl" % (definition)] = 'true'
                 if redirect_ssl is not None:
-                    rule_data["easyhaproxy.%s_%s.redirect_ssl" % (definition, port_number)] = 'true'
+                    rule_data["%s.redirect_ssl" % (definition)] = 'true'
                 if letsencrypt is not None:
-                    rule_data["easyhaproxy.%s_%s.letsencrypt" % (definition, port_number)] = 'true'
+                    rule_data["%s.letsencrypt" % (definition)] = 'true'
                 if redirect is not None:
-                    rule_data["easyhaproxy.%s_%s.redirect" % (definition, port_number)] = redirect
+                    rule_data["%s.redirect" % (definition)] = redirect
 
                 service_name = rule.http.paths[0].backend.service.name
                 try:
-                    api_response = self.api_instance.read_namespaced_service(service_name, i.metadata.namespace)
+                    api_response = self.api_instance.read_namespaced_service(service_name, ingress.metadata.namespace)
                     cluster_ip = api_response.spec.cluster_ip
                 except ApiException as e:
                     cluster_ip = None
