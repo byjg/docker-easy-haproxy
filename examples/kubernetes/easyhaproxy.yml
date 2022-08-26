@@ -4,6 +4,89 @@ kind: Namespace
 metadata:
   name: easyhaproxy
 
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: easyhaproxy-ingress
+  namespace: easyhaproxy
+
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: easyhaproxy-ingress
+rules:
+- apiGroups:
+  - ""
+  resources:
+  # - configmaps
+  # - endpoints
+  # - nodes
+  - pods
+  - services
+  - namespaces
+  # - events
+  - serviceaccounts
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - "extensions"
+  - "networking.k8s.io"
+  resources:
+  - ingresses
+  # - ingresses/status
+  # - ingressclasses
+  verbs:
+  - get
+  - list
+  - watch
+# - apiGroups:
+#   - "extensions"
+#   - "networking.k8s.io"
+#   resources:
+#   - ingresses/status
+#   verbs:
+#   - update
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  # - watch
+  # - create
+  # - patch
+  # - update
+# - apiGroups:
+#   - "discovery.k8s.io"
+#   resources:
+#   - endpointslices
+#   verbs:
+#   - get
+#   - list
+#   - watch
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: easyhaproxy-ingress
+  namespace: easyhaproxy
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: easyhaproxy-ingress
+subjects:
+- kind: ServiceAccount
+  name: easyhaproxy-ingress
+  namespace: easyhaproxy
+
+
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -19,6 +102,7 @@ spec:
       labels:
         app: easyhaproxy-ingress
     spec:
+      serviceAccountName: easyhaproxy-ingress
       containers:
       - image: byjg/easy-haproxy:test
         imagePullPolicy: Always
