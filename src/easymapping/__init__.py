@@ -110,6 +110,9 @@ class HaproxyConfigGenerator:
                     self.label.create([definition, "letsencrypt"]),
                     False
                 ) and self.mapping["letsencrypt"]["email"] != "" 
+                clone_to_ssl = self.label.get_bool(
+                    self.label.create([definition, "clone_to_ssl"])
+                )
 
                 if port not in easymapping:
                     easymapping[port] = {
@@ -147,7 +150,7 @@ class HaproxyConfigGenerator:
                         self.label.create([definition, "redirect"])
                     )
 
-                    if letsencrypt:
+                    if letsencrypt or clone_to_ssl:
                         if "443" not in easymapping:
                             easymapping["443"] = {
                                 "mode": "http",
@@ -160,17 +163,17 @@ class HaproxyConfigGenerator:
                         easymapping["443"]["hosts"][hostname]["letsencrypt"] = False
                         easymapping["443"]["hosts"][hostname]["redirect_ssl"] = False
                         easymapping["443"]["ssl"] = True
-                        self.letsencrypt_hosts.append(hostname) if hostname not in self.letsencrypt_hosts else self.letsencrypt_hosts
+                        self.letsencrypt_hosts.append(hostname) if letsencrypt and hostname not in self.letsencrypt_hosts else self.letsencrypt_hosts
                         
 
                     # handle SSL
                     ssl_label = self.label.create([definition, "sslcert"])
                     if self.label.has_label(ssl_label):
                         filename = "{}.pem".format(d[host_label])
-                        easymapping[port]["ssl"] = True
+                        easymapping[port]["ssl"] = True if not clone_to_ssl else False
                         self.certs[filename] = base64.b64decode(d[ssl_label]).decode('ascii')
 
                     if self.label.get_bool(self.label.create([definition, "ssl"])):
-                        easymapping[port]["ssl"] = True
+                        easymapping[port]["ssl"] = True if not clone_to_ssl else False
 
         return easymapping.values()

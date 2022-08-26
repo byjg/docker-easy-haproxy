@@ -423,6 +423,83 @@ def test_parser_ssl_letsencrypt():
         assert expected_file.read() == haproxy_config
     assert ["test.example.org"] == cfg.letsencrypt_hosts
 
+
+def test_parser_finds_services_clone_to_ssl_raw():
+    line_list = load_fixture("services-clone-to-ssl")
+
+    result = {
+        "customerrors": False,
+        "letsencrypt": {
+            "email": LETSENCRYPT_EMAIL
+        },
+        "stats": {
+            "port": 0
+        }
+    }
+
+    if os.path.exists(CERT_FILE):
+        os.remove(CERT_FILE)
+
+    cfg = easymapping.HaproxyConfigGenerator(result)
+
+    parsed_object = [
+        {
+            "health-check":"",
+            "hosts":{
+                "host2.local":{
+                    "containers":[
+                    "10.152.183.215:8080"
+                    ],
+                    "letsencrypt": False,
+                    "redirect_ssl": False
+                },
+                "valida.me":{
+                    "containers":[
+                    "10.152.183.62:8080"
+                    ],
+                    "letsencrypt": False,
+                    "redirect_ssl": False
+                },
+                "www.valida.me":{
+                    "containers":[
+                    "10.152.183.62:8080"
+                    ],
+                    "letsencrypt": False,
+                    "redirect_ssl": False
+                }
+            },
+            "mode":"http",
+            "port":"80",
+            "redirect":{
+                
+            }
+        },
+        {
+            "health-check":"ssl",
+            "hosts":{
+                "host2.local":{
+                    "containers":[
+                    "10.152.183.215:8080"
+                    ],
+                    "letsencrypt": False,
+                    "redirect_ssl": False
+                }
+            },
+            "mode":"http",
+            "port":"443",
+            "redirect":{
+                
+            },
+            "ssl": True
+        }
+    ]
+    processed = list(cfg.parse(line_list))
+
+    assert parsed_object == processed
+    assert [] == cfg.letsencrypt_hosts
+
+
+
 #test_parser_finds_services_raw()
 #test_parser_tcp()
 #test_parser_multiple_hosts()

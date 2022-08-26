@@ -50,23 +50,20 @@ The mapping to `/var/run/docker.sock` is necessary to discover the docker contai
 
 The environment variables will setup the HAProxy.
 
-| Environment Variable          | Description                                                                                                   |
-|-------------------------------|---------------------------------------------------------------------------------------------------------------|
-| EASYHAPROXY_DISCOVER          | How `haproxy.cfg` will be created: `static`, `docker`, `swarm` or `kubernetes`                                |
-| EASYHAPROXY_LABEL_PREFIX      | (Optional) The key will search for matching resources. Default: `easyhaproxy`.                                |
-| EASYHAPROXY_LETSENCRYPT_EMAIL | (Optional) The email will be used to request the certificate to Letsencrypt                                   |
-| EASYHAPROXY_SSL_MODE          | (Optional) `STRICT` supports only the most recent TLS version; `DEFAULT` good SSL integration with recent browsers; `LOOSE` supports all old SSL protocols for old browsers (not recommended).  |    
-| EASYHAPROXY_REFRESH_CONF      | (Optional) Check configuration every N seconds. Default: 10                                                   |  
-| EASYHAPROXY_LOG_LEVEL         | (Optional) The log level for EasyHAproxy messages. Available: TRACE,DEBUG,INFO,WARN,ERROR,FATAL Default: TRACE |  
-| CERTBOT_LOG_LEVEL             | (Optional) The log level for Certbot messages. Available: TRACE,DEBUG,INFO,WARN,ERROR,FATAL Default: TRACE |  
-| HAPROXY_LOG_LEVEL             | (Optional) The log level for HAProxy messages. Available: TRACE,DEBUG,INFO,WARN,ERROR,FATAL Default: TRACE |  
-| HAPROXY_USERNAME              | (Optional) The HAProxy username to the statistics. Default: `admin`                                           |
-| HAPROXY_PASSWORD              | (Optional) The HAProxy password to the statistics. If not set, statistics will be available with no password  |
-| HAPROXY_STATS_PORT            | (Optional) The HAProxy port to the statistics. Default: `1936`. If set to `false`, disable statistics         |
-| HAPROXY_CUSTOMERRORS          | (Optional) If HAProxy will use custom HTML errors. true/false. Default: `false`                               |
-
-
-
+| Environment Variable          | Description                                                                                     | Default          |
+|-------------------------------|-------------------------------------------------------------------------------------------------|------------------|
+| EASYHAPROXY_DISCOVER          | How the services will be discovered to create `haproxy.cfg`:  `static`, `docker`, `swarm` or `kubernetes`     | **required**     |
+| EASYHAPROXY_LABEL_PREFIX      | (Optional) The key will search for matching resources.                                          | `easyhaproxy`    |
+| EASYHAPROXY_LETSENCRYPT_EMAIL | (Optional) The email will be used to request the certificate to Letsencrypt                     | *empty*          |
+| EASYHAPROXY_SSL_MODE          | (Optional) `strict` supports only the most recent TLS version; `default` good SSL integration with recent browsers; `loose` supports all old SSL protocols for old browsers (not recommended).  | `default`|
+| EASYHAPROXY_REFRESH_CONF      | (Optional) Check configuration every N seconds.                                                 | 10               |
+| EASYHAPROXY_LOG_LEVEL         | (Optional) The log level for EasyHAproxy messages. Available: TRACE,DEBUG,INFO,WARN,ERROR,FATAL | DEBUG            |
+| CERTBOT_LOG_LEVEL             | (Optional) The log level for Certbot messages. Available: TRACE,DEBUG,INFO,WARN,ERROR,FATAL     | DEBUG            |
+| HAPROXY_LOG_LEVEL             | (Optional) The log level for HAProxy messages. Available: TRACE,DEBUG,INFO,WARN,ERROR,FATAL     | DEBUG            |
+| HAPROXY_USERNAME              | (Optional) The HAProxy username to the statistics.                                              |  `admin`         |
+| HAPROXY_PASSWORD              | (Optional) The HAProxy password to the statistics. If not set, statistics will be available with no password  | *empty* |
+| HAPROXY_STATS_PORT            | (Optional) The HAProxy port to the statistics. If set to `false`, disable statistics            | `1936`           |
+| HAPROXY_CUSTOMERRORS          | (Optional) If HAProxy will use custom HTML errors. true/false.                                  | `false`          |
 
 The environment variable `EASYHAPROXY_DISCOVER` will define where is located your containers (see below for more details):
 
@@ -98,7 +95,7 @@ docker run --network easyhaproxy myimage
 
 or, if the container is already created you can join it using the command:
 
-```
+```bash
 docker network connect easyhaproxy mycontainer
 ```
 
@@ -113,10 +110,10 @@ Important: easyhaproxy needs to be in the same network of the containers or othe
 
 ### EASYHAPROXY_DISCOVER: kubernetes (experimental and limited)
 
-This will query all `ingress` in the kubernetes cluster and check the annotation `kubernetes.io/ingress.class: easyhaproxy-ingress`. 
+This will query all `ingress` in the kubernetes cluster and check the annotation `kubernetes.io/ingress.class: easyhaproxy-ingress`.
 
 e.g.:
-```
+```yaml
 kind: Ingress
 metadata:
   annotations:
@@ -145,36 +142,92 @@ spec:
         pathType: ImplementationSpecific
 ```
 
-At this point the implementation is very limited and doesn't support all ingress properties nor wildcard domains. 
+Caveats:
 
-The system will read only `host` and `port.number`
-
-There is no necessary to add labels or annotations.
+- At this point, the implementation don't support all ingress properties nor wildcard domains.
+- The ingress will publish externally only the ports 80 and 443, plus 1936 if stats is enable.
+- The system will read  `spec.rules[].host` and `spec.rules[].http.paths[0].port.number` and ignore the other parameters.
+- Only the first path `spec.rules[].http.paths[0]` will be parsed.
+- There are specific annotations can be added as described bellow.
 
 ### Kubernetes annotations:
 
-| annotation                  | Description                                                                                     | Example      |
-|-----------------------------|-------------------------------------------------------------------------------------------------|--------------|
-| kubernetes.io/ingress.class | (required) Activate EasyHAProxy.                                                                | easyhaproxy-ingress
-| easyhaproxy.redirect_ssl    | (optional) Boolean. Force redirect all endpoints to https.                                      | true/false)
-| easyhaproxy.letsencrypt     | (optional) Boolean. It will request letsencript certificates for the ingresses domains          | true/false
-| easyhaproxy.redirect        | (optional) Json. Specific a domain and its destination                                          | {"domain":"redirect_url"}
+| annotation                  | Description                                                                             | Default      | Example      |
+|-----------------------------|-----------------------------------------------------------------------------------------|--------------|--------------|
+| kubernetes.io/ingress.class | (required) Activate EasyHAProxy.                                                        | **required** | easyhaproxy-ingress
+| easyhaproxy.redirect_ssl    | (optional) Boolean. Force redirect all endpoints to https.                              | false        | true or false
+| easyhaproxy.letsencrypt     | (optional) Boolean. It will request letsencript certificates for the ingresses domains. | false        | true or false
+| easyhaproxy.redirect        | (optional) Json. Specific a domain and its destination.                                 | *empty*      | {"domain":"redirect_url"}
+| easyhaproxy.mode            | (optional) Set the HTTP mode for that connection.                                       | http         | http or tcp
 
+**Important**: The annotations are per ingress and applied to all hosts in that ingress configuration.
+
+### Kubernetes and Letsencrypt:
+
+It is necessary add the annotation `easyhaproxy.letsencrypt` to the ingress configuration:
+
+```yaml
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: easyhaproxy-ingress
+    easyhaproxy.letsencrypt: 'true'
+  name: example-ingress
+  namespace: example
+spec:
+  ....
+```
+
+Make sure your cluster is accessible both through ports 80 and 443.
+
+### Kubernetes and SSL:
+
+You need to create a secret with your certificate and key, and associate them in your ingress.
+
+```yaml
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: host2-tls
+  namespace: default
+data:
+  tls.crt: base64 of your certificate
+  tls.key: base64 of your certificate private key
+type: kubernetes.io/tls
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: easyhaproxy-ingress
+  name: tls-example
+  namespace: default
+spec:
+  tls:
+  - hosts:
+      - host2.local
+    secretName: host2-tls
+  rules:
+    ...
+```
 
 ### Container (Docker or Swarm) labels:
 
-| Tag                                   | Description                                                                                             | Example      |
-|---------------------------------------|---------------------------------------------------------------------------------------------------------|--------------|
-| easyhaproxy.[definition].host         | Host(s) HAProxy is listening. More than one host use comma as delimiter                                 | somehost.com OR host1.com,host2.com |
-| easyhaproxy.[definition].mode         | (Optional) Is this `http` or `tcp` mode in HAProxy. (Defaults to http)                                  | http         |
-| easyhaproxy.[definition].port         | (Optional) Port HAProxy will listen for the host. (Defaults to 80)                                      | 80           |
-| easyhaproxy.[definition].localport    | (Optional) Port container is listening. (Defaults to 80)                                                | 8080         |
-| easyhaproxy.[definition].redirect     | (Optional) JSON containing key/value pair from host/to URL redirect.                                    | {"foo.com":"https://bla.com", "bar.com":"https://bar.org"} |
-| easyhaproxy.[definition].sslcert      | (Optional) Cert PEM Base64 encoded. Do not use this if letsencrypt is enabled.                          |              |
-| easyhaproxy.[definition].ssl          | (Optional) If `true` you need to provide certificate as a file. See below. Do not use with `sslcert`.   | true         |
-| easyhaproxy.[definition].health-check | (Optional) `ssl`, enable health check via SSL in `mode tcp` (Defaults to "empty")                       | ssl          |
-| easyhaproxy.[definition].letsencrypt  | (Optional) Generate certificate with letsencrypt. Do not use with `sslcert`.                            | true OR yes OR false OR no    |
-| easyhaproxy.[definition].redirect_ssl | (Optional) Redirect all requests to https                                                               | true OR yes OR false OR no    |
+| Tag                                   | Description                                                                                           | Default               | Example      |
+|---------------------------------------|-------------------------------------------------------------------------------------------------------|----------------|--------------|
+| easyhaproxy.[definition].host         | Host(s) HAProxy is listening. More than one host use comma as delimiter                               | **required**   | somehost.com OR host1.com,host2.com |
+| easyhaproxy.[definition].mode         | (Optional) Is this `http` or `tcp` mode in HAProxy.                                                   | http           | http or tcp    |
+| easyhaproxy.[definition].port         | (Optional) Port HAProxy will listen for the host.                                                     | 80             | 3000           |
+| easyhaproxy.[definition].localport    | (Optional) Port container is listening.                                                               | 80             | 8080           |
+| easyhaproxy.[definition].redirect     | (Optional) JSON containing key/value pair from host/to URL redirect.                                  | *empty*        | {"foo.com":"https://bla.com", "bar.com":"https://bar.org"} |
+| easyhaproxy.[definition].sslcert      | (Optional) Cert PEM Base64 encoded. Do not use this if `letsencrypt` is enabled.                      | *empty*        | base64 cert + key |
+| easyhaproxy.[definition].ssl          | (Optional) If `true` you need to provide certificate as a file. See below. Do not use with `sslcert`. | false          | true or false  |
+| easyhaproxy.[definition].health-check | (Optional) `ssl`, enable health check via SSL in `mode tcp`                                           | *empty*        | ssl            |
+| easyhaproxy.[definition].letsencrypt  | (Optional) Generate certificate with letsencrypt. Do not use with `sslcert` parameter.                | false          | true OR false  |
+| easyhaproxy.[definition].redirect_ssl | (Optional) Redirect all requests to https                                                             | false          | true OR false  |
+| easyhaproxy.[definition].clone_to_ssl | (Optional) It copies the configuration to HTTPS(443) and disable SSL from the current config. **Do not use* this with `ssl` or `letsencrypt` parameters | false | true OR false    |
 
 ### Defining the labels in Docker Swarm
 

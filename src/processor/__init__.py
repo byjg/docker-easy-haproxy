@@ -14,7 +14,7 @@ class ContainerEnv:
     def read():
         env_vars = {
             "customerrors": True if os.getenv("HAPROXY_CUSTOMERRORS") == "true" else False,
-            "ssl_mode": os.getenv("EASYHAPROXY_SSL_MODE") if os.getenv("EASYHAPROXY_SSL_MODE") else 'default'
+            "ssl_mode": os.getenv("EASYHAPROXY_SSL_MODE").lower() if os.getenv("EASYHAPROXY_SSL_MODE") else 'default'
         }
 
         if os.getenv("HAPROXY_PASSWORD"):
@@ -157,6 +157,7 @@ class Kubernetes(ProcessorInterface):
             letsencrypt = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.letsencrypt")
             redirect_ssl = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.redirect_ssl")
             redirect = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.redirect")
+            mode = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.mode")
 
             data = {}
             data["creation_timestamp"] = ingress.metadata.creation_timestamp.strftime("%x %X")
@@ -193,15 +194,17 @@ class Kubernetes(ProcessorInterface):
                 rule_data["%s.port" % (definition)] = "80"
                 rule_data["%s.localport" % (definition)] = port_number
                 if rule.host in ssl_hosts:
-                    rule_data["%s.ssl" % (definition)] = 'true'
+                    rule_data["%s.clone_to_ssl" % (definition)] = 'true'
                 if redirect_ssl is not None:
-                    rule_data["%s.redirect_ssl" % (definition)] = 'true'
+                    rule_data["%s.redirect_ssl" % (definition)] = redirect_ssl
                 if letsencrypt is not None:
-                    rule_data["%s.letsencrypt" % (definition)] = 'true'
+                    rule_data["%s.letsencrypt" % (definition)] = letsencrypt
                 if redirect is not None:
                     rule_data["%s.redirect" % (definition)] = redirect
+                if mode is not None:
+                    rule_data["%s.mode" % (definition)] = mode
 
-                service_name = rule.http.paths[0].backend.service.ingress_name
+                service_name = rule.http.paths[0].backend.service.name
                 try:
                     api_response = self.api_instance.read_namespaced_service(service_name, ingress.metadata.namespace)
                     cluster_ip = api_response.spec.cluster_ip

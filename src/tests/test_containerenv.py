@@ -23,7 +23,7 @@ def test_container_env_customerrors():
         os.environ['HAPROXY_CUSTOMERRORS'] = ''
 
 def test_container_env_sslmode():
-    os.environ['EASYHAPROXY_SSL_MODE'] = 'strict'
+    os.environ['EASYHAPROXY_SSL_MODE'] = 'STRICT'
     try:
         assert {
             "customerrors": False,

@@ -19,7 +19,6 @@ spec:
       labels:
         app: easyhaproxy-ingress
     spec:
-      #serviceAccountName: easyhaproxy-ingress
       containers:
       - image: byjg/easy-haproxy:test
         imagePullPolicy: Always
@@ -32,8 +31,8 @@ spec:
           containerPort: 443
           hostPort: 443
         - name: stats
-          containerPort: 1943
-          hostPort: 1943
+          containerPort: 1936
+          hostPort: 1936
         resources:
           requests:
             cpu: "100m"

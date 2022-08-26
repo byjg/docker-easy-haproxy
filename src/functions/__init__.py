@@ -31,8 +31,8 @@ class Functions:
             Functions.ERROR: 4,
             Functions.FATAL: 5
         }
-        level_required = 0 if level not in level_importance else level_importance[level]
-        level_asked = 0 if log_level_str.upper() not in level_importance else level_importance[log_level_str.upper()]
+        level_required = 1 if level not in level_importance else level_importance[level]
+        level_asked = 1 if log_level_str.upper() not in level_importance else level_importance[log_level_str.upper()]
         return level_asked < level_required
 
     @staticmethod
