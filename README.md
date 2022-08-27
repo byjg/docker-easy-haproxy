@@ -6,7 +6,7 @@
 [![GitHub license](https://img.shields.io/github/license/byjg/docker-easy-haproxy.svg)](https://opensource.byjg.com/opensource/licensing.html)
 [![GitHub release](https://img.shields.io/github/release/byjg/docker-easy-haproxy.svg)](https://github.com/byjg/docker-easy-haproxy/releases/)
 
-![EasyHAProxy](logo.png)
+![EasyHAProxy](easyhaproxy_logo.png)
 
 ## Service discovery for HAProxy
 
@@ -45,8 +45,8 @@ automatically detect them and setup HAProxy for you.
 For detailed instructions on how to use EasyHAProxy follow the instructions for the platform you want to use:
 
 | Kubernetes | Docker Swarm | Docker |  Static
-|------------|--------------|--------|---------
-| [![Kubernetes](kubernetes.png)](docs/kubernetes.md) | [![Docker Swarm](swarm.png)](docs/swarm.md)  | [![Docker](docker.png)](docs/docker.md) | [![Static](static.png)](docs/static.md)
+|:----------:|:------------:|:------:|:-------:
+| [![Kubernetes](easyhaproxy_kubernetes.png)](docs/kubernetes.md) | [![Docker Swarm](easyhaproxy_swarm.png)](docs/swarm.md)  | [![Docker](easyhaproxy_docker.png)](docs/docker.md) | [![Static](easyhaproxy_static.png)](docs/static.md)
 
 
 ----

@@ -115,4 +115,4 @@ jobs:
       DOC_GITHUB_TOKEN: '${{ secrets.DOC_TOKEN }}'
     steps:
       - uses: actions/checkout@v2
-      - run: curl https://opensource.byjg.com/add-doc.sh | bash /dev/stdin devops docker-easy-haproxy
+      - run: curl https://opensource.byjg.com/add-doc.sh | bash /dev/stdin devops docker-easy-haproxy docs
