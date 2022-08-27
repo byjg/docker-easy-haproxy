@@ -1,21 +1,27 @@
 ---
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: easyhaproxy
-
----
+# Source: easyhaproxy-ingress/templates/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: easyhaproxy-ingress
-  namespace: easyhaproxy
-
+  name: manual-easyhaproxy-ingress
+  labels:
+    helm.sh/chart: easyhaproxy-ingress-0.1.0
+    app.kubernetes.io/name: easyhaproxy-ingress
+    app.kubernetes.io/instance: manual
+    app.kubernetes.io/version: "test"
+    app.kubernetes.io/managed-by: Helm
 ---
+# Source: easyhaproxy-ingress/templates/clusterrole.yaml
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: easyhaproxy-ingress
+  name: manual-easyhaproxy-ingress
+  labels:
+    helm.sh/chart: easyhaproxy-ingress-0.1.0
+    app.kubernetes.io/name: easyhaproxy-ingress
+    app.kubernetes.io/instance: manual
+    app.kubernetes.io/version: "test"
+    app.kubernetes.io/managed-by: Helm
 rules:
 - apiGroups:
   - ""
@@ -69,36 +75,47 @@ rules:
 #   - get
 #   - list
 #   - watch
-
 ---
+# Source: easyhaproxy-ingress/templates/clusterrolebinding.yaml
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: easyhaproxy-ingress
-  namespace: easyhaproxy
+  name: manual-easyhaproxy-ingress
+  labels:
+    helm.sh/chart: easyhaproxy-ingress-0.1.0
+    app.kubernetes.io/name: easyhaproxy-ingress
+    app.kubernetes.io/instance: manual
+    app.kubernetes.io/version: "test"
+    app.kubernetes.io/managed-by: Helm
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: easyhaproxy-ingress
+  name: manual-easyhaproxy-ingress
 subjects:
 - kind: ServiceAccount
-  name: easyhaproxy-ingress
-  namespace: easyhaproxy
-
+  name: manual-easyhaproxy-ingress
 ---
+# Source: easyhaproxy-ingress/templates/deployment.yaml
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: easyhaproxy-ingress
-  namespace: easyhaproxy
+  name: manual-easyhaproxy-ingress
+  labels:
+    helm.sh/chart: easyhaproxy-ingress-0.1.0
+    app.kubernetes.io/name: easyhaproxy-ingress
+    app.kubernetes.io/instance: manual
+    app.kubernetes.io/version: "test"
+    app.kubernetes.io/managed-by: Helm
 spec:
   selector:
     matchLabels:
-      app: easyhaproxy-ingress
+      app.kubernetes.io/name: easyhaproxy-ingress
+      app.kubernetes.io/instance: manual
   template:
     metadata:
       labels:
-        app: easyhaproxy-ingress
+        app.kubernetes.io/name: easyhaproxy-ingress
+        app.kubernetes.io/instance: manual
     spec:
       affinity:
         nodeAffinity:
@@ -108,37 +125,44 @@ spec:
               - key: easyhaproxy/node
                 operator: In
                 values:
-                - master
-      serviceAccountName: easyhaproxy-ingress
+                  - master
+      serviceAccountName: manual-easyhaproxy-ingress
+      securityContext:
+        {}
       containers:
-      - image: byjg/easy-haproxy:test
-        imagePullPolicy: Always
-        name: easyhaproxy-ingress
-        ports:
-        - name: http
-          containerPort: 80
-          hostPort: 80
-        - name: https
-          containerPort: 443
-          hostPort: 443
-        - name: stats
-          containerPort: 1936
-          hostPort: 1936
-        resources:
-          requests:
-            cpu: "100m"
-            memory: "128Mi"
-
-        env:
-        - name: EASYHAPROXY_DISCOVER
-          value: kubernetes
-        - name: HAPROXY_USERNAME
-          value: admin
-        - name: HAPROXY_PASSWORD
-          value: password
-        - name: EASYHAPROXY_REFRESH_CONF
-          value: "10"
-        - name: HAPROXY_CUSTOMERRORS
-          value: "true"
-        - name: EASYHAPROXY_SSL_MODE
-          value: loose
+        - name: easyhaproxy-ingress
+          securityContext:
+            {}
+          image: "byjg/easy-haproxy:test"
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 80
+              hostPort: 80
+            - name: https
+              containerPort: 443
+              hostPort: 443
+            - name: stats
+              containerPort: 1936
+              hostPort: 1936
+          resources:
+            {}
+          env:
+            - name: EASYHAPROXY_DISCOVER
+              value: kubernetes
+            - name: HAPROXY_USERNAME
+              value: admin
+            - name: HAPROXY_PASSWORD
+              value: password
+            - name: EASYHAPROXY_REFRESH_CONF
+              value: "10"
+            - name: HAPROXY_CUSTOMERRORS
+              value: "true"
+            - name: EASYHAPROXY_SSL_MODE
+              value: loose
+            - name: EASYHAPROXY_LOG_LEVEL
+              value: DEBUG
+            - name: HAPROXY_LOG_LEVEL
+              value: DEBUG
+            - name: CERTBOT_LOG_LEVEL
+              value: DEBUG

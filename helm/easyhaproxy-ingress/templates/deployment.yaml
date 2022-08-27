@@ -1,0 +1,65 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "easyhaproxy-ingress.fullname" . }}
+  labels:
+    {{- include "easyhaproxy-ingress.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "easyhaproxy-ingress.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "easyhaproxy-ingress.selectorLabels" . | nindent 8 }}
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: {{ .Values.masterNode.label }}
+                operator: In
+                values:
+                  {{- toYaml .Values.masterNode.values | nindent 18 }}
+      serviceAccountName: {{ include "easyhaproxy-ingress.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+              hostPort: 80
+            - name: https
+              containerPort: 443
+              hostPort: 443
+            - name: stats
+              containerPort: 1936
+              hostPort: 1936
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: EASYHAPROXY_DISCOVER
+              value: kubernetes
+            - name: HAPROXY_USERNAME
+              value: {{ .Values.easyhaproxy.stats.username }}
+            - name: HAPROXY_PASSWORD
+              value: {{ .Values.easyhaproxy.stats.password }}
+            - name: EASYHAPROXY_REFRESH_CONF
+              value: {{ .Values.easyhaproxy.refresh | quote }}
+            - name: HAPROXY_CUSTOMERRORS
+              value: {{ .Values.easyhaproxy.customErrors | quote}}
+            - name: EASYHAPROXY_SSL_MODE
+              value: {{ .Values.easyhaproxy.sslMode }}
+            - name: EASYHAPROXY_LOG_LEVEL
+              value: {{ .Values.easyhaproxy.logLevel.easyhaproxy }}
+            - name: HAPROXY_LOG_LEVEL
+              value: {{ .Values.easyhaproxy.logLevel.haproxy }}
+            - name: CERTBOT_LOG_LEVEL
+              value: {{ .Values.easyhaproxy.logLevel.certbot }}
