@@ -4,6 +4,7 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: {{ include "easyhaproxy-ingress.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "easyhaproxy-ingress.labels" . | nindent 4 }}
   {{- with .Values.serviceAccount.annotations }}

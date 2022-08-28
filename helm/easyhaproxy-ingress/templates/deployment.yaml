@@ -3,6 +3,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: {{ include "easyhaproxy-ingress.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "easyhaproxy-ingress.labels" . | nindent 4 }}
 spec:
