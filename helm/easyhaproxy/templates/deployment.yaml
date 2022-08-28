@@ -43,6 +43,11 @@ spec:
             - name: stats
               containerPort: 1936
               hostPort: 1936
+            {{ range .Values.listen_extra_ports }}
+            - name: extra_{{ . }}
+              containerPort: {{ . }}
+              hostPort: {{ . }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           env:

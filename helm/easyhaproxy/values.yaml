@@ -58,6 +58,8 @@ easyhaproxy:
     easyhaproxy: DEBUG
     haproxy: DEBUG
 
+listen_extra_ports: []
+
 # Make sure to create this
 masterNode:
   label: easyhaproxy/node

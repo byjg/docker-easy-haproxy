@@ -158,6 +158,9 @@ class Kubernetes(ProcessorInterface):
             redirect_ssl = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.redirect_ssl")
             redirect = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.redirect")
             mode = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.mode")
+            listen_port = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.listen_port")
+            if listen_port is None:
+                listen_port = 80
 
             data = {}
             data["creation_timestamp"] = ingress.metadata.creation_timestamp.strftime("%x %X")
@@ -191,7 +194,7 @@ class Kubernetes(ProcessorInterface):
                 port_number = rule.http.paths[0].backend.service.port.number
                 definition = "easyhaproxy.%s_%s" % (rule.host.replace(".", "-"), port_number)
                 rule_data["%s.host" % (definition)] = rule.host
-                rule_data["%s.port" % (definition)] = "80"
+                rule_data["%s.port" % (definition)] = listen_port
                 rule_data["%s.localport" % (definition)] = port_number
                 if rule.host in ssl_hosts:
                     rule_data["%s.clone_to_ssl" % (definition)] = 'true'

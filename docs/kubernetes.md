@@ -33,6 +33,8 @@ There are two ways to install EasyHAProxy in a Kubernetes cluster. You can use K
 3.1. Using Kubernetes Manifest
 
 ```bash
+kubectl create namespace easyhaproxy
+
 kubectl apply -f \
     https://raw.githubusercontent.com/haproxytech/kubernetes-ingress/master/deploy/haproxy-ingress-daemonset.yaml
 ```
@@ -45,7 +47,7 @@ Minimal configuration
 
 ```bash
 helm repo add byjg https://opensource.byjg.com/helm
-helm repo update
+helm repo update byjg
 kubectl create namespace easyhaproxy
 helm upgrade --install ingress byjg/easyhaproxy \
     --namespace easyhaproxy \
@@ -67,6 +69,8 @@ easyhaproxy:
     certbot: DEBUG
     easyhaproxy: DEBUG
     haproxy: DEBUG
+
+listen_extra_ports: []
 
 # Make sure to create this
 masterNode:
@@ -120,6 +124,7 @@ Caveats:
 | easyhaproxy.letsencrypt     | (optional) Boolean. It will request letsencript certificates for the ingresses domains. | false        | true or false
 | easyhaproxy.redirect        | (optional) Json. Specific a domain and its destination.                                 | *empty*      | {"domain":"redirect_url"}
 | easyhaproxy.mode            | (optional) Set the HTTP mode for that connection.                                       | http         | http or tcp
+| easyhaproxy.listen_port     | (optional) Set the an additional port for that ingress                                  | http         | http or tcp
 
 **Important**: The annotations are per ingress and applied to all hosts in that ingress configuration.
 
