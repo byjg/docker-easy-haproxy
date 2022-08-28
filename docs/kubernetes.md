@@ -28,12 +28,52 @@ kubectl label nodes node-01 "easyhaproxy/node=master"
 
 3. Install EasyHAProxy
 
+There are two ways to install EasyHAProxy in a Kubernetes cluster. You can use Kubernetes Manifest or Helm 3.
+
+3.1. Using Kubernetes Manifest
+
 ```bash
 kubectl apply -f \
     https://raw.githubusercontent.com/haproxytech/kubernetes-ingress/master/deploy/haproxy-ingress-daemonset.yaml
 ```
 
 You can configure the behavior of the EasyHAProxy by setup specific environment variables. To get a list of the variables please follow the [docker container environment](docker-environment.md)
+
+3.2. Using HELM 3
+
+Minimal configuration
+
+```bash
+helm repo add byjg https://opensource.byjg.com/helm
+helm repo update
+kubectl create namespace easyhaproxy
+helm upgrade --install byjg byjg/easyhaproxy-ingress \
+    --namespace easyhaproxy
+    --set resources.requests.cpu=100m \
+    --set resources.requests.memory=128Mi
+```
+
+Customizing Helm Values:
+
+```yaml
+easyhaproxy:
+  stats:
+    username: admin
+    password: password
+  refresh: "10"
+  customErrors: "true"
+  sslMode: loose
+  logLevel:
+    certbot: DEBUG
+    easyhaproxy: DEBUG
+    haproxy: DEBUG
+
+# Make sure to create this
+masterNode:
+  label: easyhaproxy/node
+  values: 
+    - master
+```
 
 ## Running containers
 
