@@ -1,27 +1,27 @@
 ---
-# Source: easyhaproxy-ingress/templates/serviceaccount.yaml
+# Source: easyhaproxy/templates/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: byjg-easyhaproxy-ingress
+  name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-ingress-0.1.0
-    app.kubernetes.io/name: easyhaproxy-ingress
-    app.kubernetes.io/instance: byjg
+    helm.sh/chart: easyhaproxy-0.1.0
+    app.kubernetes.io/name: easyhaproxy
+    app.kubernetes.io/instance: ingress
     app.kubernetes.io/version: "test"
     app.kubernetes.io/managed-by: Helm
 ---
-# Source: easyhaproxy-ingress/templates/clusterrole.yaml
+# Source: easyhaproxy/templates/clusterrole.yaml
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: byjg-easyhaproxy-ingress
+  name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-ingress-0.1.0
-    app.kubernetes.io/name: easyhaproxy-ingress
-    app.kubernetes.io/instance: byjg
+    helm.sh/chart: easyhaproxy-0.1.0
+    app.kubernetes.io/name: easyhaproxy
+    app.kubernetes.io/instance: ingress
     app.kubernetes.io/version: "test"
     app.kubernetes.io/managed-by: Helm
 rules:
@@ -78,49 +78,49 @@ rules:
 #   - list
 #   - watch
 ---
-# Source: easyhaproxy-ingress/templates/clusterrolebinding.yaml
+# Source: easyhaproxy/templates/clusterrolebinding.yaml
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: byjg-easyhaproxy-ingress
+  name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-ingress-0.1.0
-    app.kubernetes.io/name: easyhaproxy-ingress
-    app.kubernetes.io/instance: byjg
+    helm.sh/chart: easyhaproxy-0.1.0
+    app.kubernetes.io/name: easyhaproxy
+    app.kubernetes.io/instance: ingress
     app.kubernetes.io/version: "test"
     app.kubernetes.io/managed-by: Helm
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: byjg-easyhaproxy-ingress
+  name: ingress-easyhaproxy
 subjects:
 - kind: ServiceAccount
-  name: byjg-easyhaproxy-ingress
+  name: ingress-easyhaproxy
   namespace: easyhaproxy
 ---
-# Source: easyhaproxy-ingress/templates/deployment.yaml
+# Source: easyhaproxy/templates/deployment.yaml
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: byjg-easyhaproxy-ingress
+  name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-ingress-0.1.0
-    app.kubernetes.io/name: easyhaproxy-ingress
-    app.kubernetes.io/instance: byjg
+    helm.sh/chart: easyhaproxy-0.1.0
+    app.kubernetes.io/name: easyhaproxy
+    app.kubernetes.io/instance: ingress
     app.kubernetes.io/version: "test"
     app.kubernetes.io/managed-by: Helm
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/name: easyhaproxy-ingress
-      app.kubernetes.io/instance: byjg
+      app.kubernetes.io/name: easyhaproxy
+      app.kubernetes.io/instance: ingress
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: easyhaproxy-ingress
-        app.kubernetes.io/instance: byjg
+        app.kubernetes.io/name: easyhaproxy
+        app.kubernetes.io/instance: ingress
     spec:
       affinity:
         nodeAffinity:
@@ -131,11 +131,11 @@ spec:
                 operator: In
                 values:
                   - master
-      serviceAccountName: byjg-easyhaproxy-ingress
+      serviceAccountName: ingress-easyhaproxy
       securityContext:
         {}
       containers:
-        - name: easyhaproxy-ingress
+        - name: easyhaproxy
           securityContext:
             {}
           image: "byjg/easy-haproxy:test"
