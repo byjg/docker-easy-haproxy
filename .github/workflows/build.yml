@@ -115,7 +115,7 @@ jobs:
       DOC_GITHUB_TOKEN: '${{ secrets.DOC_TOKEN }}'
     steps:
       - uses: actions/checkout@v2
-      - run: curl https://opensource.byjg.com/add-helm.sh | bash /dev/stdin helm easyhaproxy-ingress
+      - run: curl https://opensource.byjg.com/add-helm.sh | bash /dev/stdin helm easyhaproxy
 
   Documentation:
     runs-on: 'ubuntu-latest'

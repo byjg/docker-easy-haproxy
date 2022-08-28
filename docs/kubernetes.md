@@ -47,8 +47,8 @@ Minimal configuration
 helm repo add byjg https://opensource.byjg.com/helm
 helm repo update
 kubectl create namespace easyhaproxy
-helm upgrade --install byjg byjg/easyhaproxy-ingress \
-    --namespace easyhaproxy
+helm upgrade --install ingress byjg/easyhaproxy \
+    --namespace easyhaproxy \
     --set resources.requests.cpu=100m \
     --set resources.requests.memory=128Mi
 ```
