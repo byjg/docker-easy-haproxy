@@ -1,0 +1,34 @@
+{{ if .Values.service.create }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+metadata:
+  name: {{ include "easyhaproxy.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "easyhaproxy.labels" . | nindent 4 }}
+  annotations:
+    {{- toYaml .Values.service.annotations | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: http
+      port: 80
+      {{ if eq .Values.service.type "NodePort" }}nodePort: {{ .Values.binding.ports.http }}{{ end }}
+    - name: https
+      port: 443
+      {{ if eq .Values.service.type "NodePort" }}nodePort: {{ .Values.binding.ports.https }}{{ end }}
+    - name: stats
+      port: 1936
+      {{ if eq .Values.service.type "NodePort" }}nodePort: {{ .Values.binding.ports.stats }}{{ end }}
+    {{- range $port := .Values.binding.additionalPorts }}
+    - name: extra{{ $port }}
+      port: {{ $port }}
+      {{ if eq $.Values.service.type "NodePort" }}nodePort: {{ $port }}{{ end }}
+    {{- end }}
+
+
+  selector:
+    {{- include "easyhaproxy.selectorLabels" . | nindent 4 }}
+{{ end }}

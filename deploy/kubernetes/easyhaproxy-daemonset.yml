@@ -6,7 +6,7 @@ metadata:
   name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-0.1.0
+    helm.sh/chart: easyhaproxy-0.1.2
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
     app.kubernetes.io/version: "test"
@@ -19,7 +19,7 @@ metadata:
   name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-0.1.0
+    helm.sh/chart: easyhaproxy-0.1.2
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
     app.kubernetes.io/version: "test"
@@ -85,7 +85,7 @@ metadata:
   name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-0.1.0
+    helm.sh/chart: easyhaproxy-0.1.2
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
     app.kubernetes.io/version: "test"
@@ -106,7 +106,7 @@ metadata:
   name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-0.1.0
+    helm.sh/chart: easyhaproxy-0.1.2
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
     app.kubernetes.io/version: "test"
@@ -151,7 +151,9 @@ spec:
               containerPort: 1936
               hostPort: 1936
           resources:
-            {}
+            requests:
+              cpu: 100m
+              memory: 128Mi
           env:
             - name: EASYHAPROXY_DISCOVER
               value: kubernetes

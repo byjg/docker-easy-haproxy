@@ -2,15 +2,19 @@
 
 ## Setup Kubernetes EasyHAProxy
 
-EasyHAProxy is a Daemonset and it will query all ingress definitions with the annotation `kubernetes.io/ingress.class: easyhaproxy-ingress`.
+EasyHAProxy query all ingress definitions with the annotation `kubernetes.io/ingress.class: easyhaproxy-ingress`.Once find the annotation, it will immediatelly setup HAProxy and start to serve it.
 
-Once find the annotation, it will immediatelly setup HAProxy and start to serve it.
+There are three installation modes:
+
+- DaemonSet: It will expose the ports 80, 443 and 1936
+- NodePort: It will expose the ports 31080, 31443 and 31936
+- ClusterIP it will node expose any port. The HAProxy will be accessible only inside the cluster.
 
 To install the daemonset in your cluster follow these steps:
 
-1. Identify the node where your EasyHAProxy container will run.
+### 1) Identify the node where your EasyHAProxy container will run.
 
-EasyHAProxy is a daemonset but it will be limited to a single node. To understand that see [limitations](limitations.md) page.
+Doesn't matter if you choose DaemonSet or ClusterIP, EasyHAProxy will be limited to a single node. To understand that see [limitations](limitations.md) page.
 
 ```bash
 $ kubectl get nodes
@@ -20,28 +24,28 @@ node-01   Ready    <none>   561d   v1.21.13-3
 node-02   Ready    <none>   561d   v1.21.13-3
 ```
 
-2. Add the EasyHAProxy label to the node
+Add the EasyHAProxy label to the node
 
 ```bash
 kubectl label nodes node-01 "easyhaproxy/node=master"
 ```
 
-3. Install EasyHAProxy
+### 2) Install EasyHAProxy
 
 There are two ways to install EasyHAProxy in a Kubernetes cluster. You can use Kubernetes Manifest or Helm 3.
 
-3.1. Using Kubernetes Manifest
+#### 2.1.) Using Kubernetes Manifest
 
 ```bash
 kubectl create namespace easyhaproxy
 
 kubectl apply -f \
-    https://raw.githubusercontent.com/haproxytech/kubernetes-ingress/master/deploy/haproxy-ingress-daemonset.yaml
+    https://raw.githubusercontent.com/byjg/docker-easy-haproxy/kubernetes/deploy/kubernetes/easyhaproxy-daemonset.yml
 ```
 
 You can configure the behavior of the EasyHAProxy by setup specific environment variables. To get a list of the variables please follow the [docker container environment](docker-environment.md)
 
-3.2. Using HELM 3
+#### 2.2) Using HELM 3
 
 Minimal configuration
 
@@ -49,6 +53,7 @@ Minimal configuration
 helm repo add byjg https://opensource.byjg.com/helm
 helm repo update byjg
 kubectl create namespace easyhaproxy
+
 helm upgrade --install ingress byjg/easyhaproxy \
     --namespace easyhaproxy \
     --set resources.requests.cpu=100m \
@@ -70,7 +75,17 @@ easyhaproxy:
     easyhaproxy: DEBUG
     haproxy: DEBUG
 
-listen_extra_ports: []
+service:
+  create: false          # If false, it will create a Daemonset with hostPort. The easiest. 
+  type: ClusterIP        # or NodePort
+  annotations: {}
+
+binding:
+  ports:
+    http: 80
+    https: 443
+    stats: 1936
+  additionalPorts: []
 
 # Make sure to create this
 masterNode:
@@ -178,9 +193,6 @@ spec:
   rules:
     ...
 ```
-
-
-
 
 ----
 [Open source ByJG](http://opensource.byjg.com)

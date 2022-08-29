@@ -1,6 +1,6 @@
 ---
 apiVersion: apps/v1
-kind: DaemonSet
+kind: {{ ternary "Deployment" "DaemonSet" .Values.service.create }}
 metadata:
   name: {{ include "easyhaproxy.fullname" . }}
   namespace: {{ .Release.Namespace }}
@@ -36,17 +36,17 @@ spec:
           ports:
             - name: http
               containerPort: 80
-              hostPort: 80
+              {{ if not .Values.service.create }}hostPort: {{ .Values.binding.ports.http }}{{ end }}
             - name: https
               containerPort: 443
-              hostPort: 443
+              {{ if not .Values.service.create }}hostPort: {{ .Values.binding.ports.https }}{{ end }}
             - name: stats
               containerPort: 1936
-              hostPort: 1936
-            {{ range .Values.listen_extra_ports }}
-            - name: extra{{ . }}
-              containerPort: {{ . }}
-              hostPort: {{ . }}
+              {{ if not .Values.service.create }}hostPort: {{ .Values.binding.ports.stats }}{{ end }}
+            {{- range $port := .Values.binding.additionalPorts }}
+            - name: extra{{ $port }}
+              containerPort: {{ $port }}
+              {{ if not $.Values.service.create }}hostPort: {{ $port }}{{ end }}
             {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
