@@ -48,15 +48,15 @@ frontend http_in_19901
     mode http
     redirect prefix www.google.com code 301 if { hdr(host) -i google.helloworld.com }
 
-    acl is_rule_hello_com_19901_1 hdr(host) -i hello.com
-    acl is_rule_hello_com_19901_2 hdr(host) -i hello.com:19901
-    use_backend srv_hello_com_19901 if is_rule_hello_com_19901_1 OR is_rule_hello_com_19901_2
-
     acl is_rule_www_helloworld_com_19901_1 hdr(host) -i www.helloworld.com
     acl is_rule_www_helloworld_com_19901_2 hdr(host) -i www.helloworld.com:19901
     use_backend srv_www_helloworld_com_19901 if is_rule_www_helloworld_com_19901_1 OR is_rule_www_helloworld_com_19901_2
 
-backend srv_hello_com_19901
+    acl is_rule_hello_com_19901_1 hdr(host) -i hello.com
+    acl is_rule_hello_com_19901_2 hdr(host) -i hello.com:19901
+    use_backend srv_hello_com_19901 if is_rule_hello_com_19901_1 OR is_rule_hello_com_19901_2
+
+backend srv_www_helloworld_com_19901
     balance roundrobin
     mode http
     option forwardfor
@@ -64,7 +64,7 @@ backend srv_hello_com_19901
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
     server srv-0 3e63154954b0:80 check weight 1
     server srv-1 eb294c110eb1:80 check weight 1
-backend srv_www_helloworld_com_19901
+backend srv_hello_com_19901
     balance roundrobin
     mode http
     option forwardfor

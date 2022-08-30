@@ -90,7 +90,7 @@ class HaproxyConfigGenerator:
             self.label.set_data(d)
 
             # Parse each definition found. 
-            for definition in definitions.keys():
+            for definition in sorted(definitions.keys()):
                 mode = self.label.get(
                     self.label.create([definition, "mode"]),
                     "http"
@@ -134,7 +134,7 @@ class HaproxyConfigGenerator:
                     ""
                 )
 
-                for hostname in d[host_label].split(","):
+                for hostname in sorted(d[host_label].split(",")):
                     hostname = hostname.strip()
                     self.serving_hosts.append("%s:%s" % (hostname, port))
                     easymapping[port]["hosts"].setdefault(hostname, {})

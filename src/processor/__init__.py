@@ -101,10 +101,21 @@ class ProcessorInterface:
 class Static(ProcessorInterface):
     def inspect_network(self):
         self.parsed_object = {}
-        
+        self.static_content = None
+    
+    def get_parsed_object(self):
+        return self.static_content["easymapping"] if "easymapping" in self.static_content else []
+
+    def get_hosts(self):
+        hosts = []
+        for object in self.get_parsed_object():
+            for host in object["hosts"].keys():
+                hosts.append("%s:%s" % (host, object["port"]))
+        return hosts
+
     def parse(self):
-        static_content = yaml.load(Functions.load(self.filename), Loader=yaml.FullLoader)
-        self.cfg = HaproxyConfigGenerator(static_content)
+        self.static_content = yaml.load(Functions.load(self.filename), Loader=yaml.FullLoader)
+        self.cfg = HaproxyConfigGenerator(self.static_content)
 
 
 class Docker(ProcessorInterface):
