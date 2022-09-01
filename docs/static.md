@@ -2,11 +2,11 @@
 
 ## Setup Docker EasyHAProxy
 
-This method will use a static configuration, simpler and easier than HAProxy to create the `haproxy.cfg`
+This method will use a static configuration, simpler and easier than create a `haproxy.cfg`
 
 You can use this configuration to setup external servers not related to docker or kubernetes.
 
-Another advantage is that EasyHAProxy will monitor for changes in this file and automatically reconfigure HAProxy and changes are detected.
+Another advantage is that EasyHAProxy will monitor for changes in this file and automatically reconfigure HAProxy when any changes are detected.
 
 First, Create a YAML:
 
@@ -103,7 +103,7 @@ easymapping:
       www.host1.com.br: http://host1.com.br
 ```
 
-*Note*: The only way to pass SSL certificates is to map the certificates to EasyHAProxy as a docker volume. Refer to the [SSL documentation](ssl.md) to learn how to do it. 
+**Note**: The only way to pass SSL certificates is to map the certificates to EasyHAProxy as a docker volume. Refer to the [SSL documentation](ssl.md) to learn how to do it. 
 
 ----
 [Open source ByJG](http://opensource.byjg.com)
