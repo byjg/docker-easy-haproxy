@@ -1,0 +1,80 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: easyhaproxy-ingress
+  name: container-example
+  namespace: default
+spec:
+  rules:
+  - host: example.org
+    http:
+      paths:
+      - backend:
+          service:
+            name: container-example
+            port:
+              number: 8080
+        pathType: ImplementationSpecific
+  - host: www.example.org
+    http:
+      paths:
+      - backend:
+          service:
+            name: container-example
+            port:
+              number: 8080
+        pathType: ImplementationSpecific
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: container-example
+  namespace: default
+spec:
+  ports:
+  - name: http
+    port: 8080
+  selector:
+    app: container-example
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: container-example
+  namespace: default
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: container-example
+  template:
+    metadata:
+      labels:
+        app: container-example
+    spec:
+      containers:
+        - name: container-example
+          image: byjg/static-httpserver
+          ports:
+            - containerPort: 8080
+          resources:
+            limits:
+              cpu: '0.05'
+              memory: '20Mi'
+            requests:
+              cpu: '0.05'
+              memory: '20Mi'
+          env:
+            - name: TITLE
+              value: "My Host Example"

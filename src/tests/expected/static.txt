@@ -1,0 +1,110 @@
+global
+    log stdout  format raw  local0  info
+    maxconn 2000
+    tune.ssl.default-dh-param 2048
+
+    # intermediate configuration
+    ssl-default-bind-ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384
+    ssl-default-bind-ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
+    ssl-default-bind-options prefer-client-ciphers no-sslv3 no-tlsv10 no-tlsv11 no-tls-tickets
+
+    ssl-default-server-ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384
+    ssl-default-server-ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
+    ssl-default-server-options no-sslv3 no-tlsv10 no-tlsv11 no-tls-tickets
+
+    ssl-dh-param-file /etc/haproxy/dhparam
+
+defaults
+    log global
+    option httplog
+
+    timeout connect    3s
+    timeout client    10s
+    timeout server    10m
+    errorfile 400 /etc/haproxy/errors-custom/400.http
+    errorfile 403 /etc/haproxy/errors-custom/403.http
+    errorfile 408 /etc/haproxy/errors-custom/408.http
+    errorfile 500 /etc/haproxy/errors-custom/500.http
+    errorfile 502 /etc/haproxy/errors-custom/502.http
+    errorfile 503 /etc/haproxy/errors-custom/503.http
+    errorfile 504 /etc/haproxy/errors-custom/504.http
+
+frontend stats
+    bind *:1936
+    mode http
+    stats enable
+    stats hide-version
+    stats realm Haproxy\ Statistics
+    stats uri /
+    stats auth admin:test123
+    default_backend srv_stats
+
+backend srv_stats
+    mode http
+    server Local 127.0.0.1:1936
+
+frontend http_in_80
+    bind *:80
+    mode http
+    redirect prefix http://host1.com.br code 301 if { hdr(host) -i www.host1.com.br }
+
+    acl is_rule_host1_com_br_80_1 hdr(host) -i host1.com.br
+    acl is_rule_host1_com_br_80_2 hdr(host) -i host1.com.br:80
+    acl is_letsencrypt_host1_com_br_80 path_beg /.well-known/acme-challenge/
+    use_backend letsencrypt_backend if is_letsencrypt_host1_com_br_80 is_rule_host1_com_br_80_1 OR is_letsencrypt_host1_com_br_80 is_rule_host1_com_br_80_2
+    use_backend srv_host1_com_br_80 if is_rule_host1_com_br_80_1 OR is_rule_host1_com_br_80_2
+
+    acl is_rule_host2_com_br_80_1 hdr(host) -i host2.com.br
+    acl is_rule_host2_com_br_80_2 hdr(host) -i host2.com.br:80
+    use_backend srv_host2_com_br_80 if is_rule_host2_com_br_80_1 OR is_rule_host2_com_br_80_2
+
+backend srv_host1_com_br_80
+    balance roundrobin
+    mode http
+    option forwardfor
+    http-request set-header X-Forwarded-Port %[dst_port]
+    http-request add-header X-Forwarded-Proto https if { ssl_fc }
+    server srv-0 container:5000 check weight 1
+backend srv_host2_com_br_80
+    balance roundrobin
+    mode http
+    option forwardfor
+    http-request set-header X-Forwarded-Port %[dst_port]
+    http-request add-header X-Forwarded-Proto https if { ssl_fc }
+    server srv-0 other:3000 check weight 1
+
+frontend http_in_443
+    bind *:443  ssl crt /certs/letsencrypt/ alpn http/1.1 crt /certs/haproxy/ alpn http/1.1
+    mode http
+
+    acl is_rule_host1_com_br_443_1 hdr(host) -i host1.com.br
+    acl is_rule_host1_com_br_443_2 hdr(host) -i host1.com.br:443
+    use_backend srv_host1_com_br_443 if is_rule_host1_com_br_443_1 OR is_rule_host1_com_br_443_2
+
+backend srv_host1_com_br_443
+    balance roundrobin
+    mode http
+    option forwardfor
+    http-request set-header X-Forwarded-Port %[dst_port]
+    http-request add-header X-Forwarded-Proto https if { ssl_fc }
+    server srv-0 container:80 check weight 1
+
+frontend http_in_8080
+    bind *:8080
+    mode http
+
+    acl is_rule_host3_com_br_8080_1 hdr(host) -i host3.com.br
+    acl is_rule_host3_com_br_8080_2 hdr(host) -i host3.com.br:8080
+    use_backend srv_host3_com_br_8080 if is_rule_host3_com_br_8080_1 OR is_rule_host3_com_br_8080_2
+
+backend srv_host3_com_br_8080
+    balance roundrobin
+    mode http
+    option forwardfor
+    http-request set-header X-Forwarded-Port %[dst_port]
+    http-request add-header X-Forwarded-Proto https if { ssl_fc }
+    server srv-0 domain:8181 check weight 1
+
+backend letsencrypt_backend
+    mode http
+    server certbot 127.0.0.1:2080

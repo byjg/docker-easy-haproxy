@@ -1,0 +1,77 @@
+# Default values for easyhaproxy.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: byjg/easy-haproxy
+  pullPolicy: Always # IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  create: false          # If false, it will create a Daemonset with hostPort. The easiest. 
+  type: ClusterIP        # or NodePort
+  annotations: {}
+
+binding:
+  ports:
+    http: 80
+    https: 443
+    stats: 1936
+  additionalPorts: []
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+resources: {}
+#  requests:
+#    cpu: "100m"
+#    memory: "128Mi"
+#  limits:
+#    cpu: 100m
+#    memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+easyhaproxy:
+  stats:
+    username: admin
+    password: password
+  refresh: "10"
+  customErrors: "true"
+  sslMode: loose
+  logLevel:
+    certbot: DEBUG
+    easyhaproxy: DEBUG
+    haproxy: DEBUG
+
+# Make sure to create this
+masterNode:
+  label: easyhaproxy/node
+  values: 
+    - master

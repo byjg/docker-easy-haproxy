@@ -1,0 +1,7 @@
+pyyaml
+docker
+jinja2
+pytest
+docker
+kubernetes
+deepdiff
