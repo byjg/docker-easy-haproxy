@@ -18,7 +18,7 @@
 
 The `definition` is a string that will group all configurations togethers. Different `definition` will create different configurations.
 
-The container can have more than one defintion.
+The container can have more than one definition.
 
 ## Configuations
 
