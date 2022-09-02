@@ -3,9 +3,9 @@
 ## Setup Docker EasyHAProxy
 
 This method will use a docker swarm installation to discover the containers and configure the HAProxy.
-The advantage of this method is that you can discover container in other nodes from cluster. 
+The advantage of this method is that you can discover containers in other nodes from the cluster. 
 
-The only requirement is that containers and EasyHAProxy must be in the same docker swarm network in order to HAProxy be able direct the traffic to the containers.
+The only requirement is that containers and EasyHAProxy must be in the same docker swarm network.
 
 e.g.:
 
@@ -44,19 +44,19 @@ networks:
     external: true
 ```
 
-and then:
+And then:
 
 ```bash
 docker stack deploy --compose-file docker-compose.yml easyhaproxy
 ```
 
-The mapping to `/var/run/docker.sock` is necessary to discover the docker containers and get the labels;
+Mapping to `/var/run/docker.sock` is necessary to discover the docker containers and get the labels;
 
 **Do not** add more than one replica for EasyHAProxy. To understand that see [limitations](limitations.md) page.
 
 ## Running containers
 
-To make your containers "discoverable" by EasyHAProxy that is minimum configuration you need:
+To make your containers "discoverable" by EasyHAProxy, that is the minimum configuration you need:
 
 ```yaml
 version: "3"
@@ -78,19 +78,19 @@ networks:
     external: true
 ```
 
-Once the container is running EasyHAProxy will detect automatically and start to redirect all traffic from `example.org:80` to your container.
+Once the container is running, EasyHAProxy will detect automatically and start to redirect all traffic from `example.org:80` to your container.
 
 You don't need to expose any port in your container.
 
-There a list of other parameters you can to configure your container. Please follow the [docker label configuration](container-labels.md)
+Please follow the [docker label configuration](container-labels.md) to see other configurations available. 
 
 ## Setup the EasyHAProxy container
 
-You can configure the behavior of the EasyHAProxy by setup specific environment variables. To get a list of the variables please follow the [docker container environment](docker-environment.md)
+You can configure the behavior of the EasyHAProxy by setup specific environment variables. To get a list of the variables, please follow the [docker container environment](docker-environment.md)
 
 ## More information
 
-You can refer the [Docker Documentation](docker.md) to get other detailed instructions.
+You can refer to the [Docker Documentation](docker.md) to get other detailed instructions.
 
 ----
 [Open source ByJG](http://opensource.byjg.com)

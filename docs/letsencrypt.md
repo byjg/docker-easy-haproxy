@@ -1,6 +1,6 @@
 # Letsencrypt
 
-EasyHAProxy can issue a letsencrypt certificate. The command is as below:
+EasyHAProxy can issue a letsencrypt certificate. Follow the steps below:
 
 Run the EasyHAProxy:
 
@@ -25,19 +25,17 @@ docker run \
 
 Requirements:
 
-- Your container **must** listen to the port 80. Besides no error, the certificate won't be issued if in a different port.
-- You cannot set the port 443 for the container with the Letsencrypt because EasyHAProxy will handle this automatically once the certificate is issued.
-- You have to setup the `EASYHAPROXY_LETSENCRYPT_EMAIL` environment variable on EasyHAProxy. If you don't setup, EasyHAProxy **will not request** a certificate.
+- Your container **must** listen to port 80. Letsencrypt will not issue the certificate if `easyhaproxy.express.port` is in another port, and EasyHAProxy will fail silently.
+- You cannot set port 443 for the container with the Letsencrypt because EasyHAProxy will create this port automatically once the certificate is issued.
+- `EASYHAPROXY_LETSENCRYPT_EMAIL` environment variable is required to be set. If you don't set it up, EasyHAProxy **will not request** a certificate.
 
 Be aware of Letsencrypt issue limits - https://letsencrypt.org/docs/duplicate-certificate-limit/ and https://letsencrypt.org/docs/rate-limits/
 
 ## Persist your Letsencrypt certificates
 
-It is a good idea to store the letsencrypt certificate in a persistent storage, even you knowing you can issue again in case your lost the certificate. 
+It is a good idea to store the letsencrypt certificate in persistent storage because of the limit on how many certificates can be issued for the same domain in a period.
 
-However, there is a limit in how many certificates can be issue for the same domain in a period of time.
-
-To avoid this, map the folder `/certs/letsencrypt` to a docker volume.
+To do this, map the folder `/certs/letsencrypt` to a docker volume.
 
 ```bash
 docker volume create certs_letsencrypt

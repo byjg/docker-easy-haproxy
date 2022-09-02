@@ -2,19 +2,19 @@
 
 ## Setup Kubernetes EasyHAProxy
 
-EasyHAProxy query all ingress definitions with the annotation `kubernetes.io/ingress.class: easyhaproxy-ingress`.Once find the annotation, it will immediatelly setup HAProxy and start to serve it.
+EasyHAProxy for Kubernetes queries all ingress definitions with the annotation `kubernetes.io/ingress.class: easyhaproxy-ingress`. Once find the annotation, it will immediately set up HAProxy and start to serve it.
 
 There are three installation modes:
 
-- DaemonSet: It will expose the ports 80, 443 and 1936
+- DaemonSet: It will expose ports 80, 443 and 1936
 - NodePort: It will expose the ports 31080, 31443 and 31936
-- ClusterIP it will node expose any port. The HAProxy will be accessible only inside the cluster.
+- ClusterIP: it will node expose any port. The HAProxy will be accessible only inside the cluster.
 
-To install the daemonset in your cluster follow these steps:
+To install EasyHAProxy in your cluster, follow these steps:
 
 ### 1) Identify the node where your EasyHAProxy container will run.
 
-Doesn't matter if you choose DaemonSet or ClusterIP, EasyHAProxy will be limited to a single node. To understand that see [limitations](limitations.md) page.
+EasyHAProxy will be limited to a single node. To understand that see [limitations](limitations.md) page.
 
 ```bash
 $ kubectl get nodes
@@ -24,7 +24,7 @@ node-01   Ready    <none>   561d   v1.21.13-3
 node-02   Ready    <none>   561d   v1.21.13-3
 ```
 
-Add the EasyHAProxy label to the node
+Add the EasyHAProxy label to the node.
 
 ```bash
 kubectl label nodes node-01 "easyhaproxy/node=master"
@@ -32,7 +32,7 @@ kubectl label nodes node-01 "easyhaproxy/node=master"
 
 ### 2) Install EasyHAProxy
 
-There are two ways to install EasyHAProxy in a Kubernetes cluster. You can use Kubernetes Manifest or Helm 3.
+You can install EasyHAProxy in a Kubernetes cluster using Kubernetes Manifest or Helm 3.
 
 #### 2.1.) Using Kubernetes Manifest
 
@@ -40,10 +40,10 @@ There are two ways to install EasyHAProxy in a Kubernetes cluster. You can use K
 kubectl create namespace easyhaproxy
 
 kubectl apply -f \
-    https://raw.githubusercontent.com/byjg/docker-easy-haproxy/kubernetes/deploy/kubernetes/easyhaproxy-daemonset.yml
+    https://raw.githubusercontent.com/byjg/docker-easy-haproxy/4.2.0/deploy/kubernetes/easyhaproxy-daemonset.yml
 ```
 
-You can configure the behavior of the EasyHAProxy by setup specific environment variables. To get a list of the variables please follow the [docker container environment](docker-environment.md)
+If necessary, you can configure environment variables. To get a list of the variables, please follow the [docker container environment](docker-environment.md)
 
 #### 2.2) Using HELM 3
 
@@ -76,7 +76,7 @@ easyhaproxy:
     haproxy: DEBUG
 
 service:
-  create: false          # If false, it will create a Daemonset with hostPort. The easiest. 
+  create: false          # If false, it will create a DaemonSet with hostPort. The easiest. 
   type: ClusterIP        # or NodePort
   annotations: {}
 
@@ -96,7 +96,7 @@ masterNode:
 
 ## Running containers
 
-The only requirement is that you have an ingress properly setup and with the annotation `kubernetes.io/ingress.class: easyhaproxy-ingress`.
+Your container only requires creating an ingress with the annotation `kubernetes.io/ingress.class: easyhaproxy-ingress` pointing to your service.
 
 e.g.
 
@@ -120,14 +120,14 @@ spec:
         pathType: ImplementationSpecific
 ```
 
-Once the container is running EasyHAProxy will detect automatically and start to redirect all traffic from `example.org:80` to your container.
+Once the container is running, EasyHAProxy will detect automatically and start to redirect all traffic from `example.org:80` to your container at port 8080.
 
 You don't need to expose any port in your container.
 
 Caveats:
 
-- At this point, the implementation don't support all ingress properties nor wildcard domains.
-- The ingress will publish externally only the ports 80 and 443, plus 1936 if stats is enable.
+- At this point, the implementation doesn't support all ingress properties or wildcard domains.
+- The ingress will publish the ports 80 and 443, plus 1936 if stats are enabled.
 - EasyHAProxy will read all `spec.rules[].host` spec, however it will parse only the first path `spec.rules[].http.paths[0].port.number` for each rule, and ignore the other paths.
 
 ## Kubernetes annotations
@@ -135,9 +135,9 @@ Caveats:
 | annotation                  | Description                                                                             | Default      | Example      |
 |-----------------------------|-----------------------------------------------------------------------------------------|--------------|--------------|
 | kubernetes.io/ingress.class | (required) Activate EasyHAProxy.                                                        | **required** | easyhaproxy-ingress
-| easyhaproxy.redirect_ssl    | (optional) Boolean. Force redirect all endpoints to https.                              | false        | true or false
-| easyhaproxy.letsencrypt     | (optional) Boolean. It will request letsencript certificates for the ingresses domains. | false        | true or false
-| easyhaproxy.redirect        | (optional) Json. Specific a domain and its destination.                                 | *empty*      | {"domain":"redirect_url"}
+| easyhaproxy.redirect_ssl    | (optional) Boolean. Force redirect all endpoints to HTTPS.                              | false        | true or false
+| easyhaproxy.letsencrypt     | (optional) Boolean. It will request letsencrypt certificates for the ingresses domains. | false        | true or false
+| easyhaproxy.redirect        | (optional) JSON. Key pair with a domain and its destination.                                 | *empty*      | {"domain":"redirect_url"}
 | easyhaproxy.mode            | (optional) Set the HTTP mode for that connection.                                       | http         | http or tcp
 | easyhaproxy.listen_port     | (optional) Set the an additional port for that ingress                                  | http         | http or tcp
 
@@ -163,7 +163,7 @@ Make sure your cluster is accessible both through ports 80 and 443.
 
 ## Custom SSL Certificates
 
-You need to create a secret with your certificate and key, and associate them in your ingress.
+Create a secret with your certificate and key and associate them with your ingress.
 
 ```yaml
 ---

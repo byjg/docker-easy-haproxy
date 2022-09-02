@@ -2,10 +2,10 @@
 
 ## Exposing Ports
 
-You must expose some ports on the EasyHAProxy container and in the firewall. However, you don't need to expose the other container ports because EasyHAProxy will handle that.
+Some ports on the EasyHAProxy container and in the firewall are required to be open. However, you don't need to expose the other container ports because EasyHAProxy will handle that.
 
 - The ports `80` and `443`.
-- If you enable the HAProxy statistics, you must also expose the port defined in `HAPROXY_STATS_PORT` environment variable (default 1936). Be aware that statististics are enabled by default with no password.
+- If you enable the HAProxy statistics, you must also expose the port defined in `HAPROXY_STATS_PORT` environment variable (default 1936). Be aware that statistics are enabled by default with no password.
 - Every port defined in `easyhaproxy.[definitions].port` also should be exposed. 
 
 e.g.
@@ -16,6 +16,17 @@ docker run \
     -p 80:80 \
     -p 443:443 \
     -p 1936:1936 \
+    -d byjg/easy-haproxy
+```
+
+## Mapping Docker Volume
+
+The docker volume or a way to call the API needs to pass to the EasyHAProxy container.
+
+```bash
+docker run \
+    /* other parameters */
+    -v /var/run/docker.sock:/var/run/docker.sock \
     -d byjg/easy-haproxy
 ```
 

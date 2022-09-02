@@ -1,12 +1,12 @@
-# Setup your own certificates
+# Setup custom certificates
 
 You can use your certificates with EasyHAProxy. 
 
-There is two ways to do that. 
+There are two ways to do that. 
 
 ## Setup certificate as a label definition in docker container
 
-1. First, Create a single PEM from the certificate and the key. 
+### Create a single PEM from the certificate and key. 
 
 ```bash
 cat example.com.crt example.com.key > single.pem
@@ -24,19 +24,21 @@ MIIEojCCA4qgAwIBAgIUegW2BimwuL4RzRZ2WYkHA6U5nkAwDQYJKoZIhvcNAQEL
 -----END PRIVATE KEY-----
 ```
 
-2. Convert the `single.pem` to BASE64 in a single line:
+### Convert the `single.pem` to BASE64 in a single line:
 
 ```bash
 cat single.pem | base64 -w0
 ```
 
-3. Use this string to define the label `easyhaproxy.[definition].sslcert`
+### Map the BASE64 to your container
 
-## Map the certificate as docker volume
+Add the Base64 string you generated before to the label `easyhaproxy.[definition].sslcert`
+
+## Map the certificate as a docker volume
 
 EasyHAProxy stores the certificates inside the folder `/certs/haproxy`.
 
-1. Run EasyHAProxy with the volume for the certificates:
+### Run EasyHAProxy with the volume for the certificates:
 
 ```bash
 docker volume create certs_haproxy
@@ -47,7 +49,7 @@ docker run \
     -d byjg/easy-haproxy
 ```
 
-2. Create a single PEM from the certificate and the key.
+### Create a single PEM from the certificate and the key.
 
 ```bash
 cat example.com.crt example.com.key > single.pem
@@ -65,7 +67,7 @@ MIIEojCCA4qgAwIBAgIUegW2BimwuL4RzRZ2WYkHA6U5nkAwDQYJKoZIhvcNAQEL
 -----END PRIVATE KEY-----
 ```
 
-3. Copy this certificate to EasyHAProxy volume
+### Copy this certificate to EasyHAProxy volume
 
 ```bash
 docker cp single.pem easyhaproxy:/certs/haproxy
