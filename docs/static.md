@@ -1,4 +1,4 @@
-# Docker
+# Static File
 
 ## Setup Docker EasyHAProxy
 
