@@ -1,7 +1,6 @@
 from functions import Functions, DaemonizeHAProxy, Certbot, Consts
 from processor import ProcessorInterface
 import os
-import time
 from deepdiff import DeepDiff
 
 def start():
@@ -21,18 +20,18 @@ def start():
     old_haproxy = None
     haproxy = DaemonizeHAProxy()
     haproxy.haproxy("start")
+    haproxy.sleep()
 
     certbot = Certbot(Consts.certs_letsencrypt, os.getenv("EASYHAPROXY_LETSENCRYPT_EMAIL"))
 
     while True:
-        time.sleep(10)
         if old_haproxy is not None:
             old_haproxy.kill()
             old_haproxy = None
         try:
             old_parsed = processor_obj.get_parsed_object()
             processor_obj.refresh()
-            if DeepDiff(old_parsed, processor_obj.get_parsed_object()) != {} or not haproxy.is_alive():
+            if certbot.check_certificates(letsencrypt_certs_found) or DeepDiff(old_parsed, processor_obj.get_parsed_object()) != {} or not haproxy.is_alive():
                 Functions.log(Functions.EASYHAPROXY_LOG, Functions.DEBUG, 'New configuration found. Reloading...')
                 Functions.log(Functions.EASYHAPROXY_LOG, Functions.TRACE, 'Object Found: %s' % (processor_obj.get_parsed_object()))
                 processor_obj.save_config(Consts.haproxy_config)
@@ -44,10 +43,11 @@ def start():
                 haproxy.haproxy("reload")
                 old_haproxy.terminate()
 
-            certbot.check_certificates(letsencrypt_certs_found)
         except Exception as e:
             Functions.log(Functions.EASYHAPROXY_LOG, Functions.FATAL, "Err: %s" % (e))
+
         Functions.log(Functions.EASYHAPROXY_LOG, Functions.DEBUG, 'Heartbeat')
+        haproxy.sleep()
 
 
 

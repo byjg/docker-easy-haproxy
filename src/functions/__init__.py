@@ -4,6 +4,8 @@ import subprocess
 import shlex
 import time
 import os
+import re
+import time
 
 class Functions:
     HAPROXY_LOG="HAPROXY"
@@ -105,6 +107,7 @@ class DaemonizeHAProxy:
     def __init__(self):
         self.process = None
         self.thread = None
+        self.sleep_secs = None
 
     def haproxy(self, action):
         if action == "start":
@@ -159,6 +162,15 @@ class DaemonizeHAProxy:
     def terminate(self):
         self.process.terminate()
         self.thread.terminate()
+
+    def sleep(self):
+        if self.sleep_secs is None:
+            try: 
+                self.sleep_secs = int(os.getenv("EASYHAPROXY_REFRESH_CONF", "10"))
+            except ValueError:
+                self.sleep_secs = 10
+
+        time.sleep(self.sleep_secs)
 
 
 class Certbot:
