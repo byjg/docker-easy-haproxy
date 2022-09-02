@@ -98,7 +98,7 @@ class Functions:
 
 
 class Consts:
-    easyhaproxy_config = "/etc/haproxy/easyconfig.yml"
+    easyhaproxy_config = "/etc/haproxy/static/config.yml"
     haproxy_config = "/etc/haproxy/haproxy.cfg"
     certs_letsencrypt = "/certs/letsencrypt"
     certs_haproxy = "/certs/haproxy"

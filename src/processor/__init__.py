@@ -34,7 +34,7 @@ class ContainerEnv:
 
 
 class ProcessorInterface:
-    static_file = "/etc/haproxy/easyconfig.yml"
+    static_file = Consts.easyhaproxy_config
 
     def __init__(self, filename = None):
         self.filename = filename
@@ -109,6 +109,8 @@ class Static(ProcessorInterface):
     def get_hosts(self):
         hosts = []
         for object in self.get_parsed_object():
+            if "hosts" not in object:
+                continue
             for host in object["hosts"].keys():
                 hosts.append("%s:%s" % (host, object["port"]))
         return hosts

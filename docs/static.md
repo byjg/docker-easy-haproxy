@@ -53,19 +53,19 @@ easymapping:
           - domain:8181
 ```
 
-Then map this file to `/etc/haproxy/easyconfig.yml` in your EasyHAProxy container as:
+Then map this file to `/etc/haproxy/static/config.yml` in your EasyHAProxy container as:
 
 ```bash
 docker run -d \
       --name easy-haproxy-container \
       -v /var/run/docker.sock:/var/run/docker.sock \
-      -v /my/config.yml:/etc/haproxy/easyconfig.yml
+      -v /my/static/:/etc/haproxy/static/ \
       -e EASYHAPROXY_DISCOVER="static" \
       # + Environment Variables \
       -p 80:80 \
       -p 443:443 \
       -p 1936:1936 \
-      --network easyhaproxy
+      --network easyhaproxy \
     byjg/easy-haproxy
 ```
 
