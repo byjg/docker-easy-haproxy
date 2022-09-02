@@ -147,7 +147,7 @@ jobs:
             git add .
             git commit -m "[skip ci] Update from $CURRENT_VERSION to $TAG"
             git config user.name "$GITHUB_ACTOR CI/CD"
-            git config user.email "$(git log --pretty=format:'%ae' | head -n 1)"
+            git config user.email "info@byjg.com.br"
             git push
           fi
 
