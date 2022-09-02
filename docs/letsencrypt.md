@@ -15,10 +15,10 @@ Run your container:
 
 ```bash
 docker run \
-    -l easyhaproxy.express.port=80 \
-    -l easyhaproxy.express.localport=3000 \
-    -l easyhaproxy.express.host=example.org \
-    -l easyhaproxy.express.letsencrypt=true \
+    --label easyhaproxy.express.port=80 \
+    --label easyhaproxy.express.localport=3000 \
+    --label easyhaproxy.express.host=example.org \
+    --label easyhaproxy.express.letsencrypt=true \
     .... \
     some/myimage
 ```

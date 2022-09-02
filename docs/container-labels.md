@@ -26,8 +26,8 @@ The container can have more than one definition.
 
 ```bash
 docker run \
-    -l easyhaproxy.webapi.port=80\
-    -l easyhaproxy.webapi.host=byjg.com.br \
+    --label easyhaproxy.webapi.port=80\
+    --label easyhaproxy.webapi.host=byjg.com.br \
     ....
 ```
 
@@ -35,13 +35,13 @@ docker run \
 
 ```bash
 docker run \
-    -l easyhaproxy.express.port=80 \
-    -l easyhaproxy.express.localport=3000 \
-    -l easyhaproxy.express.host=express.byjg.com.br \
+    --label easyhaproxy.express.port=80 \
+    --label easyhaproxy.express.localport=3000 \
+    --label easyhaproxy.express.host=express.byjg.com.br \
 
-    -l easyhaproxy.admin.port=80 \
-    -l easyhaproxy.admin.localport=3001 \
-    -l easyhaproxy.admin.host=admin.byjg.com.br \
+    --label easyhaproxy.admin.port=80 \
+    --label easyhaproxy.admin.localport=3001 \
+    --label easyhaproxy.admin.host=admin.byjg.com.br \
     .... \
     some/myimage
 ```
@@ -50,9 +50,9 @@ docker run \
 
 ```bash
 docker run \
-    -l easyhaproxy.express.port=80 \
-    -l easyhaproxy.express.localport=3000 \
-    -l easyhaproxy.express.host=express.byjg.com.br,admin.byjg.com.br \
+    --label easyhaproxy.express.port=80 \
+    --label easyhaproxy.express.localport=3000 \
+    --label easyhaproxy.express.host=express.byjg.com.br,admin.byjg.com.br \
     .... \
     some/myimage
 ```
@@ -79,9 +79,9 @@ Set `easyhaproxy.[definition].mode=tcp` if your application uses TCP protocol in
 
 ```bash
 docker run \
-    -l easyhaproxy.example.mode=tcp \
-    -l easyhaproxy.example.port=3306
-    -l easyhaproxy.example.localport=3306
+    --label easyhaproxy.example.mode=tcp \
+    --label easyhaproxy.example.port=3306
+    --label easyhaproxy.example.localport=3306
     .... \
     some/tcp-service
 ```
@@ -90,7 +90,7 @@ docker run \
 
 ```bash
 docker run \
-    -l easyhaproxy.[definition].redirect='{"www.byjg.com.br":"http://byjg.com.br","byjg.com":"http://byjg.com.br"}'
+    --label easyhaproxy.[definition].redirect='{"www.byjg.com.br":"http://byjg.com.br","byjg.com":"http://byjg.com.br"}'
 ```
 
 ----

@@ -226,7 +226,7 @@ class Certbot:
         for item in os.listdir(letsencrypt_certs):
             path = os.path.join(letsencrypt_certs, item)
             if os.path.isdir(path):
-                cert = Functions.load(os.path.join(path, "fullchain.pem"))
+                cert = Functions.load(os.path.join(path, "cert.pem"))
                 key = Functions.load(os.path.join(path, "privkey.pem"))
                 filename = "%s/%s.pem" % (self.certs, item)
                 self.merge_certificate(cert, key, filename)

@@ -35,9 +35,9 @@ To make your containers "discoverable" by EasyHAProxy, that is the minimum confi
 
 ```bash
 docker run -d \
-      -e easyhaproxy.http.host=example.org \
-      -e easyhaproxy.http.port=80 \
-      -e easyhaproxy.http.localport=8080 \
+      --label easyhaproxy.http.host=example.org \
+      --label easyhaproxy.http.port=80 \
+      --label easyhaproxy.http.localport=8080 \
       --network easyhaproxy
     my/image:tag
 ```
