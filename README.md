@@ -47,10 +47,9 @@ The steps are:
 
 For detailed instructions on how to use EasyHAProxy, follow the instructions for the platform you want to use:
 
-| Kubernetes | Docker Swarm | Docker |  Static
+| [Kubernetes](docs/kubernetes.md) | [Docker Swarm](docs/swarm.md) | [Docker](docs/docker.md) |  [Static](docs/static.md)
 |:----------:|:------------:|:------:|:-------:
-| [![Kubernetes](docs/easyhaproxy_kubernetes.png)](docs/kubernetes.md) | [![Docker Swarm](docs/easyhaproxy_swarm.png)](docs/swarm.md)  | [![Docker](docs/easyhaproxy_docker.png)](docs/docker.md) | [![Static](docs/easyhaproxy_static.png)](docs/static.md)
-
+| ![Kubernetes](docs/easyhaproxy_kubernetes.png) | ![Docker Swarm](docs/easyhaproxy_swarm.png)  | ![Docker](docs/easyhaproxy_docker.png) | ![Static](docs/easyhaproxy_static.png)
 
 ----
 [Open source ByJG](http://opensource.byjg.com)
