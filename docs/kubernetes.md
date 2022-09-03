@@ -74,6 +74,8 @@ easyhaproxy:
     certbot: DEBUG
     easyhaproxy: DEBUG
     haproxy: DEBUG
+  letsencrypt:
+    email: ""
 
 service:
   create: false          # If false, it will create a DaemonSet with hostPort. The easiest. 

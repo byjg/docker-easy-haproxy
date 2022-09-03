@@ -69,6 +69,8 @@ easyhaproxy:
     certbot: DEBUG
     easyhaproxy: DEBUG
     haproxy: DEBUG
+  letsencrypt:
+    email: ""
 
 # Make sure to create this
 masterNode:
