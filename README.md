@@ -51,5 +51,16 @@ For detailed instructions on how to use EasyHAProxy, follow the instructions for
 |:----------:|:------------:|:------:|:-------:
 | ![Kubernetes](docs/easyhaproxy_kubernetes.png) | ![Docker Swarm](docs/easyhaproxy_swarm.png)  | ![Docker](docs/easyhaproxy_docker.png) | ![Static](docs/easyhaproxy_static.png)
 
+## See EasyHAProxy in action
+
+Click on the image to see the videos (use HD for better visualization)
+|  | | 
+|:----------:|:------------:|
+| [![Docker In Action](docs/video-docker.png)](https://youtu.be/ar8raFK0R1k) | [![Docker and Letsencrypt](docs/video-docker-ssl.png)](https://youtu.be/xwIdj9mc2mU) | 
+| [![K8s In Action](docs/video-kubernetes.png)](https://youtu.be/uq7TuLIijks) | [![K8s and Letsencrypt](docs/video-kubernetes-letsencrypt.png)](https://youtu.be/v9Q4M5Al7AQ) | 
+| [![Static Configuration](docs/video-static.png)](https://youtu.be/B_bYZnRTGJM) | [![TCP Mode](docs/video-tcp-mysql.png)](https://youtu.be/JHqcq9crbDI) | 
+
+[Here is the code](https://gist.github.com/byjg/e125e478a0562190176d69ea795fd3d4) applied in the examples above. 
+
 ----
 [Open source ByJG](http://opensource.byjg.com)
