@@ -49,7 +49,7 @@ class HaproxyConfigGenerator:
     def __init__(self, mapping):
         self.mapping = mapping
         self.mapping.setdefault("ssl_mode", 'default')
-        self.mapping.setdefault("letsencrypt", {"email": ""})
+        self.mapping.setdefault("letsencrypt", {"email": "", "staging": False})
         self.mapping["ssl_mode"] = self.mapping["ssl_mode"].lower()
         self.label = DockerLabelHandler(mapping['lookup_label'] if 'lookup_label' in mapping else "easyhaproxy")
         self.letsencrypt_hosts = []

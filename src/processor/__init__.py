@@ -27,7 +27,8 @@ class ContainerEnv:
         env_vars["lookup_label"] = os.getenv("EASYHAPROXY_LABEL_PREFIX") if os.getenv("EASYHAPROXY_LABEL_PREFIX") else "easyhaproxy"
         if (os.getenv("EASYHAPROXY_LETSENCRYPT_EMAIL")):
             env_vars["letsencrypt"] = {
-                "email": os.getenv("EASYHAPROXY_LETSENCRYPT_EMAIL")
+                "email": os.getenv("EASYHAPROXY_LETSENCRYPT_EMAIL"),
+                "staging": os.getenv("EASYHAPROXY_LETSENCRYPT_STAGING", "false").lower() in ["true", "1", "yes"]
             }
         
         return env_vars

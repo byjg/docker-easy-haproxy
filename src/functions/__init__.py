@@ -174,9 +174,10 @@ class DaemonizeHAProxy:
 
 
 class Certbot:
-    def __init__(self, certs, email):
+    def __init__(self, certs, email, staging):
         self.certs = certs
         self.email = email
+        self.staging = staging
 
     def check_certificates(self, hosts):
         if self.email == "" or len(hosts) == 0:
@@ -201,7 +202,7 @@ class Certbot:
                         Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "Renew certificate for %s" % (host))
                         renew_certs.append(host_arg)
 
-            certbot_certonly = ('/usr/bin/certbot certonly '
+            certbot_certonly = ('/usr/bin/certbot certonly {staging}'
                                 '    --standalone'
                                 '    --preferred-challenges http'
                                 '    --http-01-port 2080'
@@ -210,7 +211,9 @@ class Certbot:
                                 '    --no-eff-email'
                                 '    --non-interactive'
                                 '    --max-log-backups=0'
-                                '    %s --email %s' % (' '.join(request_certs), self.email)
+                                '    {certs} --email {email}'.format(certs = ' '.join(request_certs),
+                                                           email = self.email,
+                                                           staging = '--staging' if self.staging else '')
                             )
 
             ret_reload = False
