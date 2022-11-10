@@ -129,7 +129,10 @@ class Docker(ProcessorInterface):
     def inspect_network(self):
         self.parsed_object = {}
         for container in self.client.containers.list():
-            self.parsed_object[container.name] = container.labels
+            ip_address = container.attrs["NetworkSettings"]["IPAddress"]
+            if not ip_address:
+                ip_address = list(container.attrs["NetworkSettings"]["Networks"].values())[0]["IPAddress"]
+            self.parsed_object[ip_address] = container.labels
 
 
 class Swarm(ProcessorInterface):
@@ -140,7 +143,7 @@ class Swarm(ProcessorInterface):
     def inspect_network(self):
         self.parsed_object = {}
         for container in self.client.services.list():
-            self.parsed_object[container.attrs["Spec"]["Name"]] = container.attrs["Spec"]["Labels"]
+            self.parsed_object[container.attrs["Endpoint"]["VirtualIPs"][0]["Addr"].split("/")[0]] = container.attrs["Spec"]["Labels"]
 
 
 class Kubernetes(ProcessorInterface):

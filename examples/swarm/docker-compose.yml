@@ -13,7 +13,7 @@
 # location: https://host1.local/
 #
 # Test SSL:
-# openssl s_client -showcerts -connect 127.0.0.1:443 --servername host1.local
+# openssl s_client -showcerts -connect 127.0.0.1:443 -servername host1.local
 
 version: "3"
 
