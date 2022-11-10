@@ -6,6 +6,7 @@ import os
 import json
 import base64
 import docker
+import socket
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 
@@ -127,11 +128,17 @@ class Docker(ProcessorInterface):
         super().__init__()
     
     def inspect_network(self):
+        ha_proxy_network_name = next(iter(self.client.containers.get(socket.gethostname()).attrs["NetworkSettings"]["Networks"]))
+        ha_proxy_network = self.client.networks.get(ha_proxy_network_name)
+
         self.parsed_object = {}
         for container in self.client.containers.list():
-            ip_address = container.attrs["NetworkSettings"]["IPAddress"]
-            if not ip_address:
-                ip_address = list(container.attrs["NetworkSettings"]["Networks"].values())[0]["IPAddress"]
+            # Issue 32 - Docker container cannot connect to containers in different network.
+            if ha_proxy_network_name not in container.attrs["NetworkSettings"]["Networks"].keys():
+                ha_proxy_network.connect(container.name)
+                container = self.client.containers.get(container.name)  # refresh object
+
+            ip_address = container.attrs["NetworkSettings"]["Networks"][ha_proxy_network_name]["IPAddress"]
             self.parsed_object[ip_address] = container.labels
 
 
@@ -141,9 +148,28 @@ class Swarm(ProcessorInterface):
         super().__init__()
 
     def inspect_network(self):
+        ha_proxy_service_name = self.client.containers.get(socket.gethostname()).name.split('.')[0]
+        for endpoint in self.client.services.get(ha_proxy_service_name).attrs['Endpoint']["VirtualIPs"]:                
+            ha_proxy_network_id = endpoint["NetworkID"]
+            if self.client.networks.get(ha_proxy_network_id).name != 'ingress':
+                break
+
         self.parsed_object = {}
-        for container in self.client.services.list():
-            self.parsed_object[container.attrs["Endpoint"]["VirtualIPs"][0]["Addr"].split("/")[0]] = container.attrs["Spec"]["Labels"]
+        for service in self.client.services.list():
+            ip_address = None
+            network_list = []
+            for endpoint in service.attrs["Endpoint"]["VirtualIPs"]:
+                if ha_proxy_network_id == endpoint["NetworkID"]:
+                    ip_address = endpoint["Addr"].split("/")[0]
+                    break
+                network_list.append(endpoint["NetworkID"])
+            
+            if ip_address is None:
+                network_list.append(ha_proxy_network_id)
+                service.update(networks = network_list)
+                continue # skip to the next service to give time to update the network
+                
+            self.parsed_object[ip_address] = service.attrs["Spec"]["Labels"]
 
 
 class Kubernetes(ProcessorInterface):

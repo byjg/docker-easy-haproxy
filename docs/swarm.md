@@ -3,9 +3,10 @@
 ## Setup Docker EasyHAProxy
 
 This method will use a docker swarm installation to discover the containers and configure the HAProxy.
-The advantage of this method is that you can discover containers in other nodes from the cluster. 
+The advantage of this method is that you can discover containers in other nodes from the cluster.
 
 The only requirement is that containers and EasyHAProxy must be in the same docker swarm network.
+If not, EasyHAProxy will connect the service with the EasyHAProxy service network.
 
 e.g.:
 
