@@ -128,7 +128,14 @@ class Docker(ProcessorInterface):
         super().__init__()
     
     def inspect_network(self):
-        ha_proxy_network_name = next(iter(self.client.containers.get(socket.gethostname()).attrs["NetworkSettings"]["Networks"]))
+        try:
+            ha_proxy_network_name = next(iter(self.client.containers.get(socket.gethostname()).attrs["NetworkSettings"]["Networks"]))
+        except:
+            # HAProxy is not running in a container, get first container network
+            if len(self.client.containers.list()) == 0:
+                return
+            ha_proxy_network_name = next(iter(self.client.containers.get(self.client.containers.list()[0].name).attrs["NetworkSettings"]["Networks"]))
+
         ha_proxy_network = self.client.networks.get(ha_proxy_network_name)
 
         self.parsed_object = {}
@@ -192,6 +199,8 @@ class Kubernetes(ProcessorInterface):
 
         self.parsed_object = {}
         for ingress in ret.items:
+            if 'kubernetes.io/ingress.class' not in ingress.metadata.annotations:
+                continue
             if ingress.metadata.annotations['kubernetes.io/ingress.class'] != "easyhaproxy-ingress":
                 continue
 

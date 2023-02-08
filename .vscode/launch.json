@@ -5,6 +5,22 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "PyTest Current File",
+            "type": "python",
+            "request": "launch",
+            "module": "pytest",
+            "justMyCode": true,
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src",
+            "args": [
+                "-vv",
+                "${file}"
+            ],
+            "env": {
+                "PYTHONPATH": "${cwd}/src"
+            }
+        },
+        {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
