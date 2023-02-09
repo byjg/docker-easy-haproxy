@@ -5,7 +5,7 @@
 | EASYHAPROXY_DISCOVER            | How the services will be discovered to create `haproxy.cfg`:  `static`, `docker`, `swarm` or `kubernetes`     | **required**     |
 | EASYHAPROXY_LABEL_PREFIX        | (Optional) The key will search for matching resources.                                          | `easyhaproxy`    |
 | EASYHAPROXY_LETSENCRYPT_EMAIL   | (Optional) The email will be used to request the certificate to Letsencrypt                     | *empty*          |
-| EASYHAPROXY_LETSENCRYPT_SERVER  | (Optional) Can be true or 'schema://domain.tld'. If set, will try to connect to the Letsencrypt test server  | false            |
+| EASYHAPROXY_LETSENCRYPT_SERVER  | (Optional) Can be `staging` or 'schema://domain.tld'. If set, will try to connect to the Letsencrypt test server  | *empty*            |
 | EASYHAPROXY_SSL_MODE            | (Optional) `strict` supports only the most recent TLS version; `default` good SSL integration with recent browsers; `loose` supports all old SSL protocols for old browsers (not recommended).  | `default`|
 | EASYHAPROXY_REFRESH_CONF        | (Optional) Check configuration every N seconds.                                                 | 10               |
 | EASYHAPROXY_LOG_LEVEL           | (Optional) The log level for EasyHAproxy messages. Available: TRACE,DEBUG,INFO,WARN,ERROR,FATAL | DEBUG            |

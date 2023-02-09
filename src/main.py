@@ -22,7 +22,7 @@ def start():
     haproxy.haproxy("start")
     haproxy.sleep()
 
-    certbot = Certbot(Consts.certs_letsencrypt, os.getenv("EASYHAPROXY_LETSENCRYPT_EMAIL"), os.getenv("EASYHAPROXY_LETSENCRYPT_SERVER", "false").lower())
+    certbot = Certbot(Consts.certs_letsencrypt, os.getenv("EASYHAPROXY_LETSENCRYPT_EMAIL"), os.getenv("EASYHAPROXY_LETSENCRYPT_SERVER", "").lower())
 
     while True:
         if old_haproxy is not None:

@@ -180,13 +180,12 @@ class Certbot:
         self.test_server = self.set_test_server(test_server)
 
     def set_test_server(self, test_server):
-        if not test_server:
-            return ""
-
-        if test_server.lower() in ["true", "1", "yes"]:
+        if test_server.lower() == "staging":
             return "--staging"
-        else:
+        elif test_server.lower().startswith("http"):
             return "--server " + test_server
+        else:
+            return ""
 
     def check_certificates(self, hosts):
         if self.email == "" or len(hosts) == 0:
@@ -247,6 +246,8 @@ class Certbot:
     
     def find_live_certificates(self):
         letsencrypt_certs = "/etc/letsencrypt/live/"
+        if not os.path.exists(letsencrypt_certs):
+            return
         for item in os.listdir(letsencrypt_certs):
             path = os.path.join(letsencrypt_certs, item)
             if os.path.isdir(path):
