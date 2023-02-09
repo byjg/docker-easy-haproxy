@@ -174,9 +174,18 @@ class DaemonizeHAProxy:
 
 
 class Certbot:
-    def __init__(self, certs, email):
+    def __init__(self, certs, email, test_server):
         self.certs = certs
         self.email = email
+        self.test_server = self.set_test_server(test_server)
+
+    def set_test_server(self, test_server):
+        if test_server.lower() == "staging":
+            return "--staging"
+        elif test_server.lower().startswith("http"):
+            return "--server " + test_server
+        else:
+            return ""
 
     def check_certificates(self, hosts):
         if self.email == "" or len(hosts) == 0:
@@ -201,7 +210,7 @@ class Certbot:
                         Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "Renew certificate for %s" % (host))
                         renew_certs.append(host_arg)
 
-            certbot_certonly = ('/usr/bin/certbot certonly '
+            certbot_certonly = ('/usr/bin/certbot certonly {test_server}'
                                 '    --standalone'
                                 '    --preferred-challenges http'
                                 '    --http-01-port 2080'
@@ -210,7 +219,9 @@ class Certbot:
                                 '    --no-eff-email'
                                 '    --non-interactive'
                                 '    --max-log-backups=0'
-                                '    %s --email %s' % (' '.join(request_certs), self.email)
+                                '    {certs} --email {email}'.format(certs = ' '.join(request_certs),
+                                                           email = self.email,
+                                                           test_server = self.test_server)
                             )
 
             ret_reload = False
@@ -235,6 +246,8 @@ class Certbot:
     
     def find_live_certificates(self):
         letsencrypt_certs = "/etc/letsencrypt/live/"
+        if not os.path.exists(letsencrypt_certs):
+            return
         for item in os.listdir(letsencrypt_certs):
             path = os.path.join(letsencrypt_certs, item)
             if os.path.isdir(path):

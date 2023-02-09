@@ -95,8 +95,24 @@ def test_container_env_stats_password():
             "lookup_label": "easyhaproxy",
             "letsencrypt": {
                 "email": "acme@example.org",
+                "server": False
             }
         } == ContainerEnv.read()
     finally:
         os.environ['EASYHAPROXY_LETSENCRYPT_EMAIL'] = ''
 
+def test_container_env_letsencrypt():
+    os.environ['EASYHAPROXY_LETSENCRYPT_EMAIL'] = 'acme@example.org'
+    os.environ['EASYHAPROXY_LETSENCRYPT_SERVER'] = 'true'
+    try:
+        assert {
+            "customerrors": False,
+            "ssl_mode": "default",
+            "lookup_label": "easyhaproxy",
+            "letsencrypt": {
+                "email": "acme@example.org",
+                "server": True
+            }
+        } == ContainerEnv.read()
+    finally:
+        os.environ['EASYHAPROXY_LETSENCRYPT_EMAIL'] = ''

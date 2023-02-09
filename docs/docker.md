@@ -5,6 +5,7 @@
 This method will use a docker standalone installation to discover the containers and configure the HAProxy.
 
 The only requirement is that containers and EasyHAProxy must be in the same docker network.
+If not, EasyHAProxy will connect the container with the EasyHAProxy network.
 
 e.g.:
 
