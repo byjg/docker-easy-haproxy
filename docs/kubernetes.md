@@ -40,7 +40,7 @@ You can install EasyHAProxy in a Kubernetes cluster using Kubernetes Manifest or
 kubectl create namespace easyhaproxy
 
 kubectl apply -f \
-    https://raw.githubusercontent.com/byjg/docker-easy-haproxy/4.2.0/deploy/kubernetes/easyhaproxy-daemonset.yml
+    https://raw.githubusercontent.com/byjg/docker-easy-haproxy/4.3.0/deploy/kubernetes/easyhaproxy-daemonset.yml
 ```
 
 If necessary, you can configure environment variables. To get a list of the variables, please follow the [docker container environment](docker-environment.md)
