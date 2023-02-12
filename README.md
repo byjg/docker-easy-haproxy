@@ -5,6 +5,7 @@
 [![GitHub source](https://img.shields.io/badge/Github-source-informational?logo=github)](https://github.com/byjg/docker-easy-haproxy/)
 [![GitHub license](https://img.shields.io/github/license/byjg/docker-easy-haproxy.svg)](https://opensource.byjg.com/opensource/licensing.html)
 [![GitHub release](https://img.shields.io/github/release/byjg/docker-easy-haproxy.svg)](https://github.com/byjg/docker-easy-haproxy/releases/)
+[![Helm Version](https://img.shields.io/badge/dynamic/yaml?color=blue&label=Helm&query=%24.entries.easyhaproxy%5B0%5D.version&url=http%3A%2F%2Fopensource.byjg.com%2Fhelm%2Findex.yaml)](https://opensource.byjg.com/helm)
 
 ![EasyHAProxy](docs/easyhaproxy_logo.png)
 
@@ -41,26 +42,35 @@ The steps are:
 
 - Run the EasyHAProxy container;
 - Add some labels to the containers you want to be parsed by EasyHAProxy (see detailed instructions below);
-- EasyHAProxy will automatically detect the containers, set up, and reload the HAProxy configurations for you without downtime. 
+- EasyHAProxy will automatically detect the containers, set up, and reload the HAProxy configurations for you without downtime.
 
 ## Detailed Instructions
 
 For detailed instructions on how to use EasyHAProxy, follow the instructions for the platform you want to use:
 
-| [Kubernetes](docs/kubernetes.md) | [Docker Swarm](docs/swarm.md) | [Docker](docs/docker.md) |  [Static](docs/static.md)
-|:----------:|:------------:|:------:|:-------:
-| ![Kubernetes](docs/easyhaproxy_kubernetes.png) | ![Docker Swarm](docs/easyhaproxy_swarm.png)  | ![Docker](docs/easyhaproxy_docker.png) | ![Static](docs/easyhaproxy_static.png)
+[![Kubernetes](docs/easyhaproxy_kubernetes.png)](docs/kubernetes.md)
+[![Docker Swarm](docs/easyhaproxy_swarm.png)](docs/swarm.md)
+[![Docker](docs/easyhaproxy_docker.png)](docs/docker.md)
+[![Static](docs/easyhaproxy_static.png)](docs/static.md)
+
+Or you can install using tools:
+
+[![Helm](docs/easyhaproxy_helm.png)](docs/helm.md)
+[![MicroK8s](docs/easyhaproxy_microk8s.png)](docs/microk8s.md)
+[![Dokku](docs/easyhaproxy_dokku.png)](docs/dokku.md)
 
 ## See EasyHAProxy in action
 
 Click on the image to see the videos (use HD for better visualization)
-|  | | 
-|:----------:|:------------:|
-| [![Docker In Action](docs/video-docker.png)](https://youtu.be/ar8raFK0R1k) | [![Docker and Letsencrypt](docs/video-docker-ssl.png)](https://youtu.be/xwIdj9mc2mU) | 
-| [![K8s In Action](docs/video-kubernetes.png)](https://youtu.be/uq7TuLIijks) | [![K8s and Letsencrypt](docs/video-kubernetes-letsencrypt.png)](https://youtu.be/v9Q4M5Al7AQ) | 
-| [![Static Configuration](docs/video-static.png)](https://youtu.be/B_bYZnRTGJM) | [![TCP Mode](docs/video-tcp-mysql.png)](https://youtu.be/JHqcq9crbDI) | 
 
-[Here is the code](https://gist.github.com/byjg/e125e478a0562190176d69ea795fd3d4) applied in the examples above. 
+[![Docker In Action](docs/video-docker.png)](https://youtu.be/ar8raFK0R1k)
+[![Docker and Letsencrypt](docs/video-docker-ssl.png)](https://youtu.be/xwIdj9mc2mU)
+[![K8s In Action](docs/video-kubernetes.png)](https://youtu.be/uq7TuLIijks)
+[![K8s and Letsencrypt](docs/video-kubernetes-letsencrypt.png)](https://youtu.be/v9Q4M5Al7AQ)
+[![Static Configuration](docs/video-static.png)](https://youtu.be/B_bYZnRTGJM)
+[![TCP Mode](docs/video-tcp-mysql.png)](https://youtu.be/JHqcq9crbDI)
+
+[Here is the code](https://gist.github.com/byjg/e125e478a0562190176d69ea795fd3d4) applied in the examples above.
 
 ----
 [Open source ByJG](http://opensource.byjg.com)
