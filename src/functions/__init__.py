@@ -121,7 +121,9 @@ class DaemonizeHAProxy:
         self.thread.start()
 
     def get_haproxy_command(self, action):
-        custom_config_files = " ".join(["-f %s" % (file) for file in self.get_custom_config_files()])
+        custom_config_files = ""
+        if len(list(self.get_custom_config_files().keys())) != 0:
+            custom_config_files = "-f %s" % (self.custom_config_folder)
 
         if action == "start":
             return "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg %s -p /run/haproxy.pid -S /var/run/haproxy.sock" % (custom_config_files)

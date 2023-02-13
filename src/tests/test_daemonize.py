@@ -36,9 +36,9 @@ def test_daemonize_haproxy_check_config():
 def test_daemonize_haproxy_get_haproxy_command_start():
     daemon = DaemonizeHAProxy(os.path.abspath(os.path.dirname(__file__))  + '/fixtures')
     command = daemon.get_haproxy_command("start")
-    assert command == "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -f %s/00_haproxy.cfg -f %s/10_haproxy.cfg -p /run/haproxy.pid -S /var/run/haproxy.sock" % (os.path.dirname(__file__) + "/fixtures", os.path.dirname(__file__) + "/fixtures")
+    assert command == "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -f %s -p /run/haproxy.pid -S /var/run/haproxy.sock" % (os.path.dirname(__file__) + "/fixtures")
 
 def test_daemonize_haproxy_get_haproxy_command_reload():
     daemon = DaemonizeHAProxy(os.path.abspath(os.path.dirname(__file__))  + '/fixtures')
     command = daemon.get_haproxy_command("reload")
-    assert command == "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -f %s/00_haproxy.cfg -f %s/10_haproxy.cfg -p /run/haproxy.pid -x /var/run/haproxy.sock -sf " % (os.path.dirname(__file__) + "/fixtures", os.path.dirname(__file__) + "/fixtures")
+    assert command == "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -f %s -p /run/haproxy.pid -x /var/run/haproxy.sock -sf " % (os.path.dirname(__file__) + "/fixtures")
