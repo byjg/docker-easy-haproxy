@@ -12,7 +12,7 @@ There are three installation modes:
 
 To install EasyHAProxy in your cluster, follow these steps:
 
-### 1) Identify the node where your EasyHAProxy container will run.
+### 1) Identify the node where your EasyHAProxy container will run
 
 EasyHAProxy will be limited to a single node. To understand that see [limitations](limitations.md) page.
 
@@ -30,11 +30,7 @@ Add the EasyHAProxy label to the node.
 kubectl label nodes node-01 "easyhaproxy/node=master"
 ```
 
-### 2) Install EasyHAProxy
-
-You can install EasyHAProxy in a Kubernetes cluster using Kubernetes Manifest or Helm 3.
-
-#### 2.1.) Using Kubernetes Manifest
+### 2) Install EasyHAProxy with Kubernetes Manifest
 
 ```bash
 kubectl create namespace easyhaproxy
@@ -44,57 +40,6 @@ kubectl apply -f \
 ```
 
 If necessary, you can configure environment variables. To get a list of the variables, please follow the [docker container environment](docker-environment.md)
-
-#### 2.2) Using HELM 3
-
-Minimal configuration
-
-```bash
-helm repo add byjg https://opensource.byjg.com/helm
-helm repo update byjg
-kubectl create namespace easyhaproxy
-
-helm upgrade --install ingress byjg/easyhaproxy \
-    --namespace easyhaproxy \
-    --set resources.requests.cpu=100m \
-    --set resources.requests.memory=128Mi
-```
-
-Customizing Helm Values:
-
-```yaml
-easyhaproxy:
-  stats:
-    username: admin
-    password: password
-  refresh: "10"
-  customErrors: "true"
-  sslMode: loose
-  logLevel:
-    certbot: DEBUG
-    easyhaproxy: DEBUG
-    haproxy: DEBUG
-  letsencrypt:
-    email: ""
-
-service:
-  create: false          # If false, it will create a DaemonSet with hostPort. The easiest. 
-  type: ClusterIP        # or NodePort
-  annotations: {}
-
-binding:
-  ports:
-    http: 80
-    https: 443
-    stats: 1936
-  additionalPorts: []
-
-# Make sure to create this
-masterNode:
-  label: easyhaproxy/node
-  values: 
-    - master
-```
 
 ## Running containers
 
