@@ -79,6 +79,8 @@ networks:
     external: true
 ```
 
+Note: The services to be discovered **don't need** to be in the same network as EasyHAProxy is. 
+
 Once the container is running, EasyHAProxy will detect automatically and start to redirect all traffic from `example.org:80` to your container.
 
 You don't need to expose any port in your container.
