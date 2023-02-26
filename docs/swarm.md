@@ -11,7 +11,7 @@ If not, EasyHAProxy will connect the service with the EasyHAProxy service networ
 e.g.:
 
 ```bash
-docker create network easyhaproxy
+docker network create -d overlay easyhaproxy
 ```
 
 And then deploy the EasyHAProxy stack:
