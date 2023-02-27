@@ -164,16 +164,15 @@ class Swarm(ProcessorInterface):
         self.parsed_object = {}
         for service in self.client.services.list():
             ip_address = None
-            network_list = []
             for endpoint in service.attrs["Endpoint"]["VirtualIPs"]:
                 if ha_proxy_network_id == endpoint["NetworkID"]:
                     ip_address = endpoint["Addr"].split("/")[0]
                     break
-                network_list.append(endpoint["NetworkID"])
 
             # add the network ha_proxy_network_id to the service object
             if ip_address is None:
-                self.client.networks.get(ha_proxy_network_id).connect(service.name)
+                network_attachment = docker.types.NetworkAttachmentConfig(target=ha_proxy_network_id)
+                service.update(networks = [network_attachment])
                 continue # skip to the next service to give time to update the network
                 
             self.parsed_object[ip_address] = service.attrs["Spec"]["Labels"]
