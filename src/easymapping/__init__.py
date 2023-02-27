@@ -117,7 +117,7 @@ class HaproxyConfigGenerator:
                 if port not in easymapping:
                     easymapping[port] = {
                         "mode": mode,
-                        "health-check": "",
+                        "ssl-check": "",
                         "port": port,
                         "hosts": dict(),
                         "redirect": dict(),
@@ -129,8 +129,8 @@ class HaproxyConfigGenerator:
                     "80"
                 )
 
-                easymapping[port]["health-check"] = self.label.get(
-                    self.label.create([definition, "health-check"]),
+                easymapping[port]["ssl-check"] = self.label.get(
+                    self.label.create([definition, "ssl-check"]),
                     ""
                 )
 
@@ -145,6 +145,10 @@ class HaproxyConfigGenerator:
                     easymapping[port]["hosts"][hostname]["redirect_ssl"] = self.label.get_bool(
                         self.label.create([definition, "redirect_ssl"])
                     )
+                    easymapping[port]["hosts"][hostname]["balance"] = self.label.get(
+                        self.label.create([definition, "balance"]),
+                        "roundrobin"
+                    )
 
                     easymapping[port]["redirect"] = self.label.get_json(
                         self.label.create([definition, "redirect"])
@@ -154,7 +158,7 @@ class HaproxyConfigGenerator:
                         if "443" not in easymapping:
                             easymapping["443"] = {
                                 "mode": "http",
-                                "health-check": "ssl",
+                                "ssl-check": "ssl",
                                 "port": "443",
                                 "hosts": dict(),
                                 "redirect": dict(),

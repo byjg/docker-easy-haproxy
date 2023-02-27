@@ -110,10 +110,11 @@ def test_parser_finds_services_raw():
     parsed_object = [
         {
             "mode":"tcp",
-            "health-check":"",
+            "ssl-check":"",
             "port":"31339",
             "hosts":{
                 "agent.quantum.example.org": {
+                    "balance": "roundrobin",
                     "containers": [
                         "my-stack_agent:9001"
                     ],
@@ -127,10 +128,11 @@ def test_parser_finds_services_raw():
         },
         {
             "mode":"http",
-            "health-check":"",
+            "ssl-check":"",
             "port":"31337",
             "hosts":{
                 "cadvisor.quantum.example.org":{
+                    "balance": "roundrobin",
                     "containers": [
                         "my-stack_cadvisor:8080"
                     ],
@@ -138,6 +140,7 @@ def test_parser_finds_services_raw():
                     "redirect_ssl": False
                 },
                 "node-exporter.quantum.example.org":{
+                    "balance": "roundrobin",
                     "containers": [
                         "my-stack_node-exporter:9100"
                     ],
@@ -151,10 +154,11 @@ def test_parser_finds_services_raw():
         },
         {
             "mode":"http",
-            "health-check":"",
+            "ssl-check":"",
             "port":"443",
             "hosts":{
                 "node-exporter.quantum.example.org": {
+                    "balance": "roundrobin",
                     "containers": [
                         "my-stack_node-exporter:9100"
                     ],
@@ -162,6 +166,7 @@ def test_parser_finds_services_raw():
                     "redirect_ssl": False
                 },
                 "www.somehost.com.br":{
+                    "balance": "roundrobin",
                     "containers": [
                         "some-service:80"
                     ],
@@ -180,10 +185,11 @@ def test_parser_finds_services_raw():
         },
         {
             "mode":"http",
-            "health-check":"",
+            "ssl-check":"",
             "port":"80",
             "hosts":{
                 "www.somehost.com.br":{
+                    "balance": "roundrobin",
                     "containers": [
                         "some-service:80"
                     ],
@@ -444,9 +450,10 @@ def test_parser_finds_services_clone_to_ssl_raw():
 
     parsed_object = [
         {
-            "health-check":"",
+            "ssl-check":"",
             "hosts":{
                 "host2.local":{
+                    "balance":"roundrobin",
                     "containers":[
                     "10.152.183.215:8080"
                     ],
@@ -454,6 +461,7 @@ def test_parser_finds_services_clone_to_ssl_raw():
                     "redirect_ssl": False
                 },
                 "valida.me":{
+                    "balance":"roundrobin",
                     "containers":[
                     "10.152.183.62:8080"
                     ],
@@ -461,6 +469,7 @@ def test_parser_finds_services_clone_to_ssl_raw():
                     "redirect_ssl": False
                 },
                 "www.valida.me":{
+                    "balance":"roundrobin",
                     "containers":[
                     "10.152.183.62:8080"
                     ],
@@ -475,9 +484,10 @@ def test_parser_finds_services_clone_to_ssl_raw():
             }
         },
         {
-            "health-check":"ssl",
+            "ssl-check":"ssl",
             "hosts":{
                 "host2.local":{
+                    "balance":"roundrobin",
                     "containers":[
                     "10.152.183.215:8080"
                     ],

@@ -87,6 +87,7 @@ Caveats:
 | easyhaproxy.redirect        | (optional) JSON. Key pair with a domain and its destination.                                 | *empty*      | {"domain":"redirect_url"}
 | easyhaproxy.mode            | (optional) Set the HTTP mode for that connection.                                       | http         | http or tcp
 | easyhaproxy.listen_port     | (optional) Set the an additional port for that ingress                                  | http         | http or tcp
+| easyhaproxy.balance         | (optional) Set the balance algorithm for that ingress. See [HAProxy documentation](https://cbonte.github.io/haproxy-dconv/1.8/configuration.html#4.2-balance) | roundrobin   | roundrobin, leastconn, source, uri, url_param, hdr, rdp-cookie, static-rr, static-est, hdr(host), rdp-cookie, map-based, map-based(backend) |
 
 **Important**: The annotations are per ingress and applied to all hosts in that ingress configuration.
 

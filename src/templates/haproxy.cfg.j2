@@ -59,7 +59,7 @@ frontend {{ mode }}_in_{{ o["port"] }}
     {% for k in o["hosts"] -%}
         {% set host = k.replace(".", "_") + "_{0}".format(o["port"]) %}
 backend srv_{{ host }}
-    balance roundrobin
+    balance {{ o["balance"] | default("roundrobin") }}
     mode {{ mode }}
         {% if mode == "http" %}
     option forwardfor
@@ -67,10 +67,10 @@ backend srv_{{ host }}
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
         {% elif mode == "tcp" %}
     option tcp-check
-    tcp-check connect{{ " ssl" if o["health-check"] == "ssl" }}
+    tcp-check connect{{ " ssl" if o["ssl-check"] == "ssl" }}
         {% endif %}
         {% for c in o["hosts"][k]["containers"] %}
-    server srv-{{ loop.index0 }} {{ c }} check weight 1{{ " verify none" if o["health-check"] == "ssl" }}
+    server srv-{{ loop.index0 }} {{ c }} check weight 1{{ " verify none" if o["ssl-check"] == "ssl" }}
         {% endfor %}
     {% endfor %}
 {% endfor %}
