@@ -170,10 +170,10 @@ class Swarm(ProcessorInterface):
                     ip_address = endpoint["Addr"].split("/")[0]
                     break
                 network_list.append(endpoint["NetworkID"])
-            
+
+            # add the network ha_proxy_network_id to the service object
             if ip_address is None:
-                network_list.append(ha_proxy_network_id)
-                service.update(networks = network_list)
+                self.client.networks.get(ha_proxy_network_id).connect(service.name)
                 continue # skip to the next service to give time to update the network
                 
             self.parsed_object[ip_address] = service.attrs["Spec"]["Labels"]
