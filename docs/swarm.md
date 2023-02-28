@@ -5,13 +5,17 @@
 This method will use a docker swarm installation to discover the containers and configure the HAProxy.
 The advantage of this method is that you can discover containers in other nodes from the cluster.
 
-The only requirement is that containers and EasyHAProxy must be in the same docker swarm network.
-If not, EasyHAProxy will connect the service with the EasyHAProxy service network.
+You cannot mix docker containers with swarm containers.
+
+The only request is that containers and EasyHAProxy must be in the same docker swarm network.
+If you don't add to your services the same network EasyHAProxy is connected to, EasyHAProxy will attach it network to your container.
+
+Also, it is highly recommended you create a network external to EasyHAProxy.
 
 e.g.:
 
 ```bash
-docker network create -d overlay easyhaproxy
+docker network create -d overlay --attachable easyhaproxy
 ```
 
 And then deploy the EasyHAProxy stack:
@@ -78,8 +82,6 @@ networks:
   easyhaproxy:
     external: true
 ```
-
-Note: The services to be discovered **don't need** to be in the same network as EasyHAProxy is. 
 
 Once the container is running, EasyHAProxy will detect automatically and start to redirect all traffic from `example.org:80` to your container.
 

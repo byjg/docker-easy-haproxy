@@ -71,7 +71,7 @@ Once the container is running, EasyHAProxy will detect automatically and start t
 
 You don't need to expose any port in your container.
 
-Caveats:
+Notes:
 
 - At this point, the implementation doesn't support all ingress properties or wildcard domains.
 - The ingress will publish the ports 80 and 443, plus 1936 if stats are enabled.

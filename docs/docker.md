@@ -4,8 +4,12 @@
 
 This method will use a docker standalone installation to discover the containers and configure the HAProxy.
 
-The only requirement is that containers and EasyHAProxy must be in the same docker network.
-If not, EasyHAProxy will connect the container with the EasyHAProxy network.
+You cannot mix docker containers with swarm containers.
+
+The only request is that containers and EasyHAProxy must be in the same docker network.
+If you don't add to your services the same network EasyHAProxy is connected to, EasyHAProxy will attach it network to your container.
+
+Also, it is highly recommended you create a network external to EasyHAProxy.
 
 e.g.:
 
