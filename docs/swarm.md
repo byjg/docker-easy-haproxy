@@ -87,7 +87,7 @@ Once the container is running, EasyHAProxy will detect automatically and start t
 
 You don't need to expose any port in your container.
 
-Please follow the [docker label configuration](container-labels.md) to see other configurations available. 
+Please follow the [docker label configuration](container-labels.md) to see other configurations available.
 
 ## Setup the EasyHAProxy container
 
