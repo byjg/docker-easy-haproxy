@@ -10,7 +10,7 @@ If not, EasyHAProxy will connect the container with the EasyHAProxy network.
 e.g.:
 
 ```bash
-docker create network easyhaproxy
+docker network create easyhaproxy
 ```
 
 And then run the EasyHAProxy

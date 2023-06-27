@@ -11,7 +11,7 @@ If not, EasyHAProxy will connect the service with the EasyHAProxy service networ
 e.g.:
 
 ```bash
-docker create network easyhaproxy
+docker network create -d overlay easyhaproxy
 ```
 
 And then deploy the EasyHAProxy stack:
@@ -78,6 +78,8 @@ networks:
   easyhaproxy:
     external: true
 ```
+
+Note: The services to be discovered **don't need** to be in the same network as EasyHAProxy is. 
 
 Once the container is running, EasyHAProxy will detect automatically and start to redirect all traffic from `example.org:80` to your container.
 
