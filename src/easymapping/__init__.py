@@ -56,7 +56,7 @@ class HaproxyConfigGenerator:
         self.serving_hosts = []
         self.certs = {}
  
-    def generate(self, container_metadata = {}):
+    def generate(self, container_metadata={}):
         self.mapping.setdefault("easymapping", [])
         
         if container_metadata != {}:

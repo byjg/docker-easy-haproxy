@@ -20,9 +20,11 @@ customerrors: true   # Optional (default false)
 
 ssl_mode: default
 
-letsencrypt: {
-  "email": "acme@example.org"
-}
+logLevel:
+  haproxy: INFO
+
+letsencrypt:
+  email: "acme@example.org"
 
 easymapping:
   - port: 80
@@ -83,10 +85,14 @@ customerrors: true   # Optional (default false)
 
 ssl_mode: default    # Optional
 
-letsencrypt: {       # Optional. If you enable `letsencrypt` will need to setu0p this, 
-                     #           otherwise the certificate will be issued
-  "email": "acme@example.org"
-}
+logLevel:
+  certbot: DEBUG       # Optional (default: DEBUG). Can be: TRACE,DEBUG,INFO,WARN,ERROR,FATAL
+  easyhaproxy: DEBUG   # Optional (default: DEBUG). Can be: TRACE,DEBUG,INFO,WARN,ERROR,FATAL
+  haproxy: INFO        # Optional (default: INFO). Can be: TRACE,DEBUG,INFO,WARN,ERROR,FATAL
+
+# Optional. If you enable `letsencrypt` will need to set up this, otherwise the certificate will be issued
+letsencrypt: 
+  email": "acme@example.org"
 
 easymapping:
   - port: 80                 # Listen port
