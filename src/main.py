@@ -19,6 +19,7 @@ def start():
 
     old_haproxy = None
     haproxy = DaemonizeHAProxy()
+    current_custom_config_files = haproxy.get_custom_config_files()
     haproxy.haproxy("start")
     haproxy.sleep()
 
@@ -31,7 +32,7 @@ def start():
         try:
             old_parsed = processor_obj.get_parsed_object()
             processor_obj.refresh()
-            if certbot.check_certificates(letsencrypt_certs_found) or DeepDiff(old_parsed, processor_obj.get_parsed_object()) != {} or not haproxy.is_alive():
+            if certbot.check_certificates(letsencrypt_certs_found) or DeepDiff(old_parsed, processor_obj.get_parsed_object()) != {} or not haproxy.is_alive() or DeepDiff(current_custom_config_files, haproxy.get_custom_config_files()) != {}:
                 Functions.log(Functions.EASYHAPROXY_LOG, Functions.DEBUG, 'New configuration found. Reloading...')
                 Functions.log(Functions.EASYHAPROXY_LOG, Functions.TRACE, 'Object Found: %s' % (processor_obj.get_parsed_object()))
                 processor_obj.save_config(Consts.haproxy_config)
@@ -40,6 +41,7 @@ def start():
                 Functions.log(Functions.EASYHAPROXY_LOG, Functions.DEBUG, 'Found hosts: %s' % ", ".join(processor_obj.get_hosts())) # Needs to after save_config
                 old_haproxy = haproxy
                 haproxy = DaemonizeHAProxy()
+                current_custom_config_files = haproxy.get_custom_config_files()
                 haproxy.haproxy("reload")
                 old_haproxy.terminate()
 

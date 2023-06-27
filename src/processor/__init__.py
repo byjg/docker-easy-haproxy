@@ -194,9 +194,9 @@ class Kubernetes(ProcessorInterface):
         self.cert_cache = {}
         super().__init__()
 
-    def _check_annotation(self, annotations, key):
+    def _check_annotation(self, annotations, key, default = None):
         if key not in annotations:
-            return None
+            return default
         return annotations[key]
 
     def inspect_network(self):
@@ -264,6 +264,8 @@ class Kubernetes(ProcessorInterface):
                     rule_data["%s.redirect" % (definition)] = redirect
                 if mode is not None:
                     rule_data["%s.mode" % (definition)] = mode
+                rule_data["%s.balance" % (definition)] = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.balance", "roundrobin")
+
 
                 service_name = rule.http.paths[0].backend.service.name
                 try:
