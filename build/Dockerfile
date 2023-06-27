@@ -1,4 +1,4 @@
-FROM alpine:3.17
+FROM alpine:3.18
 
 ARG RELEASE_VERSION_ARG
 
@@ -11,7 +11,6 @@ COPY src/ /scripts/
 COPY build/assets /
 
 RUN apk add --no-cache haproxy bash python3 py3-pip py-yaml certbot openssl \
- && ln -s /usr/bin/python3 /usr/bin/python \
  && pip3 install --upgrade pip \
  && pip install -r requirements.txt \
  && pytest -s -vv tests/ \
