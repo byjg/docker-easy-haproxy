@@ -11,10 +11,11 @@
 | easyhaproxy.[definition].redirect     | (Optional) JSON containing key/value pair from host/to URL redirect.                                  | *empty*        | {"foo.com":"https://bla.com", "bar.com":"https://bar.org"} |
 | easyhaproxy.[definition].sslcert      | (Optional) Cert PEM Base64 encoded. Do not use this if `letsencrypt` is enabled.                      | *empty*        | base64 cert + key |
 | easyhaproxy.[definition].ssl          | (Optional) If `true` you need to provide certificate as a file. See below. Do not use with `sslcert`. | false          | true or false  |
-| easyhaproxy.[definition].health-check | (Optional) `ssl`, enable health check via SSL in `mode tcp`                                           | *empty*        | ssl            |
+| easyhaproxy.[definition].ssl-check | (Optional) `ssl`, enable health check via SSL in `mode tcp`                                           | *empty*        | ssl            |
 | easyhaproxy.[definition].letsencrypt  | (Optional) Generate certificate with letsencrypt. Do not use with `sslcert` parameter.                | false          | true OR false  |
 | easyhaproxy.[definition].redirect_ssl | (Optional) Redirect all requests to https                                                             | false          | true OR false  |
 | easyhaproxy.[definition].clone_to_ssl | (Optional) It copies the configuration to HTTPS(443) and disable SSL from the current config. **Do not use* this with `ssl` or `letsencrypt` parameters | false | true OR false    |
+| easyhaproxy.[definition].balance     | (Optional) HAProxy balance algorithm. See [HAProxy documentation](https://cbonte.github.io/haproxy-dconv/1.8/configuration.html#4.2-balance) | roundrobin | roundrobin, source, uri, url_param, hdr, rdp-cookie, leastconn, first, static-rr, rdp-cookie, hdr_dom, map-based |
 
 The `definition` is a string that will group all configurations togethers. Different `definition` will create different configurations.
 

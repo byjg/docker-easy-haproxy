@@ -6,10 +6,10 @@ metadata:
   name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-0.1.5
+    helm.sh/chart: easyhaproxy-0.1.6
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
-    app.kubernetes.io/version: "4.3.0"
+    app.kubernetes.io/version: "4.3.1-rc1"
     app.kubernetes.io/managed-by: Helm
 ---
 # Source: easyhaproxy/templates/clusterrole.yaml
@@ -19,10 +19,10 @@ metadata:
   name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-0.1.5
+    helm.sh/chart: easyhaproxy-0.1.6
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
-    app.kubernetes.io/version: "4.3.0"
+    app.kubernetes.io/version: "4.3.1-rc1"
     app.kubernetes.io/managed-by: Helm
 rules:
 - apiGroups:
@@ -85,10 +85,10 @@ metadata:
   name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-0.1.5
+    helm.sh/chart: easyhaproxy-0.1.6
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
-    app.kubernetes.io/version: "4.3.0"
+    app.kubernetes.io/version: "4.3.1-rc1"
     app.kubernetes.io/managed-by: Helm
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -107,10 +107,10 @@ metadata:
   name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-0.1.5
+    helm.sh/chart: easyhaproxy-0.1.6
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
-    app.kubernetes.io/version: "4.3.0"
+    app.kubernetes.io/version: "4.3.1-rc1"
     app.kubernetes.io/managed-by: Helm
   annotations:
     {}
@@ -139,10 +139,10 @@ metadata:
   name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-0.1.5
+    helm.sh/chart: easyhaproxy-0.1.6
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
-    app.kubernetes.io/version: "4.3.0"
+    app.kubernetes.io/version: "4.3.1-rc1"
     app.kubernetes.io/managed-by: Helm
 spec:
   selector:
@@ -171,7 +171,7 @@ spec:
         - name: easyhaproxy
           securityContext:
             {}
-          image: "byjg/easy-haproxy:4.3.0"
+          image: "byjg/easy-haproxy:4.3.1-rc1"
           imagePullPolicy: Always
           ports:
             - name: http
