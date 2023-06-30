@@ -32,7 +32,7 @@ services:
   portainer:
     image: portainer/portainer-ce:latest
     volumes:
-     - portainer_data:/data portainer
+     - portainer_data:/data
      - /var/run/docker.sock:/var/run/docker.sock
     labels:
       easyhaproxy.http.redirect_ssl: true
