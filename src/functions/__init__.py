@@ -6,12 +6,14 @@ import time
 import os
 import re
 import time
+from OpenSSL import crypto
+
 
 class Functions:
-    HAPROXY_LOG="HAPROXY"
-    EASYHAPROXY_LOG="EASYHAPROXY"
-    CERTBOT_LOG="CERTBOT"
-    INIT_LOG="INIT"
+    HAPROXY_LOG = "HAPROXY"
+    EASYHAPROXY_LOG = "EASYHAPROXY"
+    CERTBOT_LOG = "CERTBOT"
+    INIT_LOG = "INIT"
 
     TRACE = "TRACE"
     DEBUG = "DEBUG"
@@ -28,7 +30,7 @@ class Functions:
         level_importance = {
             Functions.TRACE: 0,
             Functions.DEBUG: 1,
-            Functions.INFO: 2, 
+            Functions.INFO: 2,
             Functions.WARN: 3,
             Functions.ERROR: 4,
             Functions.FATAL: 5
@@ -57,7 +59,7 @@ class Functions:
 
         if not isinstance(message, (list, tuple)):
             message = [message]
-        
+
         for line in message:
             log = "[%s] %s [%s]: %s" % (source, datetime.now().strftime("%x %X"), level, line.rstrip())
             print(log)
@@ -70,10 +72,10 @@ class Functions:
             command = shlex.split(command)
 
         try:
-            process = subprocess.Popen(command, 
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                            universal_newlines=True)
+            process = subprocess.Popen(command,
+                                       stdout=subprocess.PIPE,
+                                       stderr=subprocess.PIPE,
+                                       universal_newlines=True)
 
             output = []
 
@@ -94,7 +96,7 @@ class Functions:
 
             return output
         except Exception as e:
-            Functions.log(source, Functions.ERROR, "%s" % (e))
+            Functions.log(source, Functions.ERROR, "%s" % e)
 
 
 class Consts:
@@ -102,6 +104,7 @@ class Consts:
     haproxy_config = "/etc/haproxy/haproxy.cfg"
     certs_letsencrypt = "/certs/letsencrypt"
     certs_haproxy = "/certs/haproxy"
+
 
 class DaemonizeHAProxy:
     def __init__(self):
@@ -111,10 +114,13 @@ class DaemonizeHAProxy:
 
     def haproxy(self, action):
         if action == "start":
-            self.__prepare("/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid -S /var/run/haproxy.sock")
+            self.__prepare(
+                "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid -S /var/run/haproxy.sock")
         else:
             pid = "".join(Functions().run_bash(Functions.HAPROXY_LOG, "cat /run/haproxy.pid", log_output=False))
-            self.__prepare("/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid -x /var/run/haproxy.sock -sf %s" % (pid))
+            self.__prepare(
+                "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid -x /var/run/haproxy.sock -sf %s" % (
+                    pid))
 
         if self.process is None:
             return
@@ -128,29 +134,28 @@ class DaemonizeHAProxy:
             command = shlex.split(command)
 
         try:
-            self.process = subprocess.Popen(command, 
-                            shell=False,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                            bufsize=-1,
-                            universal_newlines=True)
+            self.process = subprocess.Popen(command,
+                                            shell=False,
+                                            stdout=subprocess.PIPE,
+                                            stderr=subprocess.PIPE,
+                                            bufsize=-1,
+                                            universal_newlines=True)
 
         except Exception as e:
-            Functions.log(source, Functions.ERROR, "%s" % (e))
-
+            Functions.log(source, Functions.ERROR, "%s" % e)
 
     def __start(self):
         source = Functions.HAPROXY_LOG
         try:
             with self.process.stdout:
-                for line in iter(self.process.stdout.readline, b''): 
+                for line in iter(self.process.stdout.readline, b''):
                     Functions.log(source, Functions.INFO, line)
 
-            returncode = self.process.wait() 
+            returncode = self.process.wait()
             Functions.log(source, Functions.DEBUG, "Return code %s" % (returncode))
 
         except Exception as e:
-            Functions.log(source, Functions.ERROR, "%s" % (e))
+            Functions.log(source, Functions.ERROR, "%s" % e)
 
     def is_alive(self):
         return self.thread.is_alive()
@@ -165,7 +170,7 @@ class DaemonizeHAProxy:
 
     def sleep(self):
         if self.sleep_secs is None:
-            try: 
+            try:
                 self.sleep_secs = int(os.getenv("EASYHAPROXY_REFRESH_CONF", "10"))
             except ValueError:
                 self.sleep_secs = 10
@@ -197,18 +202,27 @@ class Certbot:
             current_time = time.time()
             for host in hosts:
                 filename = "%s/%s.pem" % (self.certs, host)
-                host_arg = '-d %s' % (host)
+                host_arg = '-d %s' % host
                 if not os.path.exists(filename):
-                    Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "Request new certificate for %s" % (host))
+                    Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "Request new certificate for %s" % host)
                     request_certs.append(host_arg)
                 else:
-                    creation_time = os.path.getctime(filename)
-                    if (current_time - creation_time) // (24 * 3600) > 90:
-                        Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "Request expired certificate for %s" % (host))
-                        request_certs.append(host_arg)
-                    if (current_time - creation_time) // (24 * 3600) >= 45:
-                        Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "Renew certificate for %s" % (host))
-                        renew_certs.append(host_arg)
+                    try:
+                        with open(filename, 'r') as file:
+                            certificate_str = file.read()
+                        certificate = crypto.load_certificate(crypto.FILETYPE_PEM, certificate_str)
+                        expiration_after = datetime.strptime(certificate.get_notAfter().decode()[:-1],
+                                                             '%Y%m%d%H%M%S').timestamp()
+
+                        if current_time >= expiration_after:
+                            Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG,
+                                          "Request expired certificate for %s" % host)
+                            request_certs.append(host_arg)
+                        if (expiration_after - current_time) // (24 * 3600) >= 15:
+                            Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "Renew certificate for %s" % host)
+                            renew_certs.append(host_arg)
+                    except Exception as e:
+                        Functions.log(Functions.CERTBOT_LOG, Functions.ERROR, "Certificate %s error %s" % (host, e))
 
             certbot_certonly = ('/usr/bin/certbot certonly {test_server}'
                                 '    --standalone'
@@ -219,10 +233,10 @@ class Certbot:
                                 '    --no-eff-email'
                                 '    --non-interactive'
                                 '    --max-log-backups=0'
-                                '    {certs} --email {email}'.format(certs = ' '.join(request_certs),
-                                                           email = self.email,
-                                                           test_server = self.test_server)
-                            )
+                                '    {certs} --email {email}'.format(certs=' '.join(request_certs),
+                                                                     email=self.email,
+                                                                     test_server=self.test_server)
+                                )
 
             ret_reload = False
             if len(request_certs) > 0:
@@ -230,7 +244,7 @@ class Certbot:
                 ret_reload = True
 
             if len(renew_certs) > 0:
-                Functions.run_bash(Functions.CERTBOT_LOG, "/usb/bin/certbot renew", return_result=False)
+                Functions.run_bash(Functions.CERTBOT_LOG, "/usr/bin/certbot renew", return_result=False)
                 ret_reload = True
 
             if ret_reload:
@@ -238,12 +252,12 @@ class Certbot:
 
             return ret_reload
         except Exception as e:
-            Functions.log(Functions.CERTBOT_LOG, Functions.ERROR, "%s" % (e))
+            Functions.log(Functions.CERTBOT_LOG, Functions.ERROR, "%s" % e)
             return False
-        
+
     def merge_certificate(self, cert, key, filename):
         Functions.save(filename, cert + key)
-    
+
     def find_live_certificates(self):
         letsencrypt_certs = "/etc/letsencrypt/live/"
         if not os.path.exists(letsencrypt_certs):
