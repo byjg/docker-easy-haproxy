@@ -9,17 +9,17 @@ Run the EasyHAProxy container:
 ```bash
 docker run \
     ... \
-    -e EASYHAPROXY_LETSENCRYPT_EMAIL=john@doe.com \
+    -e EASYHAPROXY_CERTBOT_EMAIL=john@doe.com \
     -p 80:80 \
     -p 443:443 \
-    -v /path/to/guest/lestencrypt/certs:/certs/letsencrypt \
+    -v /path/to/guest/certbot/certs:/certs/certbot \
     ... \
     byjg/easy-haproxy
 ```
 
 Notes:
 
-- If you don't setup `EASYHAPROXY_LETSENCRYPT_EMAIL` environment variable, EasyHAProxy will fail silently and **will not request** a certificate.
+- If you don't setup `EASYHAPROXY_CERTBOT_EMAIL` environment variable, EasyHAProxy will fail silently and **will not request** a certificate.
 - The ports 80 and 443 needs to accessible through the internet as [Let's Encrypt requirement](https://letsencrypt.org/docs/allow-port-80/)
 
 Be aware of Letsencrypt issue rate limits:
@@ -28,7 +28,7 @@ Be aware of Letsencrypt issue rate limits:
 - https://letsencrypt.org/docs/rate-limits/
 
 In order to avoid several certificate issuing, 
-**It is required you to persist the container folder `/certs/letsencrypt` outside the container.**
+**It is required you to persist the container folder `/certs/certbot` outside the container.**
 You cannot delete or change it contents. 
 If you do not persist, or change/delete the contents, Let's encrypt will not work properly. 
 
@@ -41,7 +41,7 @@ docker run \
     --label easyhaproxy.express.port=80 \
     --label easyhaproxy.express.localport=3000 \
     --label easyhaproxy.express.host=example.org \
-    --label easyhaproxy.express.letsencrypt=true \
+    --label easyhaproxy.express.certbot=true \
     ... \
     some/myimage
 ```

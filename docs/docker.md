@@ -58,6 +58,10 @@ You can configure the behavior of the EasyHAProxy by setup specific environment 
 
 Follow [this link](letsencrypt.md)
 
+## Setup certificates with ZeroSSL
+
+Follow [this link](zerossl.md)
+
 ## Setup your own certificates
 
 Follow [this link](ssl.md)

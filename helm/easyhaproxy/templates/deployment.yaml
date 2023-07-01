@@ -69,7 +69,7 @@ spec:
               value: {{ .Values.easyhaproxy.logLevel.haproxy }}
             - name: CERTBOT_LOG_LEVEL
               value: {{ .Values.easyhaproxy.logLevel.certbot }}
-            {{- if .Values.easyhaproxy.letsencrypt.email }}
-            - name: EASYHAPROXY_LETSENCRYPT_EMAIL
-              value: {{ .Values.easyhaproxy.letsencrypt.email }}
+            {{- if .Values.easyhaproxy.certbot.email }}
+            - name: EASYHAPROXY_CERTBOT_EMAIL
+              value: {{ .Values.easyhaproxy.certbot.email }}
             {{ end }}

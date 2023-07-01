@@ -102,7 +102,7 @@ class Functions:
 class Consts:
     easyhaproxy_config = "/etc/haproxy/static/config.yml"
     haproxy_config = "/etc/haproxy/haproxy.cfg"
-    certs_letsencrypt = "/certs/letsencrypt"
+    certs_certbot = "/certs/certbot"
     certs_haproxy = "/certs/haproxy"
 
 
@@ -259,11 +259,11 @@ class Certbot:
         Functions.save(filename, cert + key)
 
     def find_live_certificates(self):
-        letsencrypt_certs = "/etc/letsencrypt/live/"
-        if not os.path.exists(letsencrypt_certs):
+        certbot_certs = "/etc/letsencrypt/live/"
+        if not os.path.exists(certbot_certs):
             return
-        for item in os.listdir(letsencrypt_certs):
-            path = os.path.join(letsencrypt_certs, item)
+        for item in os.listdir(certbot_certs):
+            path = os.path.join(certbot_certs, item)
             if os.path.isdir(path):
                 cert = Functions.load(os.path.join(path, "cert.pem"))
                 key = Functions.load(os.path.join(path, "privkey.pem"))

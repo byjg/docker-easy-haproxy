@@ -15,7 +15,7 @@ def test_processor_static():
                     "containers":[
                     "container:5000"
                     ],
-                    "letsencrypt": True
+                    "certbot": True
                 },
                 "host2.com.br":{
                     "containers":[
@@ -57,7 +57,7 @@ def test_processor_static():
         'host3.com.br:8080'
     ]
 
-    assert static.get_letsencrypt_hosts() is None
+    assert static.get_certbot_hosts() is None
     assert static.get_parsed_object() == parsed_object
     assert static.get_hosts() == hosts
 
@@ -66,7 +66,7 @@ def test_processor_static():
     assert haproxy_cfg == Functions.load(os.path.join(os.path.dirname(os.path.realpath(__file__)), "./expected/static.txt"))
 
     # @todo: Static doesnt populate this fields
-    assert static.get_letsencrypt_hosts() == []
+    assert static.get_certbot_hosts() == []
     assert static.get_parsed_object() == parsed_object
     assert static.get_hosts() == hosts
 

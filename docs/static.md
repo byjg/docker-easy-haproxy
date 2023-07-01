@@ -20,7 +20,7 @@ customerrors: true   # Optional (default false)
 
 ssl_mode: default
 
-letsencrypt: {
+certbot: {
   "email": "acme@example.org"
 }
 
@@ -30,7 +30,7 @@ easymapping:
       host1.com.br: 
         containers:
           - container:5000
-        letsencrypt: true
+        certbot: true
         redirect_ssl: true
       host2.com.br: 
         containers:
@@ -83,7 +83,7 @@ customerrors: true   # Optional (default false)
 
 ssl_mode: default    # Optional
 
-letsencrypt: {       # Optional. If you enable `letsencrypt` will need to setu0p this, 
+certbot: {       # Optional. If you enable `certbot` will need to setu0p this, 
                      #           otherwise the certificate will be issued
   "email": "acme@example.org"
 }
@@ -95,7 +95,7 @@ easymapping:
       host1.com.br:          # Hostname
         containers:
           - container:5000   # Endpoints of the hostname above (ip, dns, container, etc)
-        letsencrypt: true    # Optional. it will request a letsencrypt certiticate
+        certbot: true    # Optional. it will request a certbot certiticate
         redirect_ssl: true   # Optional. It will redirect this site to it SSL.
     ssl: true                # Optional. Inform this port will listen to SSL, instead of HTTP
     clone_to_ssl: true       # Optional. Default False. You clone these hosts to its equivalent SSL. 

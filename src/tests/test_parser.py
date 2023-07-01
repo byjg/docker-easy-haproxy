@@ -6,7 +6,7 @@ import json
 
 CERTS_FOLDER="/tmp/certs"
 CERT_FILE="/tmp/certs/haproxy/www.somehost.com.br.pem"
-LETSENCRYPT_EMAIL="some@email.com"
+CERTBOT_EMAIL="some@email.com"
 
 def load_fixture(file):
     path = os.path.dirname(os.path.realpath(__file__))
@@ -33,15 +33,15 @@ def test_parser_doesnt_crash():
     path = os.path.dirname(os.path.realpath(__file__))
     with open(path + "/expected/no-services.txt", 'r') as expected_file:
         assert expected_file.read() == haproxy_config
-    assert [] == cfg.letsencrypt_hosts
+    assert [] == cfg.certbot_hosts
 
 def test_parser_finds_services():
     line_list = load_fixture("services")
 
     result = {
         "customerrors": False,
-        "letsencrypt": {
-            "email": LETSENCRYPT_EMAIL
+        "certbot": {
+            "email": CERTBOT_EMAIL
         },
         "stats": {
             "port": 0
@@ -58,7 +58,7 @@ def test_parser_finds_services():
 
     assert {"www.somehost.com.br.pem":"Some PEM Certificate"} == cfg.certs
 
-    assert ['node-exporter.quantum.example.org'] == cfg.letsencrypt_hosts
+    assert ['node-exporter.quantum.example.org'] == cfg.certbot_hosts
 
 def test_parser_finds_services_changed_label():
     line_list = load_fixture("services-changed-label")
@@ -66,8 +66,8 @@ def test_parser_finds_services_changed_label():
     result = {
         "customerrors": False,
         "lookup_label": "haproxy",
-        "letsencrypt": {
-            "email": LETSENCRYPT_EMAIL
+        "certbot": {
+            "email": CERTBOT_EMAIL
         },
         "stats": {
             "port": 0
@@ -87,15 +87,15 @@ def test_parser_finds_services_changed_label():
 
     assert {"www.somehost.com.br.pem":"Some PEM Certificate"} == cfg.certs
 
-    assert ['node-exporter.quantum.example.org'] == cfg.letsencrypt_hosts
+    assert ['node-exporter.quantum.example.org'] == cfg.certbot_hosts
 
 def test_parser_finds_services_raw():
     line_list = load_fixture("services")
 
     result = {
         "customerrors": False,
-        "letsencrypt": {
-            "email": LETSENCRYPT_EMAIL
+        "certbot": {
+            "email": CERTBOT_EMAIL
         },
         "stats": {
             "port": 0
@@ -117,7 +117,7 @@ def test_parser_finds_services_raw():
                     "containers": [
                         "my-stack_agent:9001"
                     ],
-                    "letsencrypt": False,
+                    "certbot": False,
                     "redirect_ssl": False
                 }
             },
@@ -134,14 +134,14 @@ def test_parser_finds_services_raw():
                     "containers": [
                         "my-stack_cadvisor:8080"
                     ],
-                    "letsencrypt": False,
+                    "certbot": False,
                     "redirect_ssl": False
                 },
                 "node-exporter.quantum.example.org":{
                     "containers": [
                         "my-stack_node-exporter:9100"
                     ],
-                    "letsencrypt": True,
+                    "certbot": True,
                     "redirect_ssl": False
                 }
             },
@@ -158,14 +158,14 @@ def test_parser_finds_services_raw():
                     "containers": [
                         "my-stack_node-exporter:9100"
                     ],
-                    "letsencrypt": False,
+                    "certbot": False,
                     "redirect_ssl": False
                 },
                 "www.somehost.com.br":{
                     "containers": [
                         "some-service:80"
                     ],
-                    "letsencrypt": False,
+                    "certbot": False,
                     "redirect_ssl": False
                 }
             },
@@ -187,7 +187,7 @@ def test_parser_finds_services_raw():
                     "containers": [
                         "some-service:80"
                     ],
-                    "letsencrypt": False,
+                    "certbot": False,
                     "redirect_ssl": False
                 }
             },
@@ -204,7 +204,7 @@ def test_parser_finds_services_raw():
     processed = list(cfg.parse(line_list))
 
     assert parsed_object == processed
-    assert ['node-exporter.quantum.example.org'] == cfg.letsencrypt_hosts
+    assert ['node-exporter.quantum.example.org'] == cfg.certbot_hosts
 
 
 
@@ -219,7 +219,7 @@ def test_parser_static():
 
     with open(path + "/expected/static.txt", 'r') as expected_file:
         assert expected_file.read() == haproxy_config
-    assert [] == cfg.letsencrypt_hosts
+    assert [] == cfg.certbot_hosts
 
 def test_parser_static_raw():
     path = os.path.dirname(os.path.realpath(__file__))
@@ -241,7 +241,7 @@ def test_parser_static_raw():
                         "containers": [
                             "container:5000"
                         ],
-                        "letsencrypt": True
+                        "certbot": True
                     },
                     "host2.com.br": {
                         "containers": [
@@ -299,7 +299,7 @@ def test_parser_tcp():
     path = os.path.dirname(os.path.realpath(__file__))
     with open(path + "/expected/services-tcp.txt", 'r') as expected_file:
         assert expected_file.read() == haproxy_config
-    assert [] == cfg.letsencrypt_hosts
+    assert [] == cfg.certbot_hosts
 
 def test_parser_multi_containers():
     line_list = load_fixture("services-multi-containers")
@@ -318,7 +318,7 @@ def test_parser_multi_containers():
     path = os.path.dirname(os.path.realpath(__file__))
     with open(path + "/expected/services-multi-containers.txt", 'r') as expected_file:
         assert expected_file.read() == haproxy_config
-    assert [] == cfg.letsencrypt_hosts
+    assert [] == cfg.certbot_hosts
 
 
 def test_parser_multiple_hosts():
@@ -340,7 +340,7 @@ def test_parser_multiple_hosts():
     path = os.path.dirname(os.path.realpath(__file__))
     with open(path + "/expected/services-multiple-hosts.txt", 'r') as expected_file:
         assert expected_file.read() == haproxy_config
-    assert [] == cfg.letsencrypt_hosts
+    assert [] == cfg.certbot_hosts
 
 
 def test_parser_redirect_ssl():
@@ -361,7 +361,7 @@ def test_parser_redirect_ssl():
     path = os.path.dirname(os.path.realpath(__file__))
     with open(path + "/expected/services-redirect-ssl.txt", 'r') as expected_file:
         assert expected_file.read() == haproxy_config
-    assert [] == cfg.letsencrypt_hosts
+    assert [] == cfg.certbot_hosts
 
 
 def test_parser_ssl_strict():
@@ -382,7 +382,7 @@ def test_parser_ssl_strict():
     path = os.path.dirname(os.path.realpath(__file__))
     with open(path + "/expected/ssl-strict.txt", 'r') as expected_file:
         assert expected_file.read() == haproxy_config
-    assert [] == cfg.letsencrypt_hosts
+    assert [] == cfg.certbot_hosts
 
 def test_parser_ssl_loose():
     line_list = load_fixture("no-services")
@@ -399,7 +399,7 @@ def test_parser_ssl_loose():
     path = os.path.dirname(os.path.realpath(__file__))
     with open(path + "/expected/ssl-loose.txt", 'r') as expected_file:
         assert expected_file.read() == haproxy_config
-    assert [] == cfg.letsencrypt_hosts
+    assert [] == cfg.certbot_hosts
 
 def test_parser_ssl_letsencrypt():
     line_list = load_fixture("services-letsencrypt")
@@ -409,8 +409,8 @@ def test_parser_ssl_letsencrypt():
         "stats": {
             "password": "password"
         },
-        "letsencrypt": {
-            "email": LETSENCRYPT_EMAIL
+        "certbot": {
+            "email": CERTBOT_EMAIL
         }
     }
 
@@ -421,7 +421,7 @@ def test_parser_ssl_letsencrypt():
     path = os.path.dirname(os.path.realpath(__file__))
     with open(path + "/expected/services-letsencrypt.txt", 'r') as expected_file:
         assert expected_file.read() == haproxy_config
-    assert ["test.example.org"] == cfg.letsencrypt_hosts
+    assert ["test.example.org"] == cfg.certbot_hosts
 
 
 def test_parser_finds_services_clone_to_ssl_raw():
@@ -429,8 +429,8 @@ def test_parser_finds_services_clone_to_ssl_raw():
 
     result = {
         "customerrors": False,
-        "letsencrypt": {
-            "email": LETSENCRYPT_EMAIL
+        "certbot": {
+            "email": CERTBOT_EMAIL
         },
         "stats": {
             "port": 0
@@ -450,21 +450,21 @@ def test_parser_finds_services_clone_to_ssl_raw():
                     "containers":[
                     "10.152.183.215:8080"
                     ],
-                    "letsencrypt": False,
+                    "certbot": False,
                     "redirect_ssl": False
                 },
                 "valida.me":{
                     "containers":[
                     "10.152.183.62:8080"
                     ],
-                    "letsencrypt": False,
+                    "certbot": False,
                     "redirect_ssl": False
                 },
                 "www.valida.me":{
                     "containers":[
                     "10.152.183.62:8080"
                     ],
-                    "letsencrypt": False,
+                    "certbot": False,
                     "redirect_ssl": False
                 }
             },
@@ -481,7 +481,7 @@ def test_parser_finds_services_clone_to_ssl_raw():
                     "containers":[
                     "10.152.183.215:8080"
                     ],
-                    "letsencrypt": False,
+                    "certbot": False,
                     "redirect_ssl": False
                 }
             },
@@ -496,12 +496,12 @@ def test_parser_finds_services_clone_to_ssl_raw():
     processed = list(cfg.parse(line_list))
 
     assert parsed_object == processed
-    assert [] == cfg.letsencrypt_hosts
+    assert [] == cfg.certbot_hosts
 
 
 
 #test_parser_finds_services_raw()
 #test_parser_tcp()
 #test_parser_multiple_hosts()
-#test_parser_ssl_letsencrypt()
+#test_parser_ssl_certbot()
 #test_parser_finds_services()

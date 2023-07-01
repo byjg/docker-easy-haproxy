@@ -26,10 +26,10 @@ class ContainerEnv:
             }
 
         env_vars["lookup_label"] = os.getenv("EASYHAPROXY_LABEL_PREFIX") if os.getenv("EASYHAPROXY_LABEL_PREFIX") else "easyhaproxy"
-        if (os.getenv("EASYHAPROXY_LETSENCRYPT_EMAIL")):
-            env_vars["letsencrypt"] = {
-                "email": os.getenv("EASYHAPROXY_LETSENCRYPT_EMAIL"),
-                "server": os.getenv("EASYHAPROXY_LETSENCRYPT_SERVER", "false").lower() in ["true", "1", "yes"]
+        if (os.getenv("EASYHAPROXY_CERTBOT_EMAIL")):
+            env_vars["certbot"] = {
+                "email": os.getenv("EASYHAPROXY_CERTBOT_EMAIL"),
+                "server": os.getenv("EASYHAPROXY_CERTBOT_SERVER", "false").lower() in ["true", "1", "yes"]
             }
         
         return env_vars
@@ -57,7 +57,7 @@ class ProcessorInterface:
             return None
 
     def refresh(self):
-        self.letsencrypt_hosts = None
+        self.certbot_hosts = None
         self.parsed_object = None
         self.cfg = None
         self.hosts = None
@@ -71,8 +71,8 @@ class ProcessorInterface:
     def parse(self):
         self.cfg = HaproxyConfigGenerator(ContainerEnv.read())
 
-    def get_letsencrypt_hosts(self):
-        return self.letsencrypt_hosts
+    def get_certbot_hosts(self):
+        return self.certbot_hosts
 
     def get_hosts(self):
         return self.hosts
@@ -88,7 +88,7 @@ class ProcessorInterface:
 
     def get_haproxy_conf(self):
         conf = self.cfg.generate(self.parsed_object)
-        self.letsencrypt_hosts = self.cfg.letsencrypt_hosts
+        self.certbot_hosts = self.cfg.certbot_hosts
         self.hosts = self.cfg.serving_hosts
         return conf
 
@@ -206,7 +206,7 @@ class Kubernetes(ProcessorInterface):
 
             ssl_hosts = []
 
-            letsencrypt = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.letsencrypt")
+            certbot = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.certbot")
             redirect_ssl = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.redirect_ssl")
             redirect = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.redirect")
             mode = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.mode")
@@ -252,8 +252,8 @@ class Kubernetes(ProcessorInterface):
                     rule_data["%s.clone_to_ssl" % (definition)] = 'true'
                 if redirect_ssl is not None:
                     rule_data["%s.redirect_ssl" % (definition)] = redirect_ssl
-                if letsencrypt is not None:
-                    rule_data["%s.letsencrypt" % (definition)] = letsencrypt
+                if certbot is not None:
+                    rule_data["%s.certbot" % (definition)] = certbot
                 if redirect is not None:
                     rule_data["%s.redirect" % (definition)] = redirect
                 if mode is not None:

@@ -37,6 +37,6 @@ backend srv_agent_quantum_local_31339
     tcp-check connect ssl
     server srv-0 test_agent:9001 check weight 1 verify none
 
-backend letsencrypt_backend
+backend certbot_backend
     mode http
     server certbot 127.0.0.1:2080

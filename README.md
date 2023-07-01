@@ -23,7 +23,7 @@ EasyHAProxy can detect and configure HAProxy automatically on the following plat
 
 EasyHAProxy will discover the services based on the Docker Tags of the containers running on a Docker host or Docker Swarm cluster and dynamically set up the `haproxy.cfg`. Below, EasyHAProxy main features:
 
-- Use Letsencrypt with HAProxy.
+- Automatic SSL Certificate issued by any ACME compatible service as Letsencrypt and ZeroSSL
 - Set your custom SSL certificates
 - Balance traffic between multiple replicas
 - Set SSL with three different levels of validations and according to the most recent definitions.

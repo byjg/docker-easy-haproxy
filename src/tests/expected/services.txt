@@ -47,8 +47,8 @@ frontend http_in_31337
 
     acl is_rule_node-exporter_quantum_example_org_31337_1 hdr(host) -i node-exporter.quantum.example.org
     acl is_rule_node-exporter_quantum_example_org_31337_2 hdr(host) -i node-exporter.quantum.example.org:31337
-    acl is_letsencrypt_node-exporter_quantum_example_org_31337 path_beg /.well-known/acme-challenge/
-    use_backend letsencrypt_backend if is_letsencrypt_node-exporter_quantum_example_org_31337 is_rule_node-exporter_quantum_example_org_31337_1 OR is_letsencrypt_node-exporter_quantum_example_org_31337 is_rule_node-exporter_quantum_example_org_31337_2
+    acl is_certbot_node-exporter_quantum_example_org_31337 path_beg /.well-known/acme-challenge/
+    use_backend certbot_backend if is_certbot_node-exporter_quantum_example_org_31337 is_rule_node-exporter_quantum_example_org_31337_1 OR is_certbot_node-exporter_quantum_example_org_31337 is_rule_node-exporter_quantum_example_org_31337_2
     use_backend srv_node-exporter_quantum_example_org_31337 if is_rule_node-exporter_quantum_example_org_31337_1 OR is_rule_node-exporter_quantum_example_org_31337_2
 
 backend srv_cadvisor_quantum_example_org_31337
@@ -67,7 +67,7 @@ backend srv_node-exporter_quantum_example_org_31337
     server srv-0 my-stack_node-exporter:9100 check weight 1
 
 frontend http_in_443
-    bind *:443  ssl crt /certs/letsencrypt/ alpn http/1.1 crt /certs/haproxy/ alpn http/1.1
+    bind *:443  ssl crt /certs/certbot/ alpn http/1.1 crt /certs/haproxy/ alpn http/1.1
     mode http
     redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i somehost.com.br }
     redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i somehost.com }
@@ -119,6 +119,6 @@ backend srv_www_somehost_com_br_80
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
     server srv-0 some-service:80 check weight 1
 
-backend letsencrypt_backend
+backend certbot_backend
     mode http
     server certbot 127.0.0.1:2080

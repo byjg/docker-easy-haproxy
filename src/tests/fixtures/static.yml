@@ -11,7 +11,7 @@ easymapping:
       host1.com.br:
         containers:
           - container:5000
-        letsencrypt: true
+        certbot: true
       host2.com.br:
         containers: 
           - other:3000

@@ -49,10 +49,10 @@ class HaproxyConfigGenerator:
     def __init__(self, mapping):
         self.mapping = mapping
         self.mapping.setdefault("ssl_mode", 'default')
-        self.mapping.setdefault("letsencrypt", {"email": "", "staging": False})
+        self.mapping.setdefault("certbot", {"email": "", "staging": False})
         self.mapping["ssl_mode"] = self.mapping["ssl_mode"].lower()
         self.label = DockerLabelHandler(mapping['lookup_label'] if 'lookup_label' in mapping else "easyhaproxy")
-        self.letsencrypt_hosts = []
+        self.certbot_hosts = []
         self.serving_hosts = []
         self.certs = {}
  
@@ -106,10 +106,10 @@ class HaproxyConfigGenerator:
                     "80"
                 )
 
-                letsencrypt = self.label.get_bool(
-                    self.label.create([definition, "letsencrypt"]),
+                certbot = self.label.get_bool(
+                    self.label.create([definition, "certbot"]),
                     False
-                ) and self.mapping["letsencrypt"]["email"] != "" 
+                ) and self.mapping["certbot"]["email"] != ""
                 clone_to_ssl = self.label.get_bool(
                     self.label.create([definition, "clone_to_ssl"])
                 )
@@ -139,9 +139,9 @@ class HaproxyConfigGenerator:
                     self.serving_hosts.append("%s:%s" % (hostname, port))
                     easymapping[port]["hosts"].setdefault(hostname, {})
                     easymapping[port]["hosts"][hostname].setdefault("containers", [])
-                    easymapping[port]["hosts"][hostname].setdefault("letsencrypt", False)
+                    easymapping[port]["hosts"][hostname].setdefault("certbot", False)
                     easymapping[port]["hosts"][hostname]["containers"] += ["{}:{}".format(container, ct_port)]
-                    easymapping[port]["hosts"][hostname]["letsencrypt"] = letsencrypt
+                    easymapping[port]["hosts"][hostname]["certbot"] = certbot
                     easymapping[port]["hosts"][hostname]["redirect_ssl"] = self.label.get_bool(
                         self.label.create([definition, "redirect_ssl"])
                     )
@@ -150,7 +150,7 @@ class HaproxyConfigGenerator:
                         self.label.create([definition, "redirect"])
                     )
 
-                    if letsencrypt or clone_to_ssl:
+                    if certbot or clone_to_ssl:
                         if "443" not in easymapping:
                             easymapping["443"] = {
                                 "mode": "http",
@@ -160,10 +160,10 @@ class HaproxyConfigGenerator:
                                 "redirect": dict(),
                             }
                         easymapping["443"]["hosts"][hostname] = dict(easymapping[port]["hosts"][hostname])
-                        easymapping["443"]["hosts"][hostname]["letsencrypt"] = False
+                        easymapping["443"]["hosts"][hostname]["certbot"] = False
                         easymapping["443"]["hosts"][hostname]["redirect_ssl"] = False
                         easymapping["443"]["ssl"] = True
-                        self.letsencrypt_hosts.append(hostname) if letsencrypt and hostname not in self.letsencrypt_hosts else self.letsencrypt_hosts
+                        self.certbot_hosts.append(hostname) if certbot and hostname not in self.certbot_hosts else self.certbot_hosts
                         
 
                     # handle SSL

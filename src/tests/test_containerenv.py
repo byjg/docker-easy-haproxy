@@ -87,32 +87,32 @@ def test_container_env_stats_password():
 
 
 def test_container_env_stats_password():
-    os.environ['EASYHAPROXY_LETSENCRYPT_EMAIL'] = 'acme@example.org'
+    os.environ['EASYHAPROXY_CERTBOT_EMAIL'] = 'acme@example.org'
     try:
         assert {
             "customerrors": False,
             "ssl_mode": "default",
             "lookup_label": "easyhaproxy",
-            "letsencrypt": {
+            "certbot": {
                 "email": "acme@example.org",
                 "server": False
             }
         } == ContainerEnv.read()
     finally:
-        os.environ['EASYHAPROXY_LETSENCRYPT_EMAIL'] = ''
+        os.environ['EASYHAPROXY_CERTBOT_EMAIL'] = ''
 
-def test_container_env_letsencrypt():
-    os.environ['EASYHAPROXY_LETSENCRYPT_EMAIL'] = 'acme@example.org'
-    os.environ['EASYHAPROXY_LETSENCRYPT_SERVER'] = 'true'
+def test_container_env_certbot():
+    os.environ['EASYHAPROXY_CERTBOT_EMAIL'] = 'acme@example.org'
+    os.environ['EASYHAPROXY_CERTBOT_SERVER'] = 'true'
     try:
         assert {
             "customerrors": False,
             "ssl_mode": "default",
             "lookup_label": "easyhaproxy",
-            "letsencrypt": {
+            "certbot": {
                 "email": "acme@example.org",
                 "server": True
             }
         } == ContainerEnv.read()
     finally:
-        os.environ['EASYHAPROXY_LETSENCRYPT_EMAIL'] = ''
+        os.environ['EASYHAPROXY_CERTBOT_EMAIL'] = ''
