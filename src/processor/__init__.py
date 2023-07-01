@@ -26,12 +26,14 @@ class ContainerEnv:
             }
 
         env_vars["lookup_label"] = os.getenv("EASYHAPROXY_LABEL_PREFIX") if os.getenv("EASYHAPROXY_LABEL_PREFIX") else "easyhaproxy"
-        if (os.getenv("EASYHAPROXY_CERTBOT_EMAIL")):
-            env_vars["certbot"] = {
-                "email": os.getenv("EASYHAPROXY_CERTBOT_EMAIL"),
-                "server": os.getenv("EASYHAPROXY_CERTBOT_SERVER", "false").lower() in ["true", "1", "yes"]
-            }
-        
+
+        env_vars["certbot"] = {
+            "email": os.getenv("EASYHAPROXY_CERTBOT_EMAIL", ""),
+            "server": os.getenv("EASYHAPROXY_CERTBOT_SERVER", False),
+            "eab_kid": os.getenv("EASYHAPROXY_CERTBOT_EAB_KID", ""),
+            "eab_hmac_key": os.getenv("EASYHAPROXY_CERTBOT_EAB_HMAC_KEY", ""),
+        }
+
         return env_vars
 
 

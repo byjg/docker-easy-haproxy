@@ -179,16 +179,32 @@ class DaemonizeHAProxy:
 
 
 class Certbot:
-    def __init__(self, certs, email, test_server):
-        self.certs = certs
-        self.email = email
-        self.test_server = self.set_test_server(test_server)
+    def __init__(self, certs):
+        env = ContainerEnv.read()
 
-    def set_test_server(self, test_server):
-        if test_server.lower() == "staging":
+        self.certs = certs
+        self.email = env["certbot"]["email"]
+        self.acme_server = self.set_acme_server(env["certbot"]["server"])
+        self.eab_kid = self.set_eab_kid(env["certbot"]["eab_kid"])
+        self.eab_hmac_key = self.set_eab_hmac_key(env["certbot"]["eab_hmac_key"])
+
+    def set_acme_server(self, acme_server):
+        if acme_server.lower() == "staging":
             return "--staging"
-        elif test_server.lower().startswith("http"):
-            return "--server " + test_server
+        elif acme_server.lower().startswith("http"):
+            return "--server " + acme_server
+        else:
+            return ""
+
+    def set_eab_kid(self, eab_kid):
+        if eab_kid != "":
+            return "--eab-kid \"%s\"" % eab_kid
+        else:
+            return ""
+
+    def set_eab_hmac_key(self, eab_hmac_key):
+        if eab_hmac_key != "":
+            return "--eab-hmac-key \"%s\"" % eab_hmac_key
         else:
             return ""
 
@@ -224,7 +240,7 @@ class Certbot:
                     except Exception as e:
                         Functions.log(Functions.CERTBOT_LOG, Functions.ERROR, "Certificate %s error %s" % (host, e))
 
-            certbot_certonly = ('/usr/bin/certbot certonly {test_server}'
+            certbot_certonly = ('/usr/bin/certbot certonly {acme_server}'
                                 '    --standalone'
                                 '    --preferred-challenges http'
                                 '    --http-01-port 2080'
@@ -233,9 +249,12 @@ class Certbot:
                                 '    --no-eff-email'
                                 '    --non-interactive'
                                 '    --max-log-backups=0'
-                                '    {certs} --email {email}'.format(certs=' '.join(request_certs),
+                                '    {eab_kid} {eab_hmac_key}'
+                                '    {certs} --email {email}'.format(eab_kid=self.eab_kid,
+                                                                     eab_hmac_key=self.eab_hmac_key,
+                                                                     certs=' '.join(request_certs),
                                                                      email=self.email,
-                                                                     test_server=self.test_server)
+                                                                     acme_server=self.acme_server)
                                 )
 
             ret_reload = False

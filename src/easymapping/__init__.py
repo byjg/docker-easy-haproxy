@@ -49,7 +49,7 @@ class HaproxyConfigGenerator:
     def __init__(self, mapping):
         self.mapping = mapping
         self.mapping.setdefault("ssl_mode", 'default')
-        self.mapping.setdefault("certbot", {"email": "", "staging": False})
+        self.mapping.setdefault("certbot", {"email": "", "server": False, "eab_kid": False, "eab_hmac_key": False})
         self.mapping["ssl_mode"] = self.mapping["ssl_mode"].lower()
         self.label = DockerLabelHandler(mapping['lookup_label'] if 'lookup_label' in mapping else "easyhaproxy")
         self.certbot_hosts = []

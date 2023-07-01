@@ -6,7 +6,11 @@ def test_container_env_empty():
     assert {
         "customerrors": False,
         "ssl_mode": "default",
-        "lookup_label": "easyhaproxy"
+        "lookup_label": "easyhaproxy",
+        "certbot": {"eab_hmac_key": "",
+                    "eab_kid": "",
+                    "email": "",
+                    "server": False}
     } == ContainerEnv.read()
 
     # os.environ['CERTBOT_LOG_LEVEL'] = 'warn'
@@ -17,7 +21,11 @@ def test_container_env_customerrors():
         assert {
             "customerrors": True,
             "ssl_mode": "default",
-            "lookup_label": "easyhaproxy"
+            "lookup_label": "easyhaproxy",
+            "certbot": {"eab_hmac_key": "",
+                        "eab_kid": "",
+                        "email": "",
+                        "server": False}
         } == ContainerEnv.read()
     finally:
         os.environ['HAPROXY_CUSTOMERRORS'] = ''
@@ -28,7 +36,11 @@ def test_container_env_sslmode():
         assert {
             "customerrors": False,
             "ssl_mode": "strict",
-            "lookup_label": "easyhaproxy"
+            "lookup_label": "easyhaproxy",
+            "certbot": {"eab_hmac_key": "",
+                        "eab_kid": "",
+                        "email": "",
+                        "server": False}
         } == ContainerEnv.read()
     finally:
         os.environ['EASYHAPROXY_SSL_MODE'] = ''
@@ -41,6 +53,10 @@ def test_container_env_stats():
             "customerrors": False,
             "ssl_mode": "default",
             "lookup_label": "easyhaproxy",
+            "certbot": {"eab_hmac_key": "",
+                        "eab_kid": "",
+                        "email": "",
+                        "server": False}
         } == ContainerEnv.read()
     finally:
         os.environ['HAPROXY_USERNAME'] = ''
@@ -58,7 +74,11 @@ def test_container_env_stats_password():
                 "password": "xyz",
                 "port": "1936"
 
-            }
+            },
+            "certbot": {"eab_hmac_key": "",
+                        "eab_kid": "",
+                        "email": "",
+                        "server": False}
         } == ContainerEnv.read()
     finally:
         os.environ['HAPROXY_PASSWORD'] = ''
@@ -77,8 +97,11 @@ def test_container_env_stats_password():
                 "username": "abc",
                 "password": "xyz",
                 "port": "2101"
-
-            }
+            },
+            "certbot": {"eab_hmac_key": "",
+                        "eab_kid": "",
+                        "email": "",
+                        "server": False}
         } == ContainerEnv.read()
     finally:
         os.environ['HAPROXY_USERNAME'] = ''
@@ -86,7 +109,7 @@ def test_container_env_stats_password():
         os.environ['HAPROXY_PASSWORD'] = ''
 
 
-def test_container_env_stats_password():
+def test_container_env_certbot_email():
     os.environ['EASYHAPROXY_CERTBOT_EMAIL'] = 'acme@example.org'
     try:
         assert {
@@ -94,6 +117,8 @@ def test_container_env_stats_password():
             "ssl_mode": "default",
             "lookup_label": "easyhaproxy",
             "certbot": {
+                'eab_hmac_key': "",
+                'eab_kid': "",
                 "email": "acme@example.org",
                 "server": False
             }
@@ -101,9 +126,11 @@ def test_container_env_stats_password():
     finally:
         os.environ['EASYHAPROXY_CERTBOT_EMAIL'] = ''
 
-def test_container_env_certbot():
+def test_container_env_certbot_full():
     os.environ['EASYHAPROXY_CERTBOT_EMAIL'] = 'acme@example.org'
-    os.environ['EASYHAPROXY_CERTBOT_SERVER'] = 'true'
+    os.environ['EASYHAPROXY_CERTBOT_SERVER'] = 'schema://url/a'
+    os.environ['EASYHAPROXY_CERTBOT_EAB_KID'] = 'eab_kid'
+    os.environ['EASYHAPROXY_CERTBOT_EAB_HMAC_KEY'] = 'eab_hmac_key'
     try:
         assert {
             "customerrors": False,
@@ -111,7 +138,9 @@ def test_container_env_certbot():
             "lookup_label": "easyhaproxy",
             "certbot": {
                 "email": "acme@example.org",
-                "server": True
+                "server": "schema://url/a",
+                'eab_hmac_key': 'eab_hmac_key',
+                'eab_kid': 'eab_kid',
             }
         } == ContainerEnv.read()
     finally:
