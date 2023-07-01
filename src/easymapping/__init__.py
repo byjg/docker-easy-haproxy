@@ -1,12 +1,13 @@
 import base64
-import hashlib
-from jinja2 import Environment, FileSystemLoader
 import json
-import os
 import re
+
+from jinja2 import Environment, FileSystemLoader
+
 
 class DockerLabelHandler:
     def __init__(self, label):
+        self.__data = None
         self.__label_base = label
 
     def get_lookup_label(self):
@@ -18,26 +19,23 @@ class DockerLabelHandler:
 
         return "{}.{}".format(self.__label_base, ".".join(key))
 
-
-    def get(self, label, default_value = ""):
+    def get(self, label, default_value=""):
         if self.has_label(label):
             return self.__data[label]
         return default_value
 
-
-    def get_bool(self, label, default_value = False):
+    def get_bool(self, label, default_value=False):
         if self.has_label(label):
             return self.__data[label].lower() in ["true", "1", "yes"]
         return default_value
 
-    def get_json(self, label, default_value = {}):
+    def get_json(self, label, default_value={}):
         if self.has_label(label):
             return json.loads(self.__data[label])
         return default_value
 
     def set_data(self, data):
         self.__data = data
-
 
     def has_label(self, label):
         if label in self.__data:
@@ -55,10 +53,10 @@ class HaproxyConfigGenerator:
         self.certbot_hosts = []
         self.serving_hosts = []
         self.certs = {}
- 
-    def generate(self, container_metadata = {}):
+
+    def generate(self, container_metadata={}):
         self.mapping.setdefault("easymapping", [])
-        
+
         if container_metadata != {}:
             self.mapping["easymapping"] = self.parse(container_metadata)
 
@@ -69,7 +67,6 @@ class HaproxyConfigGenerator:
         env.rstrip_blocks = True
         template = env.get_template('haproxy.cfg.j2')
         return template.render(data=self.mapping)
-
 
     def parse(self, container_metadata):
         easymapping = dict()
@@ -163,8 +160,8 @@ class HaproxyConfigGenerator:
                         easymapping["443"]["hosts"][hostname]["certbot"] = False
                         easymapping["443"]["hosts"][hostname]["redirect_ssl"] = False
                         easymapping["443"]["ssl"] = True
-                        self.certbot_hosts.append(hostname) if certbot and hostname not in self.certbot_hosts else self.certbot_hosts
-                        
+                        self.certbot_hosts.append(
+                            hostname) if certbot and hostname not in self.certbot_hosts else self.certbot_hosts
 
                     # handle SSL
                     ssl_label = self.label.create([definition, "sslcert"])

@@ -1,10 +1,11 @@
-import pytest
 import os
 import time
+
 import docker
+import pytest
+
 from functions import Functions
 from processor import ProcessorInterface
-from processor import Docker
 
 
 def _get_hydrated_object(parsed_objects, lookup_key):
@@ -17,7 +18,6 @@ def _get_hydrated_object(parsed_objects, lookup_key):
 
 
 def _get_ip_host(parsed_objects, lookup_key):
-    hydrated_object = {}
     for key in parsed_objects:
         for keys in parsed_objects[key]:
             if lookup_key in keys:

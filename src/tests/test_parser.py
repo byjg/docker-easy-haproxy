@@ -1,12 +1,14 @@
-import easymapping
-import pytest
-import os
-import yaml
 import json
+import os
 
-CERTS_FOLDER="/tmp/certs"
-CERT_FILE="/tmp/certs/haproxy/www.somehost.com.br.pem"
-CERTBOT_EMAIL="some@email.com"
+import yaml
+
+import easymapping
+
+CERTS_FOLDER = "/tmp/certs"
+CERT_FILE = "/tmp/certs/haproxy/www.somehost.com.br.pem"
+CERTBOT_EMAIL = "some@email.com"
+
 
 def load_fixture(file):
     path = os.path.dirname(os.path.realpath(__file__))
@@ -35,6 +37,7 @@ def test_parser_doesnt_crash():
         assert expected_file.read() == haproxy_config
     assert [] == cfg.certbot_hosts
 
+
 def test_parser_finds_services():
     line_list = load_fixture("services")
 
@@ -56,9 +59,10 @@ def test_parser_finds_services():
     with open(path + "/expected/services.txt", 'r') as expected_file:
         assert expected_file.read() == haproxy_config
 
-    assert {"www.somehost.com.br.pem":"Some PEM Certificate"} == cfg.certs
+    assert {"www.somehost.com.br.pem": "Some PEM Certificate"} == cfg.certs
 
     assert ['node-exporter.quantum.example.org'] == cfg.certbot_hosts
+
 
 def test_parser_finds_services_changed_label():
     line_list = load_fixture("services-changed-label")
@@ -85,9 +89,10 @@ def test_parser_finds_services_changed_label():
     with open(path + "/expected/services.txt", 'r') as expected_file:
         assert expected_file.read() == haproxy_config
 
-    assert {"www.somehost.com.br.pem":"Some PEM Certificate"} == cfg.certs
+    assert {"www.somehost.com.br.pem": "Some PEM Certificate"} == cfg.certs
 
     assert ['node-exporter.quantum.example.org'] == cfg.certbot_hosts
+
 
 def test_parser_finds_services_raw():
     line_list = load_fixture("services")
@@ -109,10 +114,10 @@ def test_parser_finds_services_raw():
 
     parsed_object = [
         {
-            "mode":"tcp",
-            "health-check":"",
-            "port":"31339",
-            "hosts":{
+            "mode": "tcp",
+            "health-check": "",
+            "port": "31339",
+            "hosts": {
                 "agent.quantum.example.org": {
                     "containers": [
                         "my-stack_agent:9001"
@@ -121,23 +126,23 @@ def test_parser_finds_services_raw():
                     "redirect_ssl": False
                 }
             },
-            "redirect":{
-                
+            "redirect": {
+
             }
         },
         {
-            "mode":"http",
-            "health-check":"",
-            "port":"31337",
-            "hosts":{
-                "cadvisor.quantum.example.org":{
+            "mode": "http",
+            "health-check": "",
+            "port": "31337",
+            "hosts": {
+                "cadvisor.quantum.example.org": {
                     "containers": [
                         "my-stack_cadvisor:8080"
                     ],
                     "certbot": False,
                     "redirect_ssl": False
                 },
-                "node-exporter.quantum.example.org":{
+                "node-exporter.quantum.example.org": {
                     "containers": [
                         "my-stack_node-exporter:9100"
                     ],
@@ -145,15 +150,15 @@ def test_parser_finds_services_raw():
                     "redirect_ssl": False
                 }
             },
-            "redirect":{
-                
+            "redirect": {
+
             },
         },
         {
-            "mode":"http",
-            "health-check":"",
-            "port":"443",
-            "hosts":{
+            "mode": "http",
+            "health-check": "",
+            "port": "443",
+            "hosts": {
                 "node-exporter.quantum.example.org": {
                     "containers": [
                         "my-stack_node-exporter:9100"
@@ -161,7 +166,7 @@ def test_parser_finds_services_raw():
                     "certbot": False,
                     "redirect_ssl": False
                 },
-                "www.somehost.com.br":{
+                "www.somehost.com.br": {
                     "containers": [
                         "some-service:80"
                     ],
@@ -169,21 +174,21 @@ def test_parser_finds_services_raw():
                     "redirect_ssl": False
                 }
             },
-            "redirect":{
-                "somehost.com.br":"https://www.somehost.com.br",
-                "somehost.com":"https://www.somehost.com.br",
-                "www.somehost.com":"https://www.somehost.com.br",
-                "byjg.ca":"https://www.somehost.com.br",
-                "www.byjg.ca":"https://www.somehost.com.br"
+            "redirect": {
+                "somehost.com.br": "https://www.somehost.com.br",
+                "somehost.com": "https://www.somehost.com.br",
+                "www.somehost.com": "https://www.somehost.com.br",
+                "byjg.ca": "https://www.somehost.com.br",
+                "www.byjg.ca": "https://www.somehost.com.br"
             },
             "ssl": True
         },
         {
-            "mode":"http",
-            "health-check":"",
-            "port":"80",
-            "hosts":{
-                "www.somehost.com.br":{
+            "mode": "http",
+            "health-check": "",
+            "port": "80",
+            "hosts": {
+                "www.somehost.com.br": {
                     "containers": [
                         "some-service:80"
                     ],
@@ -191,12 +196,12 @@ def test_parser_finds_services_raw():
                     "redirect_ssl": False
                 }
             },
-            "redirect":{
-                "somehost.com.br":"https://www.somehost.com.br",
-                "somehost.com":"https://www.somehost.com.br",
-                "www.somehost.com":"https://www.somehost.com.br",
-                "byjg.ca":"https://www.somehost.com.br",
-                "www.byjg.ca":"https://www.somehost.com.br"
+            "redirect": {
+                "somehost.com.br": "https://www.somehost.com.br",
+                "somehost.com": "https://www.somehost.com.br",
+                "www.somehost.com": "https://www.somehost.com.br",
+                "byjg.ca": "https://www.somehost.com.br",
+                "www.byjg.ca": "https://www.somehost.com.br"
             },
         }
     ]
@@ -205,7 +210,6 @@ def test_parser_finds_services_raw():
 
     assert parsed_object == processed
     assert ['node-exporter.quantum.example.org'] == cfg.certbot_hosts
-
 
 
 def test_parser_static():
@@ -220,6 +224,7 @@ def test_parser_static():
     with open(path + "/expected/static.txt", 'r') as expected_file:
         assert expected_file.read() == haproxy_config
     assert [] == cfg.certbot_hosts
+
 
 def test_parser_static_raw():
     path = os.path.dirname(os.path.realpath(__file__))
@@ -280,7 +285,6 @@ def test_parser_static_raw():
     assert expected == parsed
 
 
-
 def test_parser_tcp():
     line_list = load_fixture("services-tcp")
 
@@ -300,6 +304,7 @@ def test_parser_tcp():
     with open(path + "/expected/services-tcp.txt", 'r') as expected_file:
         assert expected_file.read() == haproxy_config
     assert [] == cfg.certbot_hosts
+
 
 def test_parser_multi_containers():
     line_list = load_fixture("services-multi-containers")
@@ -384,6 +389,7 @@ def test_parser_ssl_strict():
         assert expected_file.read() == haproxy_config
     assert [] == cfg.certbot_hosts
 
+
 def test_parser_ssl_loose():
     line_list = load_fixture("no-services")
 
@@ -400,6 +406,7 @@ def test_parser_ssl_loose():
     with open(path + "/expected/ssl-loose.txt", 'r') as expected_file:
         assert expected_file.read() == haproxy_config
     assert [] == cfg.certbot_hosts
+
 
 def test_parser_ssl_letsencrypt():
     line_list = load_fixture("services-letsencrypt")
@@ -444,51 +451,51 @@ def test_parser_finds_services_clone_to_ssl_raw():
 
     parsed_object = [
         {
-            "health-check":"",
-            "hosts":{
-                "host2.local":{
-                    "containers":[
-                    "10.152.183.215:8080"
+            "health-check": "",
+            "hosts": {
+                "host2.local": {
+                    "containers": [
+                        "10.152.183.215:8080"
                     ],
                     "certbot": False,
                     "redirect_ssl": False
                 },
-                "valida.me":{
-                    "containers":[
-                    "10.152.183.62:8080"
+                "valida.me": {
+                    "containers": [
+                        "10.152.183.62:8080"
                     ],
                     "certbot": False,
                     "redirect_ssl": False
                 },
-                "www.valida.me":{
-                    "containers":[
-                    "10.152.183.62:8080"
+                "www.valida.me": {
+                    "containers": [
+                        "10.152.183.62:8080"
                     ],
                     "certbot": False,
                     "redirect_ssl": False
                 }
             },
-            "mode":"http",
-            "port":"80",
-            "redirect":{
-                
+            "mode": "http",
+            "port": "80",
+            "redirect": {
+
             }
         },
         {
-            "health-check":"ssl",
-            "hosts":{
-                "host2.local":{
-                    "containers":[
-                    "10.152.183.215:8080"
+            "health-check": "ssl",
+            "hosts": {
+                "host2.local": {
+                    "containers": [
+                        "10.152.183.215:8080"
                     ],
                     "certbot": False,
                     "redirect_ssl": False
                 }
             },
-            "mode":"http",
-            "port":"443",
-            "redirect":{
-                
+            "mode": "http",
+            "port": "443",
+            "redirect": {
+
             },
             "ssl": True
         }
@@ -498,10 +505,8 @@ def test_parser_finds_services_clone_to_ssl_raw():
     assert parsed_object == processed
     assert [] == cfg.certbot_hosts
 
-
-
-#test_parser_finds_services_raw()
-#test_parser_tcp()
-#test_parser_multiple_hosts()
-#test_parser_ssl_certbot()
-#test_parser_finds_services()
+# test_parser_finds_services_raw()
+# test_parser_tcp()
+# test_parser_multiple_hosts()
+# test_parser_ssl_certbot()
+# test_parser_finds_services()

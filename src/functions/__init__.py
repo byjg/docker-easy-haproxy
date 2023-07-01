@@ -1,12 +1,39 @@
-from datetime import datetime
-from multiprocessing import Process, Lock
-import subprocess
-import shlex
-import time
 import os
-import re
+import shlex
+import subprocess
 import time
+from datetime import datetime
+from multiprocessing import Process
+
 from OpenSSL import crypto
+
+
+class ContainerEnv:
+    @staticmethod
+    def read():
+        env_vars = {
+            "customerrors": True if os.getenv("HAPROXY_CUSTOMERRORS") == "true" else False,
+            "ssl_mode": os.getenv("EASYHAPROXY_SSL_MODE").lower() if os.getenv("EASYHAPROXY_SSL_MODE") else 'default'
+        }
+
+        if os.getenv("HAPROXY_PASSWORD"):
+            env_vars["stats"] = {
+                "username": os.getenv("HAPROXY_USERNAME") if os.getenv("HAPROXY_USERNAME") else "admin",
+                "password": os.getenv("HAPROXY_PASSWORD"),
+                "port": os.getenv("HAPROXY_STATS_PORT") if os.getenv("HAPROXY_STATS_PORT") else "1936",
+            }
+
+        env_vars["lookup_label"] = os.getenv("EASYHAPROXY_LABEL_PREFIX") if os.getenv(
+            "EASYHAPROXY_LABEL_PREFIX") else "easyhaproxy"
+
+        env_vars["certbot"] = {
+            "email": os.getenv("EASYHAPROXY_CERTBOT_EMAIL", ""),
+            "server": os.getenv("EASYHAPROXY_CERTBOT_SERVER", False),
+            "eab_kid": os.getenv("EASYHAPROXY_CERTBOT_EAB_KID", ""),
+            "eab_hmac_key": os.getenv("EASYHAPROXY_CERTBOT_EAB_HMAC_KEY", ""),
+        }
+
+        return env_vars
 
 
 class Functions:
@@ -119,8 +146,8 @@ class DaemonizeHAProxy:
         else:
             pid = "".join(Functions().run_bash(Functions.HAPROXY_LOG, "cat /run/haproxy.pid", log_output=False))
             self.__prepare(
-                "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid -x /var/run/haproxy.sock -sf %s" % (
-                    pid))
+                "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid -x /var/run/haproxy.sock -sf %s" %
+                pid)
 
         if self.process is None:
             return
@@ -151,8 +178,8 @@ class DaemonizeHAProxy:
                 for line in iter(self.process.stdout.readline, b''):
                     Functions.log(source, Functions.INFO, line)
 
-            returncode = self.process.wait()
-            Functions.log(source, Functions.DEBUG, "Return code %s" % (returncode))
+            return_code = self.process.wait()
+            Functions.log(source, Functions.DEBUG, "Return code %s" % return_code)
 
         except Exception as e:
             Functions.log(source, Functions.ERROR, "%s" % e)
@@ -188,7 +215,8 @@ class Certbot:
         self.eab_kid = self.set_eab_kid(env["certbot"]["eab_kid"])
         self.eab_hmac_key = self.set_eab_hmac_key(env["certbot"]["eab_hmac_key"])
 
-    def set_acme_server(self, acme_server):
+    @staticmethod
+    def set_acme_server(acme_server):
         if acme_server.lower() == "staging":
             return "--staging"
         elif acme_server.lower().startswith("http"):
@@ -196,13 +224,15 @@ class Certbot:
         else:
             return ""
 
-    def set_eab_kid(self, eab_kid):
+    @staticmethod
+    def set_eab_kid(eab_kid):
         if eab_kid != "":
             return "--eab-kid \"%s\"" % eab_kid
         else:
             return ""
 
-    def set_eab_hmac_key(self, eab_hmac_key):
+    @staticmethod
+    def set_eab_hmac_key(eab_hmac_key):
         if eab_hmac_key != "":
             return "--eab-hmac-key \"%s\"" % eab_hmac_key
         else:
@@ -274,7 +304,8 @@ class Certbot:
             Functions.log(Functions.CERTBOT_LOG, Functions.ERROR, "%s" % e)
             return False
 
-    def merge_certificate(self, cert, key, filename):
+    @staticmethod
+    def merge_certificate(cert, key, filename):
         Functions.save(filename, cert + key)
 
     def find_live_certificates(self):
