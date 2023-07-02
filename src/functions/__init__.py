@@ -5,6 +5,7 @@ import time
 from datetime import datetime
 from multiprocessing import Process
 
+import requests
 from OpenSSL import crypto
 
 
@@ -27,11 +28,53 @@ class ContainerEnv:
             "EASYHAPROXY_LABEL_PREFIX") else "easyhaproxy"
 
         env_vars["certbot"] = {
+            "autoconfig": os.getenv("EASYHAPROXY_CERTBOT_AUTOCONFIG", "letsencrypt"),
             "email": os.getenv("EASYHAPROXY_CERTBOT_EMAIL", ""),
             "server": os.getenv("EASYHAPROXY_CERTBOT_SERVER", False),
             "eab_kid": os.getenv("EASYHAPROXY_CERTBOT_EAB_KID", ""),
             "eab_hmac_key": os.getenv("EASYHAPROXY_CERTBOT_EAB_HMAC_KEY", ""),
         }
+
+        if env_vars["certbot"]["autoconfig"] != "" and not env_vars["certbot"]["server"] and env_vars["certbot"]["email"] != "":
+            if env_vars["certbot"]["autoconfig"] == "letsencrypt":
+                env_vars["certbot"]["server"] = "https://acme-v02.api.letsencrypt.org/directory"
+
+            if env_vars["certbot"]["autoconfig"] == "letsencrypt_test":
+                env_vars["certbot"]["server"] = "https://acme-staging-v02.api.letsencrypt.org/directory"
+
+            if env_vars["certbot"]["autoconfig"] == "buypass":
+                env_vars["certbot"]["server"] = "https://api.buypass.com/acme/directory"
+
+            if env_vars["certbot"]["autoconfig"] == "buypass_test":
+                env_vars["certbot"]["server"] = "https://api.test4.buypass.no/acme/directory"
+
+            if env_vars["certbot"]["autoconfig"] == "sslcom_rca":
+                env_vars["certbot"]["server"] = "https://acme.ssl.com/sslcom-dv-rsa"
+
+            if env_vars["certbot"]["autoconfig"] == "sslcom_ecc":
+                env_vars["certbot"]["server"] = "https://acme.ssl.com/sslcom-dv-ecc"
+
+            if env_vars["certbot"]["autoconfig"] == "google":
+                env_vars["certbot"]["server"] = "https://dv.acme-v02.api.pki.goog/directory"
+
+            if env_vars["certbot"]["autoconfig"] == "google_test":
+                env_vars["certbot"]["server"] = "https://dv.acme-v02.test-api.pki.goog/directory"
+
+            if env_vars["certbot"]["autoconfig"] == "zerossl":
+                url = "https://api.zerossl.com/acme/eab-credentials-email"
+                headers = {"Content-Type": "application/x-www-form-urlencoded"}
+                data = "email=" + env_vars["certbot"]["email"]
+                resp = requests.post(url, headers=headers, data=data).json()
+
+                if resp["success"]:
+                    env_vars["certbot"]["server"] = "https://acme.zerossl.com/v2/DV90"
+                    env_vars["certbot"]["eab_kid"] = os.environ['EASYHAPROXY_CERTBOT_EAB_KID'] = resp["eab_kid"]
+                    env_vars["certbot"]["eab_hmac_key"] = os.environ['EASYHAPROXY_CERTBOT_EAB_HMAC_KEY'] = resp["eab_hmac_key"]
+                else:
+                    os.environ["EASYHAPROXY_CERTBOT_EMAIL"] = ""
+                    Functions.log(Functions.CERTBOT_LOG, Functions.ERROR, "Could not obtain ZeroSSL credentials " + resp["error"]["type"])
+
+            os.environ['EASYHAPROXY_CERTBOT_SERVER'] = env_vars["certbot"]["server"]
 
         return env_vars
 
