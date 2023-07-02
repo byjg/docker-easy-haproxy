@@ -65,8 +65,9 @@ def test_functions_run_bash_log_output():
     print()
     Functions.debug_log = []
     try:
-        result = Functions.run_bash(Functions.EASYHAPROXY_LOG, "echo 'test run 1'", log_output=True,
-                                    return_result=False)
+        return_code, result = Functions.run_bash(Functions.EASYHAPROXY_LOG, "echo 'test run 1'", log_output=True,
+                                                 return_result=False)
+        assert return_code == 0
         assert result == []
         assert len(Functions.debug_log) == 1
         assert re.match("\[EASYHAPROXY\] .* \[INFO\]: test run 1", Functions.debug_log[0])
@@ -78,8 +79,9 @@ def test_functions_run_bash_no_log_output():
     print()
     Functions.debug_log = []
     try:
-        result = Functions.run_bash(Functions.EASYHAPROXY_LOG, "echo 'test run 2'", log_output=False,
-                                    return_result=False)
+        return_code, result = Functions.run_bash(Functions.EASYHAPROXY_LOG, "echo 'test run 2'", log_output=False,
+                                                 return_result=False)
+        assert return_code == 0
         assert result == []
         assert len(Functions.debug_log) == 0
     finally:
@@ -90,8 +92,9 @@ def test_functions_run_bash_return():
     print()
     Functions.debug_log = []
     try:
-        result = Functions.run_bash(Functions.EASYHAPROXY_LOG, "echo 'test run 3'", log_output=False,
-                                    return_result=True)
+        return_code, result = Functions.run_bash(Functions.EASYHAPROXY_LOG, "echo 'test run 3'", log_output=False,
+                                                 return_result=True)
+        assert return_code == 0
         assert len(Functions.debug_log) == 0
         assert "".join(result) == 'test run 3'
     finally:
@@ -102,9 +105,51 @@ def test_functions_run_bash_log_and_return_output():
     print()
     Functions.debug_log = []
     try:
-        result = Functions.run_bash(Functions.EASYHAPROXY_LOG, "echo 'test run 4'", log_output=True, return_result=True)
+        return_code, result = Functions.run_bash(Functions.EASYHAPROXY_LOG, "echo 'test run 4'", log_output=True, return_result=True)
+        assert return_code == 0
         assert "".join(result) == 'test run 4'
         assert len(Functions.debug_log) == 1
         assert re.match("\[EASYHAPROXY\] .* \[INFO\]: test run 4", Functions.debug_log[0])
+    finally:
+        Functions.debug_log = None
+
+
+def test_functions_run_bash_ok():
+    print()
+    Functions.debug_log = []
+    try:
+        return_code, result = Functions.run_bash(Functions.EASYHAPROXY_LOG, "%s/fixtures/run_bash.sh" % os.path.dirname(__file__), log_output=True,
+                                                 return_result=False)
+        assert return_code == 0
+        assert result == []
+        assert len(Functions.debug_log) == 1
+        assert re.match("\[EASYHAPROXY\] .* \[INFO\]: Processing run_bash.sh", Functions.debug_log[0])
+    finally:
+        Functions.debug_log = None
+
+
+def test_functions_run_bash_fail():
+    print()
+    Functions.debug_log = []
+    try:
+        return_code, result = Functions.run_bash(Functions.EASYHAPROXY_LOG, "%s/fixtures/run_bash.sh 15" % os.path.dirname(__file__), log_output=True,
+                                                 return_result=False)
+        assert return_code == 15
+        assert result == []
+        assert len(Functions.debug_log) == 1
+        assert re.match("\[EASYHAPROXY\] .* \[INFO\]: Processing run_bash.sh", Functions.debug_log[0])
+    finally:
+        Functions.debug_log = None
+
+
+def test_functions_run_command_not_found():
+    print()
+    Functions.debug_log = []
+    try:
+        return_code, result = Functions.run_bash(Functions.EASYHAPROXY_LOG, "no_command_here", log_output=True,
+                                                 return_result=False)
+        assert return_code == -99
+        assert str(result) == "[Errno 2] No such file or directory: 'no_command_here'"
+        assert len(Functions.debug_log) == 0
     finally:
         Functions.debug_log = None

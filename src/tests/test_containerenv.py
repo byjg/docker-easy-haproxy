@@ -8,7 +8,7 @@ def test_container_env_empty():
                "customerrors": False,
                "ssl_mode": "default",
                "lookup_label": "easyhaproxy",
-               "certbot": {"autoconfig": "letsencrypt",
+               "certbot": {"autoconfig": "",
                            "eab_hmac_key": "",
                            "eab_kid": "",
                            "email": "",
@@ -25,7 +25,7 @@ def test_container_env_customerrors():
                    "customerrors": True,
                    "ssl_mode": "default",
                    "lookup_label": "easyhaproxy",
-                   "certbot": {"autoconfig": "letsencrypt",
+                   "certbot": {"autoconfig": "",
                                "eab_hmac_key": "",
                                "eab_kid": "",
                                "email": "",
@@ -42,7 +42,7 @@ def test_container_env_sslmode():
                    "customerrors": False,
                    "ssl_mode": "strict",
                    "lookup_label": "easyhaproxy",
-                   "certbot": {"autoconfig": "letsencrypt",
+                   "certbot": {"autoconfig": "",
                                "eab_hmac_key": "",
                                "eab_kid": "",
                                "email": "",
@@ -60,7 +60,7 @@ def test_container_env_stats():
                    "customerrors": False,
                    "ssl_mode": "default",
                    "lookup_label": "easyhaproxy",
-                   "certbot": {"autoconfig": "letsencrypt",
+                   "certbot": {"autoconfig": "",
                                "eab_hmac_key": "",
                                "eab_kid": "",
                                "email": "",
@@ -84,7 +84,7 @@ def test_container_env_stats_password():
                        "port": "1936"
 
                    },
-                   "certbot": {"autoconfig": "letsencrypt",
+                   "certbot": {"autoconfig": "",
                                "eab_hmac_key": "",
                                "eab_kid": "",
                                "email": "",
@@ -108,7 +108,7 @@ def test_container_env_stats_password_2():
                        "password": "xyz",
                        "port": "2101"
                    },
-                   "certbot": {"autoconfig": "letsencrypt",
+                   "certbot": {"autoconfig": "",
                                "eab_hmac_key": "",
                                "eab_kid": "",
                                "email": "",
@@ -128,11 +128,11 @@ def test_container_env_certbot_email():
                    "ssl_mode": "default",
                    "lookup_label": "easyhaproxy",
                    "certbot": {
-                       "autoconfig": "letsencrypt",
+                       "autoconfig": "",
                        'eab_hmac_key': "",
                        'eab_kid': "",
                        "email": "acme@example.org",
-                       "server": 'https://acme-v02.api.letsencrypt.org/directory'
+                       "server": False
                    }
                } == ContainerEnv.read()
     finally:
@@ -150,7 +150,7 @@ def test_container_env_certbot_full():
                    "ssl_mode": "default",
                    "lookup_label": "easyhaproxy",
                    "certbot": {
-                       "autoconfig": "letsencrypt",
+                       "autoconfig": "",
                        "email": "acme@example.org",
                        "server": "schema://url/a",
                        'eab_hmac_key': 'eab_hmac_key',

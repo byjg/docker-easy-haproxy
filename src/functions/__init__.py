@@ -28,7 +28,7 @@ class ContainerEnv:
             "EASYHAPROXY_LABEL_PREFIX") else "easyhaproxy"
 
         env_vars["certbot"] = {
-            "autoconfig": os.getenv("EASYHAPROXY_CERTBOT_AUTOCONFIG", "letsencrypt"),
+            "autoconfig": os.getenv("EASYHAPROXY_CERTBOT_AUTOCONFIG", ""),
             "email": os.getenv("EASYHAPROXY_CERTBOT_EMAIL", ""),
             "server": os.getenv("EASYHAPROXY_CERTBOT_SERVER", False),
             "eab_kid": os.getenv("EASYHAPROXY_CERTBOT_EAB_KID", ""),
@@ -164,8 +164,9 @@ class Functions:
                     Functions.log(source, Functions.WARN, process.stderr.readlines())
                     break
 
-            return output
+            return [return_code, output]
         except Exception as e:
+            return [-99, e]
             Functions.log(source, Functions.ERROR, "%s" % e)
 
 

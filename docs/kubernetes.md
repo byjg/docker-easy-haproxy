@@ -90,7 +90,7 @@ Caveats:
 
 **Important**: The annotations are per ingress and applied to all hosts in that ingress configuration.
 
-## Letsencrypt
+## Certbot / ACME / Letsencrypt
 
 It is necessary add the annotation `easyhaproxy.certbot` to the ingress configuration:
 
@@ -106,7 +106,9 @@ spec:
   ....
 ```
 
-Make sure your cluster is accessible both through ports 80 and 443.
+More info [here](acme.md).
+
+Make sure your cluster is accessible both through ports 80 and 443. 
 
 ## Custom SSL Certificates
 

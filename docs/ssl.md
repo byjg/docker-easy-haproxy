@@ -1,6 +1,6 @@
 # Setup custom certificates
 
-You can use your certificates with EasyHAProxy. 
+You can use your own certificates with EasyHAProxy. You just need to let EasyHAProxy know that certificate.  
 
 There are two ways to do that. 
 
