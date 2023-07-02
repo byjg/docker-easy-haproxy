@@ -188,7 +188,8 @@ class DaemonizeHAProxy:
             self.__prepare(
                 "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid -S /var/run/haproxy.sock")
         else:
-            pid = "".join(Functions().run_bash(Functions.HAPROXY_LOG, "cat /run/haproxy.pid", log_output=False))
+            return_code, pid_tmp = Functions().run_bash(Functions.HAPROXY_LOG, "cat /run/haproxy.pid", log_output=False)
+            pid = "".join(pid_tmp)
             self.__prepare(
                 "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid -x /var/run/haproxy.sock -sf %s" %
                 pid)
@@ -258,6 +259,7 @@ class Certbot:
         self.acme_server = self.set_acme_server(env["certbot"]["server"])
         self.eab_kid = self.set_eab_kid(env["certbot"]["eab_kid"])
         self.eab_hmac_key = self.set_eab_hmac_key(env["certbot"]["eab_hmac_key"])
+        self.freeze_issue = {}
 
     @staticmethod
     def set_acme_server(acme_server):
@@ -291,30 +293,23 @@ class Certbot:
         try:
             request_certs = []
             renew_certs = []
-            current_time = time.time()
             for host in hosts:
-                filename = "%s/%s.pem" % (self.certs, host)
+                cert_status = self.get_certificate_status(host)
                 host_arg = '-d %s' % host
-                if not os.path.exists(filename):
-                    Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "Request new certificate for %s" % host)
+                if cert_status == "ok" or cert_status == "error":
+                    continue
+                elif host in self.freeze_issue:
+                    freeze_count = self.freeze_issue.pop(host, 0)
+                    if freeze_count > 0:
+                        Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG,
+                                      "Waiting freezing period (%d) for %s due previous errors" % (freeze_count, host))
+                        self.freeze_issue[host] = freeze_count-1
+                elif cert_status == "not_found" or cert_status == "expired":
+                    Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "[%s] Request new certificate for %s" % (cert_status, host))
                     request_certs.append(host_arg)
-                else:
-                    try:
-                        with open(filename, 'rb') as file:
-                            certificate_str = file.read()
-                        certificate = crypto.load_certificate(crypto.FILETYPE_PEM, certificate_str)
-                        expiration_after = datetime.strptime(certificate.get_notAfter().decode()[:-1],
-                                                             '%Y%m%d%H%M%S').timestamp()
-
-                        if current_time >= expiration_after:
-                            Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG,
-                                          "Request expired certificate for %s" % host)
-                            request_certs.append(host_arg)
-                        if (expiration_after - current_time) // (24 * 3600) <= 15:
-                            Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "Renew certificate for %s" % host)
-                            renew_certs.append(host_arg)
-                    except Exception as e:
-                        Functions.log(Functions.CERTBOT_LOG, Functions.ERROR, "Certificate %s error %s" % (host, e))
+                elif cert_status == "expiring":
+                    Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "[%s] Renew certificate for %s" % (cert_status, host))
+                    renew_certs.append(host_arg)
 
             certbot_certonly = ('/usr/bin/certbot certonly {acme_server}'
                                 '    --standalone'
@@ -334,16 +329,23 @@ class Certbot:
                                 )
 
             ret_reload = False
+            return_code_issue = 0
+            return_code_renew = 0
             if len(request_certs) > 0:
-                Functions.run_bash(Functions.CERTBOT_LOG, certbot_certonly, return_result=False)
+                return_code_issue, output = Functions.run_bash(Functions.CERTBOT_LOG, certbot_certonly, return_result=False)
                 ret_reload = True
 
             if len(renew_certs) > 0:
-                Functions.run_bash(Functions.CERTBOT_LOG, "/usr/bin/certbot renew", return_result=False)
+                return_code_renew, output = Functions.run_bash(Functions.CERTBOT_LOG, "/usr/bin/certbot renew", return_result=False)
                 ret_reload = True
 
             if ret_reload:
                 self.find_live_certificates()
+
+            if return_code_issue != 0:
+                self.find_missing_certificates(request_certs)
+            if return_code_renew != 0:
+                self.find_missing_certificates(renew_certs)
 
             return ret_reload
         except Exception as e:
@@ -365,3 +367,31 @@ class Certbot:
                 key = Functions.load(os.path.join(path, "privkey.pem"))
                 filename = "%s/%s.pem" % (self.certs, item)
                 self.merge_certificate(cert, key, filename)
+
+    def get_certificate_status(self, host):
+        current_time = time.time()
+        filename = "%s/%s.pem" % (self.certs, host)
+        if not os.path.exists(filename):
+            return "not_found"
+
+        try:
+            with open(filename, 'rb') as file:
+                certificate_str = file.read()
+            certificate = crypto.load_certificate(crypto.FILETYPE_PEM, certificate_str)
+            expiration_after = datetime.strptime(certificate.get_notAfter().decode()[:-1], '%Y%m%d%H%M%S').timestamp()
+            if current_time >= expiration_after:
+                return "expired"
+            elif (expiration_after - current_time) // (24 * 3600) <= 15:
+                return "expiring"
+        except Exception as e:
+            Functions.log(Functions.CERTBOT_LOG, Functions.ERROR, "Certificate %s error %s" % (host, e))
+            return "error"
+
+        return "ok"
+
+    def find_missing_certificates(self, hosts):
+        for host in hosts:
+            cert_status = self.get_certificate_status(host)
+            if cert_status != "ok":
+                self.freeze_issue[host] = 5
+                Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "Freezing issue ssl for %s due failure. The certificate is %s" % (host, cert_status))
