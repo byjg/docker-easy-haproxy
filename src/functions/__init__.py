@@ -217,6 +217,8 @@ class Certbot:
 
     @staticmethod
     def set_acme_server(acme_server):
+        if not acme_server:
+            return ""
         if acme_server.lower() == "staging":
             return "--staging"
         elif acme_server.lower().startswith("http"):
@@ -254,7 +256,7 @@ class Certbot:
                     request_certs.append(host_arg)
                 else:
                     try:
-                        with open(filename, 'r') as file:
+                        with open(filename, 'rb') as file:
                             certificate_str = file.read()
                         certificate = crypto.load_certificate(crypto.FILETYPE_PEM, certificate_str)
                         expiration_after = datetime.strptime(certificate.get_notAfter().decode()[:-1],
@@ -264,7 +266,7 @@ class Certbot:
                             Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG,
                                           "Request expired certificate for %s" % host)
                             request_certs.append(host_arg)
-                        if (expiration_after - current_time) // (24 * 3600) >= 15:
+                        if (expiration_after - current_time) // (24 * 3600) <= 15:
                             Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "Renew certificate for %s" % host)
                             renew_certs.append(host_arg)
                     except Exception as e:
