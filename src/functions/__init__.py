@@ -391,7 +391,9 @@ class Certbot:
 
     def find_missing_certificates(self, hosts):
         for host in hosts:
+            if host.startswith("-d "):
+                host = host[3:]
             cert_status = self.get_certificate_status(host)
             if cert_status != "ok":
                 self.freeze_issue[host] = 5
-                Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "Freezing issue ssl for %s due failure. The certificate is %s" % (host, cert_status))
+                Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "Freeze issuing ssl for %s due failure. The certificate is %s" % (host, cert_status))
