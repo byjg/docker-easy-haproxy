@@ -166,8 +166,8 @@ class Functions:
 
             return [return_code, output]
         except Exception as e:
-            return [-99, e]
             Functions.log(source, Functions.ERROR, "%s" % e)
+            return [-99, e]
 
 
 class Consts:

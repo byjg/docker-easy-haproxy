@@ -150,6 +150,7 @@ def test_functions_run_command_not_found():
                                                  return_result=False)
         assert return_code == -99
         assert str(result) == "[Errno 2] No such file or directory: 'no_command_here'"
-        assert len(Functions.debug_log) == 0
+        assert len(Functions.debug_log) == 1
+        assert re.match("\[EASYHAPROXY\] .* \[ERROR\]: \[Errno 2\] No such file or directory: 'no_command_here'", Functions.debug_log[0])
     finally:
         Functions.debug_log = None
