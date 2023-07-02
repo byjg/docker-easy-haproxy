@@ -13,6 +13,7 @@ To enable the ACME protocol we need to enable Certbot in EasyHAProxy by setting 
 - EASYHAPROXY_CERTBOT_SERVER (optional): The ACME Endpoint of your certificate authority. If you use AUTOCONFIG, it is set automatically. See table below.
 - EASYHAPROXY_CERTBOT_EAB_KID (optional): External Account Binding (EAB) Key Identifier (KID) provided by your certificate authority. Some CA require it. See table below. 
 - EASYHAPROXY_CERTBOT_EAB_HMAC_KEY (optional): External Account Binding (EAB) HMAC Key provided by your certificate authority. Some CA require it. See table below.
+- EASYHAPROXY_CERTBOT_RETRY_COUNT (optional): Wait 'n' requests before retrying issue invalid requests. Default 60. 
 
 Here are detailed instructions per Certificate Authority (CA). If anyone is missing, please let's know.
 

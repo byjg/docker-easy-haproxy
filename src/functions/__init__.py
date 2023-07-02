@@ -33,6 +33,7 @@ class ContainerEnv:
             "server": os.getenv("EASYHAPROXY_CERTBOT_SERVER", False),
             "eab_kid": os.getenv("EASYHAPROXY_CERTBOT_EAB_KID", ""),
             "eab_hmac_key": os.getenv("EASYHAPROXY_CERTBOT_EAB_HMAC_KEY", ""),
+            "retry_count": int(os.getenv("EASYHAPROXY_CERTBOT_RETRY_COUNT", 60)),
         }
 
         if env_vars["certbot"]["autoconfig"] != "" and not env_vars["certbot"]["server"] and env_vars["certbot"]["email"] != "":
@@ -260,6 +261,7 @@ class Certbot:
         self.eab_kid = self.set_eab_kid(env["certbot"]["eab_kid"])
         self.eab_hmac_key = self.set_eab_hmac_key(env["certbot"]["eab_hmac_key"])
         self.freeze_issue = {}
+        self.retry_count = env["certbot"]["retry_count"]
 
     @staticmethod
     def set_acme_server(acme_server):
@@ -395,5 +397,5 @@ class Certbot:
                 host = host[3:]
             cert_status = self.get_certificate_status(host)
             if cert_status != "ok":
-                self.freeze_issue[host] = 5
+                self.freeze_issue[host] = self.retry_count
                 Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "Freeze issuing ssl for %s due failure. The certificate is %s" % (host, cert_status))

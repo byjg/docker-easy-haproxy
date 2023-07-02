@@ -12,7 +12,8 @@ def test_container_env_empty():
                            "eab_hmac_key": "",
                            "eab_kid": "",
                            "email": "",
-                           "server": False}
+                           "server": False,
+                           "retry_count": 60}
            } == ContainerEnv.read()
 
     # os.environ['CERTBOT_LOG_LEVEL'] = 'warn'
@@ -29,7 +30,8 @@ def test_container_env_customerrors():
                                "eab_hmac_key": "",
                                "eab_kid": "",
                                "email": "",
-                               "server": False}
+                               "server": False,
+                               "retry_count": 60}
                } == ContainerEnv.read()
     finally:
         os.environ['HAPROXY_CUSTOMERRORS'] = ''
@@ -46,7 +48,8 @@ def test_container_env_sslmode():
                                "eab_hmac_key": "",
                                "eab_kid": "",
                                "email": "",
-                               "server": False}
+                               "server": False,
+                               "retry_count": 60}
                } == ContainerEnv.read()
     finally:
         os.environ['EASYHAPROXY_SSL_MODE'] = ''
@@ -64,7 +67,8 @@ def test_container_env_stats():
                                "eab_hmac_key": "",
                                "eab_kid": "",
                                "email": "",
-                               "server": False}
+                               "server": False,
+                               "retry_count": 60}
                } == ContainerEnv.read()
     finally:
         os.environ['HAPROXY_USERNAME'] = ''
@@ -88,7 +92,8 @@ def test_container_env_stats_password():
                                "eab_hmac_key": "",
                                "eab_kid": "",
                                "email": "",
-                               "server": False}
+                               "server": False,
+                               "retry_count": 60}
                } == ContainerEnv.read()
     finally:
         os.environ['HAPROXY_PASSWORD'] = ''
@@ -112,7 +117,8 @@ def test_container_env_stats_password_2():
                                "eab_hmac_key": "",
                                "eab_kid": "",
                                "email": "",
-                               "server": False}
+                               "server": False,
+                               "retry_count": 60}
                } == ContainerEnv.read()
     finally:
         os.environ['HAPROXY_USERNAME'] = ''
@@ -132,7 +138,8 @@ def test_container_env_certbot_email():
                        'eab_hmac_key': "",
                        'eab_kid': "",
                        "email": "acme@example.org",
-                       "server": False
+                       "server": False,
+                       "retry_count": 60
                    }
                } == ContainerEnv.read()
     finally:
@@ -144,6 +151,7 @@ def test_container_env_certbot_full():
     os.environ['EASYHAPROXY_CERTBOT_SERVER'] = 'schema://url/a'
     os.environ['EASYHAPROXY_CERTBOT_EAB_KID'] = 'eab_kid'
     os.environ['EASYHAPROXY_CERTBOT_EAB_HMAC_KEY'] = 'eab_hmac_key'
+    os.environ['EASYHAPROXY_CERTBOT_RETRY_COUNT'] = "10"
     try:
         assert {
                    "customerrors": False,
@@ -155,6 +163,7 @@ def test_container_env_certbot_full():
                        "server": "schema://url/a",
                        'eab_hmac_key': 'eab_hmac_key',
                        'eab_kid': 'eab_kid',
+                       'retry_count': 10
                    }
                } == ContainerEnv.read()
     finally:
