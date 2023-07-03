@@ -198,7 +198,7 @@ class Kubernetes(ProcessorInterface):
         self.cert_cache = {}
         super().__init__()
 
-    def _check_annotation(self, annotations, key, default = None):
+    def _check_annotation(self, annotations, key, default=None):
         if key not in annotations:
             return default
         return annotations[key]

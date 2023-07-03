@@ -11,7 +11,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./certs:/certs/haproxy
-      - certs_letsencrypt:/certs/letsencrypt
+      - certs_certbot:/certs/certbot
     deploy:
       replicas: 1
     environment:
@@ -34,7 +34,7 @@ networks:
     external: true
 
 volumes:
-  certs_letsencrypt:
+  certs_certbot:
   #   external: true
   # certs_haproxy:
   #   external: true

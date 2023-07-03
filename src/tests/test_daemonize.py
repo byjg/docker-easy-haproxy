@@ -1,10 +1,7 @@
-import json
-import pytest
 import os
-import re
-import random
-import string
-from functions import DaemonizeHAProxy
+
+from functions import DaemonizeHAProxy, Functions
+
 
 def test_daemonize_haproxy():
     daemon = DaemonizeHAProxy()
@@ -38,7 +35,14 @@ def test_daemonize_haproxy_get_haproxy_command_start():
     command = daemon.get_haproxy_command("start")
     assert command == "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -f %s -p /run/haproxy.pid -S /var/run/haproxy.sock" % (os.path.dirname(__file__) + "/fixtures")
 
+
 def test_daemonize_haproxy_get_haproxy_command_reload():
-    daemon = DaemonizeHAProxy(os.path.abspath(os.path.dirname(__file__))  + '/fixtures')
-    command = daemon.get_haproxy_command("reload")
-    assert command == "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -f %s -p /run/haproxy.pid -x /var/run/haproxy.sock -sf " % (os.path.dirname(__file__) + "/fixtures")
+    tmp_pid_file = "/tmp/tmp_pid.txt"
+    Functions.save(tmp_pid_file, "10")
+
+    try:
+        daemon = DaemonizeHAProxy(os.path.abspath(os.path.dirname(__file__))  + '/fixtures')
+        command = daemon.get_haproxy_command("reload", tmp_pid_file)
+        assert command == "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -f %s -p %s -x /var/run/haproxy.sock -sf %s" % (os.path.dirname(__file__) + "/fixtures", tmp_pid_file, 10)
+    finally:
+        os.remove(tmp_pid_file)

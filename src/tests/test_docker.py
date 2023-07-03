@@ -100,7 +100,7 @@ def test_processor_docker():
             'hostssl.local.pem': 'Some PEM Certificate'
         }
     finally:
-        os.environ['EASYHAPROXY_CERTBOT_EMAIL'] = ''
+        del os.environ['EASYHAPROXY_CERTBOT_EMAIL']
         container.stop()
         container2.stop()
 

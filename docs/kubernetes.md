@@ -79,17 +79,14 @@ Notes:
 
 ## Kubernetes annotations
 
-| annotation                       | Description                                                                             | Default      | Example                               |
-|----------------------------------|-----------------------------------------------------------------------------------------|--------------|---------------------------------------|
-| kubernetes.io/ingress.class      | (required) Activate EasyHAProxy.                                                        | **required** | easyhaproxy-ingress                   |
-| easyhaproxy.redirect_ssl         | (optional) Boolean. Force redirect all endpoints to HTTPS.                              | false        | true or false                         |
-| easyhaproxy.letsencrypt          | (optional) Boolean. It will request letsencrypt certificates for the ingresses domains. | false        | true or false                         |
-| easyhaproxy.redirect             | (optional) JSON. Key pair with a domain and its destination.                            | *empty*      | {"domain":"redirect_url"}             |
-| easyhaproxy.mode                 | (optional) Set the HTTP mode for that connection.                                       | http         | http or tcp                           |
-| easyhaproxy.listen_port          | (optional) Set the an additional port for that ingress                                  | http         | http or tcp                           |
-| easyhaproxt.logLevel.certbot     | (optional) Certbot log level                                                            | DEBUG        | TRACE,DEBUG,INFO,WARN,ERROR or  FATAL |
-| easyhaproxt.logLevel.eashhaproxy | (optional) EasyHAProxy log level                                                        | DEBUG        | TRACE,DEBUG,INFO,WARN,ERROR or  FATAL |
-| easyhaproxt.logLevel.haproxy     | (optional) HAProxy log level                                                            | INFO         | TRACE,DEBUG,INFO,WARN,ERROR or  FATAL |
+| annotation                       | Description                                                                         | Default      | Example                               |
+|----------------------------------|-------------------------------------------------------------------------------------|--------------|---------------------------------------|
+| kubernetes.io/ingress.class      | (required) Activate EasyHAProxy.                                                    | **required** | easyhaproxy-ingress                   |
+| easyhaproxy.redirect_ssl         | (optional) Boolean. Force redirect all endpoints to HTTPS.                          | false        | true or false                         |
+| easyhaproxy.certbot              | (optional) Boolean. It will request certbot certificates for the ingresses domains. | false        | true or false                         |
+| easyhaproxy.redirect             | (optional) JSON. Key pair with a domain and its destination.                        | *empty*      | {"domain":"redirect_url"}             |
+| easyhaproxy.mode                 | (optional) Set the HTTP mode for that connection.                                   | http         | http or tcp                           |
+| easyhaproxy.listen_port          | (optional) Set the an additional port for that ingress                              | http         | http or tcp                           |
 
 **Important**: The annotations are per ingress and applied to all hosts in that ingress configuration.
 

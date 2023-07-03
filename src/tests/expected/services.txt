@@ -67,7 +67,7 @@ backend srv_node-exporter_quantum_example_org_31337
     server srv-0 my-stack_node-exporter:9100 check weight 1
 
 frontend http_in_443
-    bind *:443  ssl crt /certs/letsencrypt/ alpn h2,http/1.1 crt /certs/haproxy/ alpn h2,http/1.1
+    bind *:443  ssl crt /certs/certbot/ alpn h2,http/1.1 crt /certs/haproxy/ alpn h2,http/1.1
     mode http
     redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i somehost.com.br }
     redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i somehost.com }
