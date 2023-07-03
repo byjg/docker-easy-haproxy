@@ -31,7 +31,13 @@ class ContainerEnv:
                 "email": os.getenv("EASYHAPROXY_LETSENCRYPT_EMAIL"),
                 "server": os.getenv("EASYHAPROXY_LETSENCRYPT_SERVER", "false").lower() in ["true", "1", "yes"]
             }
-        
+
+        env_vars["logLevel"] = {
+            "easyhaproxy": os.getenv("EASYHAPROXY_LOG_LEVEL") if os.getenv("EASYHAPROXY_LOG_LEVEL") else Functions.DEBUG,
+            "haproxy": os.getenv("HAPROXY_LOG_LEVEL") if os.getenv("HAPROXY_LOG_LEVEL") else Functions.INFO,
+            "certbot": os.getenv("CERTBOT_LOG_LEVEL") if os.getenv("CERTBOT_LOG_LEVEL") else Functions.DEBUG,
+        }
+
         return env_vars
 
 

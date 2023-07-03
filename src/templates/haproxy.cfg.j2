@@ -1,5 +1,18 @@
+{% set log_definition = data["logLevel"] | default({}) %}
+{% set log_level = log_definition["haproxy"] | default("INFO") | upper %}
+{% if log_level == "TRACE" or log_level == "DEBUG" %}
+{% set haproxy_log_level = "debug" %}
+{% elif log_level == "INFO" %}
+{% set haproxy_log_level = "info" %}
+{% elif log_level == "WARN" %}
+{% set haproxy_log_level = "warning" %}
+{% elif log_level == "ERROR" %}
+{% set haproxy_log_level = "err" %}
+{% elif log_level == "FATAL" %}
+{% set haproxy_log_level = "crit" %}
+{% endif %}
 global
-    log stdout  format raw  local0  info
+    log stdout  format raw  local0  {{ haproxy_log_level }}
     maxconn 2000
 {% if data["ssl_mode"] == "strict" %}
 {% include "ssl_strict.j2" %}
