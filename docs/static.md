@@ -20,6 +20,9 @@ customerrors: true   # Optional (default false)
 
 ssl_mode: default
 
+logLevel:
+  haproxy: INFO
+
 certbot: {
   "email": "acme@example.org"
 }
@@ -83,8 +86,13 @@ customerrors: true   # Optional (default false)
 
 ssl_mode: default    # Optional
 
+logLevel:
+  certbot: DEBUG       # Optional (default: DEBUG). Can be: TRACE,DEBUG,INFO,WARN,ERROR,FATAL
+  easyhaproxy: DEBUG   # Optional (default: DEBUG). Can be: TRACE,DEBUG,INFO,WARN,ERROR,FATAL
+  haproxy: INFO        # Optional (default: INFO). Can be: TRACE,DEBUG,INFO,WARN,ERROR,FATAL
+
 certbot: {       # Optional. If you enable `certbot` will need to setu0p this, 
-                     #           otherwise the certificate will be issued
+                 #           otherwise the certificate will be issued
   "email": "acme@example.org"
 }
 

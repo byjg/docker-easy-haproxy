@@ -36,7 +36,7 @@ backend srv_stats
     server Local 127.0.0.1:1936
 
 frontend http_in_443
-    bind *:443  ssl crt /certs/certbot/ alpn http/1.1 crt /certs/haproxy/ alpn http/1.1
+    bind *:443  ssl crt /certs/certbot/ alpn h2,http/1.1 crt /certs/haproxy/ alpn h2,http/1.1
     mode http
 
     acl is_rule_hostssl_local_443_1 hdr(host) -i hostssl.local

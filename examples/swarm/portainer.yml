@@ -1,0 +1,28 @@
+# To install:
+# docker stack deploy -c portainer.yml portainer
+
+version: "3"
+
+services:
+  portainer:
+    image: portainer/portainer-ce:latest
+    volumes:
+     - portainer_data:/data portainer
+     - /var/run/docker.sock:/var/run/docker.sock
+    deploy:
+      replicas: 1
+      labels:
+        # easyhaproxy.http.redirect_ssl: true
+        # easyhaproxy.http.certbot: true
+        easyhaproxy.http.host: portainer.local
+        easyhaproxy.http.port: 80
+        easyhaproxy.http.localport: 9000
+
+volumes:
+  certs_certbot:
+    external: true
+  # certs_haproxy:
+  #   external: true
+  portainer_data:
+    # external: true
+

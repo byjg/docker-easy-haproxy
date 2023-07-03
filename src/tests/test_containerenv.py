@@ -1,6 +1,6 @@
 import os
 
-from functions import ContainerEnv
+from functions import Functions, ContainerEnv
 
 
 def test_container_env_empty():
@@ -8,6 +8,11 @@ def test_container_env_empty():
                "customerrors": False,
                "ssl_mode": "default",
                "lookup_label": "easyhaproxy",
+               "logLevel": {
+                   "easyhaproxy": Functions.DEBUG,
+                   "haproxy": Functions.INFO,
+                   "certbot": Functions.DEBUG,
+               },
                "certbot": {"autoconfig": "",
                            "eab_hmac_key": "",
                            "eab_kid": "",
@@ -26,6 +31,11 @@ def test_container_env_customerrors():
                    "customerrors": True,
                    "ssl_mode": "default",
                    "lookup_label": "easyhaproxy",
+                   "logLevel": {
+                       "easyhaproxy": Functions.DEBUG,
+                       "haproxy": Functions.INFO,
+                       "certbot": Functions.DEBUG,
+                   },
                    "certbot": {"autoconfig": "",
                                "eab_hmac_key": "",
                                "eab_kid": "",
@@ -34,7 +44,7 @@ def test_container_env_customerrors():
                                "retry_count": 60}
                } == ContainerEnv.read()
     finally:
-        os.environ['HAPROXY_CUSTOMERRORS'] = ''
+        del os.environ['HAPROXY_CUSTOMERRORS']
 
 
 def test_container_env_sslmode():
@@ -44,6 +54,11 @@ def test_container_env_sslmode():
                    "customerrors": False,
                    "ssl_mode": "strict",
                    "lookup_label": "easyhaproxy",
+                   "logLevel": {
+                       "easyhaproxy": Functions.DEBUG,
+                       "haproxy": Functions.INFO,
+                       "certbot": Functions.DEBUG,
+                   },
                    "certbot": {"autoconfig": "",
                                "eab_hmac_key": "",
                                "eab_kid": "",
@@ -52,7 +67,7 @@ def test_container_env_sslmode():
                                "retry_count": 60}
                } == ContainerEnv.read()
     finally:
-        os.environ['EASYHAPROXY_SSL_MODE'] = ''
+        del os.environ['EASYHAPROXY_SSL_MODE']
 
 
 def test_container_env_stats():
@@ -63,6 +78,11 @@ def test_container_env_stats():
                    "customerrors": False,
                    "ssl_mode": "default",
                    "lookup_label": "easyhaproxy",
+                   "logLevel": {
+                       "easyhaproxy": Functions.DEBUG,
+                       "haproxy": Functions.INFO,
+                       "certbot": Functions.DEBUG,
+                   },
                    "certbot": {"autoconfig": "",
                                "eab_hmac_key": "",
                                "eab_kid": "",
@@ -71,8 +91,8 @@ def test_container_env_stats():
                                "retry_count": 60}
                } == ContainerEnv.read()
     finally:
-        os.environ['HAPROXY_USERNAME'] = ''
-        os.environ['HAPROXY_STATS_PORT'] = ''
+        del os.environ['HAPROXY_USERNAME']
+        del os.environ['HAPROXY_STATS_PORT']
 
 
 def test_container_env_stats_password():
@@ -88,6 +108,11 @@ def test_container_env_stats_password():
                        "port": "1936"
 
                    },
+                   "logLevel": {
+                       "easyhaproxy": Functions.DEBUG,
+                       "haproxy": Functions.INFO,
+                       "certbot": Functions.DEBUG,
+                   },
                    "certbot": {"autoconfig": "",
                                "eab_hmac_key": "",
                                "eab_kid": "",
@@ -96,7 +121,7 @@ def test_container_env_stats_password():
                                "retry_count": 60}
                } == ContainerEnv.read()
     finally:
-        os.environ['HAPROXY_PASSWORD'] = ''
+        del os.environ['HAPROXY_PASSWORD']
 
 
 def test_container_env_stats_password_2():
@@ -113,6 +138,11 @@ def test_container_env_stats_password_2():
                        "password": "xyz",
                        "port": "2101"
                    },
+                   "logLevel": {
+                       "easyhaproxy": Functions.DEBUG,
+                       "haproxy": Functions.INFO,
+                       "certbot": Functions.DEBUG,
+                   },
                    "certbot": {"autoconfig": "",
                                "eab_hmac_key": "",
                                "eab_kid": "",
@@ -121,9 +151,9 @@ def test_container_env_stats_password_2():
                                "retry_count": 60}
                } == ContainerEnv.read()
     finally:
-        os.environ['HAPROXY_USERNAME'] = ''
-        os.environ['HAPROXY_STATS_PORT'] = ''
-        os.environ['HAPROXY_PASSWORD'] = ''
+        del os.environ['HAPROXY_USERNAME']
+        del os.environ['HAPROXY_STATS_PORT']
+        del os.environ['HAPROXY_PASSWORD']
 
 
 def test_container_env_certbot_email():
@@ -133,6 +163,11 @@ def test_container_env_certbot_email():
                    "customerrors": False,
                    "ssl_mode": "default",
                    "lookup_label": "easyhaproxy",
+                   "logLevel": {
+                       "easyhaproxy": Functions.DEBUG,
+                       "haproxy": Functions.INFO,
+                       "certbot": Functions.DEBUG,
+                   },
                    "certbot": {
                        "autoconfig": "",
                        'eab_hmac_key': "",
@@ -143,7 +178,7 @@ def test_container_env_certbot_email():
                    }
                } == ContainerEnv.read()
     finally:
-        os.environ['EASYHAPROXY_CERTBOT_EMAIL'] = ''
+        del os.environ['EASYHAPROXY_CERTBOT_EMAIL']
 
 
 def test_container_env_certbot_full():
@@ -154,17 +189,55 @@ def test_container_env_certbot_full():
     os.environ['EASYHAPROXY_CERTBOT_RETRY_COUNT'] = "10"
     try:
         assert {
-                   "customerrors": False,
-                   "ssl_mode": "default",
-                   "lookup_label": "easyhaproxy",
-                   "certbot": {
-                       "autoconfig": "",
-                       "email": "acme@example.org",
-                       "server": "schema://url/a",
-                       'eab_hmac_key': 'eab_hmac_key',
-                       'eab_kid': 'eab_kid',
-                       'retry_count': 10
-                   }
-               } == ContainerEnv.read()
+            "customerrors": False,
+            "ssl_mode": "default",
+            "lookup_label": "easyhaproxy",
+            "logLevel": {
+                "easyhaproxy": Functions.DEBUG,
+                "haproxy": Functions.INFO,
+                "certbot": Functions.DEBUG,
+            },
+           "certbot": {
+               "autoconfig": "",
+               "email": "acme@example.org",
+               "server": "schema://url/a",
+               'eab_hmac_key': 'eab_hmac_key',
+               'eab_kid': 'eab_kid',
+               'retry_count': 10
+           }
+        } == ContainerEnv.read()
     finally:
-        os.environ['EASYHAPROXY_CERTBOT_EMAIL'] = ''
+        del os.environ['EASYHAPROXY_CERTBOT_EMAIL']
+        del os.environ['EASYHAPROXY_CERTBOT_SERVER']
+        del os.environ['EASYHAPROXY_CERTBOT_EAB_KID']
+        del os.environ['EASYHAPROXY_CERTBOT_EAB_HMAC_KEY']
+        del os.environ['EASYHAPROXY_CERTBOT_RETRY_COUNT']
+
+
+def test_container_log_level():
+    os.environ['CERTBOT_LOG_LEVEL'] = Functions.TRACE
+    os.environ['EASYHAPROXY_LOG_LEVEL'] = Functions.ERROR
+    os.environ['HAPROXY_LOG_LEVEL'] = Functions.FATAL
+    try:
+        assert {
+           "customerrors": False,
+           "ssl_mode": "default",
+           "lookup_label": "easyhaproxy",
+           "logLevel": {
+               "easyhaproxy": Functions.ERROR,
+               "haproxy": Functions.FATAL,
+               "certbot": Functions.TRACE,
+           },
+           "certbot": {
+               "autoconfig": "",
+               'eab_hmac_key': "",
+               'eab_kid': "",
+               "email": "",
+               "server": False,
+               "retry_count": 60
+           }
+       } == ContainerEnv.read()
+    finally:
+        del os.environ['CERTBOT_LOG_LEVEL']
+        del os.environ['EASYHAPROXY_LOG_LEVEL']
+        del os.environ['HAPROXY_LOG_LEVEL']

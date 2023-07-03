@@ -22,6 +22,7 @@ class ProcessorInterface:
         self.certbot_hosts = None
         self.hosts = None
         self.filename = filename
+        self.label = ContainerEnv.read()['lookup_label']
         self.refresh()
 
     @staticmethod
@@ -151,28 +152,38 @@ class Swarm(ProcessorInterface):
     def inspect_network(self):
         ha_proxy_service_name = self.client.containers.get(socket.gethostname()).name.split('.')[0]
         ha_proxy_network_id = None
+        swarm_ingress_id = None
+
+        # Get the HAProxy network and the ingress network
         for endpoint in self.client.services.get(ha_proxy_service_name).attrs['Endpoint']["VirtualIPs"]:
-            ha_proxy_network_id = endpoint["NetworkID"]
-            if self.client.networks.get(ha_proxy_network_id).name != 'ingress':
+            network_name = self.client.networks.get(endpoint["NetworkID"]).name
+            if swarm_ingress_id is None and network_name == 'ingress':
+                swarm_ingress_id = endpoint["NetworkID"]
+            if ha_proxy_network_id is None and network_name != 'ingress':
+                ha_proxy_network_id = endpoint["NetworkID"]
+            if ha_proxy_network_id is not None and swarm_ingress_id is not None:
                 break
 
-        if ha_proxy_network_id is None:
-            raise "Could not find ingress network"
-
+        # Check if the service is attached to the HAProxy network
         self.parsed_object = {}
         for service in self.client.services.list():
+            if not any(self.label in key for key in service.attrs["Spec"]["Labels"]):
+                continue
+
             ip_address = None
             network_list = []
             for endpoint in service.attrs["Endpoint"]["VirtualIPs"]:
                 if ha_proxy_network_id == endpoint["NetworkID"]:
                     ip_address = endpoint["Addr"].split("/")[0]
                     break
-                network_list.append(endpoint["NetworkID"])
+                elif swarm_ingress_id != endpoint["NetworkID"]:
+                    network_list.append(endpoint["NetworkID"])
 
+            # Attach the service to the HAProxy network
             if ip_address is None:
                 network_list.append(ha_proxy_network_id)
-                service.update(networks=network_list)
-                continue  # skip to the next service to give time to update the network
+                service.update(networks = network_list)
+                continue # skip to the next service to give time to update the network
 
             self.parsed_object[ip_address] = service.attrs["Spec"]["Labels"]
 
@@ -187,10 +198,9 @@ class Kubernetes(ProcessorInterface):
         self.cert_cache = {}
         super().__init__()
 
-    @staticmethod
-    def _check_annotation(annotations, key):
+    def _check_annotation(self, annotations, key, default=None):
         if key not in annotations:
-            return None
+            return default
         return annotations[key]
 
     def inspect_network(self):
@@ -210,9 +220,7 @@ class Kubernetes(ProcessorInterface):
             redirect_ssl = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.redirect_ssl")
             redirect = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.redirect")
             mode = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.mode")
-            listen_port = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.listen_port")
-            if listen_port is None:
-                listen_port = 80
+            listen_port = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.listen_port", 80)
 
             data = {"creation_timestamp": ingress.metadata.creation_timestamp.strftime("%x %X"),
                     "resource_version": ingress.metadata.resource_version, "namespace": ingress.metadata.namespace}
@@ -259,6 +267,7 @@ class Kubernetes(ProcessorInterface):
                     rule_data["%s.redirect" % definition] = redirect
                 if mode is not None:
                     rule_data["%s.mode" % definition] = mode
+                rule_data["%s.balance" % definition] = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.balance", "roundrobin")
 
                 service_name = rule.http.paths[0].backend.service.name
                 try:

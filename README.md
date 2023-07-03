@@ -19,6 +19,14 @@ EasyHAProxy can detect and configure HAProxy automatically on the following plat
 - Docker Swarm
 - Kubernetes
 
+## Who is using?
+
+EasyHAProxy is part of some projects:
+- Dokku 
+- MicroK8s
+
+See detailed instructions on how to install below.
+
 ## EasyHAProxy Mission
 
 Easy to set up and low configuration to numerous features. 
@@ -38,7 +46,7 @@ EasyHAProxy will discover the services based on the Docker Tags of the container
 
 Also, it is possible to set up HAProxy from a simple Yaml file instead of creating `haproxy.cfg` file.
 
-## How Does It Works?
+## How Does It Work?
 
 You don't need to change your current infrastructure and don't need to learn the HAProxy configuration.
 

@@ -20,6 +20,5 @@
 | HAPROXY_CUSTOMERRORS             | (Optional) If HAProxy will use custom HTML errors. true/false.                                                                                                                                 | `false`       |
 
 
-
 ----
 [Open source ByJG](http://opensource.byjg.com)

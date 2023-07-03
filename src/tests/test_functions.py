@@ -13,15 +13,15 @@ def test_functions_check_local_level():
 
     os.environ['CERTBOT_LOG_LEVEL'] = 'warn'
     assert Functions.skip_log('CERTBOT', Functions.INFO) == True
-    os.environ['CERTBOT_LOG_LEVEL'] = ''
+    del os.environ['CERTBOT_LOG_LEVEL']
 
     os.environ['HAPROXY_LOG_LEVEL'] = 'warn'
     assert Functions.skip_log('HAPROXY', Functions.INFO) == True
-    os.environ['HAPROXY_LOG_LEVEL'] = ''
+    del os.environ['HAPROXY_LOG_LEVEL']
 
     os.environ['EASYHAPROXY_LOG_LEVEL'] = 'warn'
     assert Functions.skip_log('EASYHAPROXY', Functions.INFO) == True
-    os.environ['EASYHAPROXY_LOG_LEVEL'] = ''
+    del os.environ['EASYHAPROXY_LOG_LEVEL']
 
 
 def test_function_load_and_save():
@@ -57,7 +57,7 @@ def test_functions_check_log_sanity():
         assert len(Functions.debug_log) == 2
 
     finally:
-        os.environ['EASYHAPROXY_LOG_LEVEL'] = ''
+        del os.environ['EASYHAPROXY_LOG_LEVEL']
         Functions.debug_log = None
 
 

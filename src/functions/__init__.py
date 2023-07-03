@@ -27,6 +27,13 @@ class ContainerEnv:
         env_vars["lookup_label"] = os.getenv("EASYHAPROXY_LABEL_PREFIX") if os.getenv(
             "EASYHAPROXY_LABEL_PREFIX") else "easyhaproxy"
 
+        env_vars["logLevel"] = {
+            "easyhaproxy": os.getenv("EASYHAPROXY_LOG_LEVEL") if os.getenv(
+                "EASYHAPROXY_LOG_LEVEL") else Functions.DEBUG,
+            "haproxy": os.getenv("HAPROXY_LOG_LEVEL") if os.getenv("HAPROXY_LOG_LEVEL") else Functions.INFO,
+            "certbot": os.getenv("CERTBOT_LOG_LEVEL") if os.getenv("CERTBOT_LOG_LEVEL") else Functions.DEBUG,
+        }
+
         env_vars["certbot"] = {
             "autoconfig": os.getenv("EASYHAPROXY_CERTBOT_AUTOCONFIG", ""),
             "email": os.getenv("EASYHAPROXY_CERTBOT_EMAIL", ""),
@@ -72,7 +79,7 @@ class ContainerEnv:
                     env_vars["certbot"]["eab_kid"] = os.environ['EASYHAPROXY_CERTBOT_EAB_KID'] = resp["eab_kid"]
                     env_vars["certbot"]["eab_hmac_key"] = os.environ['EASYHAPROXY_CERTBOT_EAB_HMAC_KEY'] = resp["eab_hmac_key"]
                 else:
-                    os.environ["EASYHAPROXY_CERTBOT_EMAIL"] = ""
+                    del os.environ["EASYHAPROXY_CERTBOT_EMAIL"]
                     Functions.log(Functions.CERTBOT_LOG, Functions.ERROR, "Could not obtain ZeroSSL credentials " + resp["error"]["type"])
 
             os.environ['EASYHAPROXY_CERTBOT_SERVER'] = env_vars["certbot"]["server"]
@@ -174,32 +181,38 @@ class Functions:
 class Consts:
     easyhaproxy_config = "/etc/haproxy/static/config.yml"
     haproxy_config = "/etc/haproxy/haproxy.cfg"
+    custom_config_folder = "/etc/haproxy/conf.d"
     certs_certbot = "/certs/certbot"
     certs_haproxy = "/certs/haproxy"
 
 
 class DaemonizeHAProxy:
-    def __init__(self):
+    def __init__(self, custom_config_folder = None):
         self.process = None
         self.thread = None
         self.sleep_secs = None
+        self.custom_config_folder = custom_config_folder if custom_config_folder is not None else Consts.custom_config_folder
 
     def haproxy(self, action):
-        if action == "start":
-            self.__prepare(
-                "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid -S /var/run/haproxy.sock")
-        else:
-            return_code, pid_tmp = Functions().run_bash(Functions.HAPROXY_LOG, "cat /run/haproxy.pid", log_output=False)
-            pid = "".join(pid_tmp)
-            self.__prepare(
-                "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -p /run/haproxy.pid -x /var/run/haproxy.sock -sf %s" %
-                pid)
+        self.__prepare(self.get_haproxy_command(action))
 
         if self.process is None:
             return
 
         self.thread = Process(target=self.__start, args=())
         self.thread.start()
+
+    def get_haproxy_command(self, action, pid_file="/run/haproxy.pid"):
+        custom_config_files = ""
+        if len(list(self.get_custom_config_files().keys())) != 0:
+            custom_config_files = "-f %s" % (self.custom_config_folder)
+
+        if action == "start":
+            return "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg %s -p %s -S /var/run/haproxy.sock" % (custom_config_files, pid_file)
+        else:
+            return_code, output = Functions().run_bash(Functions.HAPROXY_LOG, "cat %s" % pid_file, log_output=False)
+            pid = "".join(output)
+            return "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg %s -p %s -x /var/run/haproxy.sock -sf %s" % (custom_config_files, pid_file, pid)
 
     def __prepare(self, command):
         source = Functions.HAPROXY_LOG
@@ -249,6 +262,16 @@ class DaemonizeHAProxy:
                 self.sleep_secs = 10
 
         time.sleep(self.sleep_secs)
+
+    def get_custom_config_files(self):
+        if not os.path.exists(self.custom_config_folder):
+            return {}
+
+        files = {}
+        for file in os.listdir(self.custom_config_folder):
+            if file.endswith(".cfg"):
+                files[os.path.join(self.custom_config_folder, file)] = os.path.getmtime(os.path.join(self.custom_config_folder, file))
+        return dict(sorted(files.items(), key=lambda t: t[0]))
 
 
 class Certbot:
