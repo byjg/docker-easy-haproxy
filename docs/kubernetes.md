@@ -93,23 +93,25 @@ Notes:
 
 **Important**: The annotations are per ingress and applied to all hosts in that ingress configuration.
 
-## Letsencrypt
+## Certbot / ACME / Letsencrypt
 
-It is necessary add the annotation `easyhaproxy.letsencrypt` to the ingress configuration:
+It is necessary add the annotation `easyhaproxy.certbot` to the ingress configuration:
 
 ```yaml
 kind: Ingress
 metadata:
   annotations:
     kubernetes.io/ingress.class: easyhaproxy-ingress
-    easyhaproxy.letsencrypt: 'true'
+    easyhaproxy.certbot: 'true'
   name: example-ingress
   namespace: example
 spec:
   ....
 ```
 
-Make sure your cluster is accessible both through ports 80 and 443.
+More info [here](acme.md).
+
+Make sure your cluster is accessible both through ports 80 and 443. 
 
 ## Custom SSL Certificates
 

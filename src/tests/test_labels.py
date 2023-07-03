@@ -1,16 +1,17 @@
-from .context import easymapping
 import json
-import pytest
+
+from easymapping import DockerLabelHandler
+
 
 def test_label_generation():
-    label = easymapping.DockerLabelHandler("foo")
+    label = DockerLabelHandler("foo")
 
     assert label.create("bar") == "foo.bar"
     assert label.create(["bar", "foobar"]) == "foo.bar.foobar"
 
 
 def test_label_data():
-    label = easymapping.DockerLabelHandler("base")
+    label = DockerLabelHandler("base")
     label.set_data(json.loads('{"base.definitions":"h2"}'))
 
     label_name = label.create("definitions")
@@ -20,7 +21,7 @@ def test_label_data():
 
 
 def test_label_complex_key():
-    label = easymapping.DockerLabelHandler("till")
+    label = DockerLabelHandler("till")
     
     data = dict()
     data["till.definitions"] = "h2"

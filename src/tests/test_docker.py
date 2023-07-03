@@ -1,10 +1,11 @@
-import pytest
 import os
 import time
+
 import docker
+import pytest
+
 from functions import Functions
 from processor import ProcessorInterface
-from processor import Docker
 
 
 def _get_hydrated_object(parsed_objects, lookup_key):
@@ -17,7 +18,6 @@ def _get_hydrated_object(parsed_objects, lookup_key):
 
 
 def _get_ip_host(parsed_objects, lookup_key):
-    hydrated_object = {}
     for key in parsed_objects:
         for keys in parsed_objects[key]:
             if lookup_key in keys:
@@ -46,7 +46,7 @@ def test_processor_docker():
                                           "easyhaproxy.http2.port": "90",
                                           "easyhaproxy.http2.localport": "9000",
                                           "easyhaproxy.http2.host": "host2.local",
-                                          "easyhaproxy.http2.letsencrypt": "true",
+                                          "easyhaproxy.http2.certbot": "true",
                                       })
     container2 = client.containers.run("byjg/static-httpserver",
                                        name="test2_processor_docker",
@@ -62,10 +62,10 @@ def test_processor_docker():
     try:
         time.sleep(1)
 
-        os.environ['EASYHAPROXY_LETSENCRYPT_EMAIL'] = 'docker@example.org'
+        os.environ['EASYHAPROXY_CERTBOT_EMAIL'] = 'docker@example.org'
 
         static = ProcessorInterface.factory("docker")
-        assert static.get_letsencrypt_hosts() is None
+        assert static.get_certbot_hosts() is None
 
         assert {
             'easyhaproxy.http.host': 'host1.local',
@@ -74,7 +74,7 @@ def test_processor_docker():
             'easyhaproxy.http2.host': 'host2.local',
             'easyhaproxy.http2.localport': '9000',
             'easyhaproxy.http2.port': '90',
-            'easyhaproxy.http2.letsencrypt': 'true',
+            'easyhaproxy.http2.certbot': 'true',
         } == _get_hydrated_object(static.get_parsed_object(), "easyhaproxy.http")
         assert {
             'easyhaproxy.ssl.host': 'hostssl.local',
@@ -90,7 +90,7 @@ def test_processor_docker():
         assert haproxy_cfg == Functions.load(os.path.join(os.path.dirname(os.path.realpath(__file__)), "./expected/docker.txt")).replace("test_processor_docker", _get_ip_host(
             static.get_parsed_object(), "easyhaproxy.http")).replace("test2_processor_docker", _get_ip_host(static.get_parsed_object(), "easyhaproxy.ssl"))
 
-        assert static.get_letsencrypt_hosts() == ['host2.local']
+        assert static.get_certbot_hosts() == ['host2.local']
         assert static.get_hosts() == [
             'hostssl.local:443',
             'host1.local:80',
@@ -100,7 +100,7 @@ def test_processor_docker():
             'hostssl.local.pem': 'Some PEM Certificate'
         }
     finally:
-        os.environ['EASYHAPROXY_LETSENCRYPT_EMAIL'] = ''
+        os.environ['EASYHAPROXY_CERTBOT_EMAIL'] = ''
         container.stop()
         container2.stop()
 

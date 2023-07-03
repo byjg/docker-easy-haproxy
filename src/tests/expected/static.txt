@@ -50,8 +50,8 @@ frontend http_in_80
 
     acl is_rule_host1_com_br_80_1 hdr(host) -i host1.com.br
     acl is_rule_host1_com_br_80_2 hdr(host) -i host1.com.br:80
-    acl is_letsencrypt_host1_com_br_80 path_beg /.well-known/acme-challenge/
-    use_backend letsencrypt_backend if is_letsencrypt_host1_com_br_80 is_rule_host1_com_br_80_1 OR is_letsencrypt_host1_com_br_80 is_rule_host1_com_br_80_2
+    acl is_certbot_host1_com_br_80 path_beg /.well-known/acme-challenge/
+    use_backend certbot_backend if is_certbot_host1_com_br_80 is_rule_host1_com_br_80_1 OR is_certbot_host1_com_br_80 is_rule_host1_com_br_80_2
     use_backend srv_host1_com_br_80 if is_rule_host1_com_br_80_1 OR is_rule_host1_com_br_80_2
 
     acl is_rule_host2_com_br_80_1 hdr(host) -i host2.com.br
@@ -105,6 +105,6 @@ backend srv_host3_com_br_8080
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
     server srv-0 domain:8181 check weight 1
 
-backend letsencrypt_backend
+backend certbot_backend
     mode http
     server certbot 127.0.0.1:2080

@@ -51,7 +51,7 @@ easyhaproxy:
     certbot: DEBUG
     easyhaproxy: DEBUG
     haproxy: DEBUG
-  letsencrypt:
+  certbot:
     email: ""
 
 service:

@@ -1,17 +1,90 @@
-from datetime import datetime
-from multiprocessing import Process, Lock
-import subprocess
-import shlex
-import time
 import os
-import re
+import shlex
+import subprocess
 import time
+from datetime import datetime
+from multiprocessing import Process
+
+import requests
+from OpenSSL import crypto
+
+
+class ContainerEnv:
+    @staticmethod
+    def read():
+        env_vars = {
+            "customerrors": True if os.getenv("HAPROXY_CUSTOMERRORS") == "true" else False,
+            "ssl_mode": os.getenv("EASYHAPROXY_SSL_MODE").lower() if os.getenv("EASYHAPROXY_SSL_MODE") else 'default'
+        }
+
+        if os.getenv("HAPROXY_PASSWORD"):
+            env_vars["stats"] = {
+                "username": os.getenv("HAPROXY_USERNAME") if os.getenv("HAPROXY_USERNAME") else "admin",
+                "password": os.getenv("HAPROXY_PASSWORD"),
+                "port": os.getenv("HAPROXY_STATS_PORT") if os.getenv("HAPROXY_STATS_PORT") else "1936",
+            }
+
+        env_vars["lookup_label"] = os.getenv("EASYHAPROXY_LABEL_PREFIX") if os.getenv(
+            "EASYHAPROXY_LABEL_PREFIX") else "easyhaproxy"
+
+        env_vars["certbot"] = {
+            "autoconfig": os.getenv("EASYHAPROXY_CERTBOT_AUTOCONFIG", ""),
+            "email": os.getenv("EASYHAPROXY_CERTBOT_EMAIL", ""),
+            "server": os.getenv("EASYHAPROXY_CERTBOT_SERVER", False),
+            "eab_kid": os.getenv("EASYHAPROXY_CERTBOT_EAB_KID", ""),
+            "eab_hmac_key": os.getenv("EASYHAPROXY_CERTBOT_EAB_HMAC_KEY", ""),
+            "retry_count": int(os.getenv("EASYHAPROXY_CERTBOT_RETRY_COUNT", 60)),
+        }
+
+        if env_vars["certbot"]["autoconfig"] != "" and not env_vars["certbot"]["server"] and env_vars["certbot"]["email"] != "":
+            if env_vars["certbot"]["autoconfig"] == "letsencrypt":
+                env_vars["certbot"]["server"] = "https://acme-v02.api.letsencrypt.org/directory"
+
+            if env_vars["certbot"]["autoconfig"] == "letsencrypt_test":
+                env_vars["certbot"]["server"] = "https://acme-staging-v02.api.letsencrypt.org/directory"
+
+            if env_vars["certbot"]["autoconfig"] == "buypass":
+                env_vars["certbot"]["server"] = "https://api.buypass.com/acme/directory"
+
+            if env_vars["certbot"]["autoconfig"] == "buypass_test":
+                env_vars["certbot"]["server"] = "https://api.test4.buypass.no/acme/directory"
+
+            if env_vars["certbot"]["autoconfig"] == "sslcom_rca":
+                env_vars["certbot"]["server"] = "https://acme.ssl.com/sslcom-dv-rsa"
+
+            if env_vars["certbot"]["autoconfig"] == "sslcom_ecc":
+                env_vars["certbot"]["server"] = "https://acme.ssl.com/sslcom-dv-ecc"
+
+            if env_vars["certbot"]["autoconfig"] == "google":
+                env_vars["certbot"]["server"] = "https://dv.acme-v02.api.pki.goog/directory"
+
+            if env_vars["certbot"]["autoconfig"] == "google_test":
+                env_vars["certbot"]["server"] = "https://dv.acme-v02.test-api.pki.goog/directory"
+
+            if env_vars["certbot"]["autoconfig"] == "zerossl":
+                url = "https://api.zerossl.com/acme/eab-credentials-email"
+                headers = {"Content-Type": "application/x-www-form-urlencoded"}
+                data = "email=" + env_vars["certbot"]["email"]
+                resp = requests.post(url, headers=headers, data=data).json()
+
+                if resp["success"]:
+                    env_vars["certbot"]["server"] = "https://acme.zerossl.com/v2/DV90"
+                    env_vars["certbot"]["eab_kid"] = os.environ['EASYHAPROXY_CERTBOT_EAB_KID'] = resp["eab_kid"]
+                    env_vars["certbot"]["eab_hmac_key"] = os.environ['EASYHAPROXY_CERTBOT_EAB_HMAC_KEY'] = resp["eab_hmac_key"]
+                else:
+                    os.environ["EASYHAPROXY_CERTBOT_EMAIL"] = ""
+                    Functions.log(Functions.CERTBOT_LOG, Functions.ERROR, "Could not obtain ZeroSSL credentials " + resp["error"]["type"])
+
+            os.environ['EASYHAPROXY_CERTBOT_SERVER'] = env_vars["certbot"]["server"]
+
+        return env_vars
+
 
 class Functions:
-    HAPROXY_LOG="HAPROXY"
-    EASYHAPROXY_LOG="EASYHAPROXY"
-    CERTBOT_LOG="CERTBOT"
-    INIT_LOG="INIT"
+    HAPROXY_LOG = "HAPROXY"
+    EASYHAPROXY_LOG = "EASYHAPROXY"
+    CERTBOT_LOG = "CERTBOT"
+    INIT_LOG = "INIT"
 
     TRACE = "TRACE"
     DEBUG = "DEBUG"
@@ -28,7 +101,7 @@ class Functions:
         level_importance = {
             Functions.TRACE: 0,
             Functions.DEBUG: 1,
-            Functions.INFO: 2, 
+            Functions.INFO: 2,
             Functions.WARN: 3,
             Functions.ERROR: 4,
             Functions.FATAL: 5
@@ -57,7 +130,7 @@ class Functions:
 
         if not isinstance(message, (list, tuple)):
             message = [message]
-        
+
         for line in message:
             log = "[%s] %s [%s]: %s" % (source, datetime.now().strftime("%x %X"), level, line.rstrip())
             print(log)
@@ -70,10 +143,10 @@ class Functions:
             command = shlex.split(command)
 
         try:
-            process = subprocess.Popen(command, 
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                            universal_newlines=True)
+            process = subprocess.Popen(command,
+                                       stdout=subprocess.PIPE,
+                                       stderr=subprocess.PIPE,
+                                       universal_newlines=True)
 
             output = []
 
@@ -92,17 +165,19 @@ class Functions:
                     Functions.log(source, Functions.WARN, process.stderr.readlines())
                     break
 
-            return output
+            return [return_code, output]
         except Exception as e:
-            Functions.log(source, Functions.ERROR, "%s" % (e))
+            Functions.log(source, Functions.ERROR, "%s" % e)
+            return [-99, e]
 
 
 class Consts:
     easyhaproxy_config = "/etc/haproxy/static/config.yml"
     haproxy_config = "/etc/haproxy/haproxy.cfg"
     custom_config_folder = "/etc/haproxy/conf.d"
-    certs_letsencrypt = "/certs/letsencrypt"
+    certs_certbot = "/certs/certbot"
     certs_haproxy = "/certs/haproxy"
+
 
 class DaemonizeHAProxy:
     def __init__(self, custom_config_folder = None):
@@ -137,29 +212,28 @@ class DaemonizeHAProxy:
             command = shlex.split(command)
 
         try:
-            self.process = subprocess.Popen(command, 
-                            shell=False,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                            bufsize=-1,
-                            universal_newlines=True)
+            self.process = subprocess.Popen(command,
+                                            shell=False,
+                                            stdout=subprocess.PIPE,
+                                            stderr=subprocess.PIPE,
+                                            bufsize=-1,
+                                            universal_newlines=True)
 
         except Exception as e:
-            Functions.log(source, Functions.ERROR, "%s" % (e))
-
+            Functions.log(source, Functions.ERROR, "%s" % e)
 
     def __start(self):
         source = Functions.HAPROXY_LOG
         try:
             with self.process.stdout:
-                for line in iter(self.process.stdout.readline, b''): 
+                for line in iter(self.process.stdout.readline, b''):
                     Functions.log(source, Functions.INFO, line)
 
-            returncode = self.process.wait() 
-            Functions.log(source, Functions.DEBUG, "Return code %s" % (returncode))
+            return_code = self.process.wait()
+            Functions.log(source, Functions.DEBUG, "Return code %s" % return_code)
 
         except Exception as e:
-            Functions.log(source, Functions.ERROR, "%s" % (e))
+            Functions.log(source, Functions.ERROR, "%s" % e)
 
     def is_alive(self):
         return self.thread.is_alive()
@@ -174,7 +248,7 @@ class DaemonizeHAProxy:
 
     def sleep(self):
         if self.sleep_secs is None:
-            try: 
+            try:
                 self.sleep_secs = int(os.getenv("EASYHAPROXY_REFRESH_CONF", "10"))
             except ValueError:
                 self.sleep_secs = 10
@@ -193,16 +267,39 @@ class DaemonizeHAProxy:
 
 
 class Certbot:
-    def __init__(self, certs, email, test_server):
-        self.certs = certs
-        self.email = email
-        self.test_server = self.set_test_server(test_server)
+    def __init__(self, certs):
+        env = ContainerEnv.read()
 
-    def set_test_server(self, test_server):
-        if test_server.lower() == "staging":
+        self.certs = certs
+        self.email = env["certbot"]["email"]
+        self.acme_server = self.set_acme_server(env["certbot"]["server"])
+        self.eab_kid = self.set_eab_kid(env["certbot"]["eab_kid"])
+        self.eab_hmac_key = self.set_eab_hmac_key(env["certbot"]["eab_hmac_key"])
+        self.freeze_issue = {}
+        self.retry_count = env["certbot"]["retry_count"]
+
+    @staticmethod
+    def set_acme_server(acme_server):
+        if not acme_server:
+            return ""
+        if acme_server.lower() == "staging":
             return "--staging"
-        elif test_server.lower().startswith("http"):
-            return "--server " + test_server
+        elif acme_server.lower().startswith("http"):
+            return "--server " + acme_server
+        else:
+            return ""
+
+    @staticmethod
+    def set_eab_kid(eab_kid):
+        if eab_kid != "":
+            return "--eab-kid \"%s\"" % eab_kid
+        else:
+            return ""
+
+    @staticmethod
+    def set_eab_hmac_key(eab_hmac_key):
+        if eab_hmac_key != "":
+            return "--eab-hmac-key \"%s\"" % eab_hmac_key
         else:
             return ""
 
@@ -213,23 +310,25 @@ class Certbot:
         try:
             request_certs = []
             renew_certs = []
-            current_time = time.time()
             for host in hosts:
-                filename = "%s/%s.pem" % (self.certs, host)
-                host_arg = '-d %s' % (host)
-                if not os.path.exists(filename):
-                    Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "Request new certificate for %s" % (host))
+                cert_status = self.get_certificate_status(host)
+                host_arg = '-d %s' % host
+                if cert_status == "ok" or cert_status == "error":
+                    continue
+                elif host in self.freeze_issue:
+                    freeze_count = self.freeze_issue.pop(host, 0)
+                    if freeze_count > 0:
+                        Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG,
+                                      "Waiting freezing period (%d) for %s due previous errors" % (freeze_count, host))
+                        self.freeze_issue[host] = freeze_count-1
+                elif cert_status == "not_found" or cert_status == "expired":
+                    Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "[%s] Request new certificate for %s" % (cert_status, host))
                     request_certs.append(host_arg)
-                else:
-                    creation_time = os.path.getctime(filename)
-                    if (current_time - creation_time) // (24 * 3600) > 90:
-                        Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "Request expired certificate for %s" % (host))
-                        request_certs.append(host_arg)
-                    if (current_time - creation_time) // (24 * 3600) >= 45:
-                        Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "Renew certificate for %s" % (host))
-                        renew_certs.append(host_arg)
+                elif cert_status == "expiring":
+                    Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "[%s] Renew certificate for %s" % (cert_status, host))
+                    renew_certs.append(host_arg)
 
-            certbot_certonly = ('/usr/bin/certbot certonly {test_server}'
+            certbot_certonly = ('/usr/bin/certbot certonly {acme_server}'
                                 '    --standalone'
                                 '    --preferred-challenges http'
                                 '    --http-01-port 2080'
@@ -238,39 +337,80 @@ class Certbot:
                                 '    --no-eff-email'
                                 '    --non-interactive'
                                 '    --max-log-backups=0'
-                                '    {certs} --email {email}'.format(certs = ' '.join(request_certs),
-                                                           email = self.email,
-                                                           test_server = self.test_server)
-                            )
+                                '    {eab_kid} {eab_hmac_key}'
+                                '    {certs} --email {email}'.format(eab_kid=self.eab_kid,
+                                                                     eab_hmac_key=self.eab_hmac_key,
+                                                                     certs=' '.join(request_certs),
+                                                                     email=self.email,
+                                                                     acme_server=self.acme_server)
+                                )
 
             ret_reload = False
+            return_code_issue = 0
+            return_code_renew = 0
             if len(request_certs) > 0:
-                Functions.run_bash(Functions.CERTBOT_LOG, certbot_certonly, return_result=False)
+                return_code_issue, output = Functions.run_bash(Functions.CERTBOT_LOG, certbot_certonly, return_result=False)
                 ret_reload = True
 
             if len(renew_certs) > 0:
-                Functions.run_bash(Functions.CERTBOT_LOG, "/usb/bin/certbot renew", return_result=False)
+                return_code_renew, output = Functions.run_bash(Functions.CERTBOT_LOG, "/usr/bin/certbot renew", return_result=False)
                 ret_reload = True
 
             if ret_reload:
                 self.find_live_certificates()
 
+            if return_code_issue != 0:
+                self.find_missing_certificates(request_certs)
+            if return_code_renew != 0:
+                self.find_missing_certificates(renew_certs)
+
             return ret_reload
         except Exception as e:
-            Functions.log(Functions.CERTBOT_LOG, Functions.ERROR, "%s" % (e))
+            Functions.log(Functions.CERTBOT_LOG, Functions.ERROR, "%s" % e)
             return False
-        
-    def merge_certificate(self, cert, key, filename):
+
+    @staticmethod
+    def merge_certificate(cert, key, filename):
         Functions.save(filename, cert + key)
-    
+
     def find_live_certificates(self):
-        letsencrypt_certs = "/etc/letsencrypt/live/"
-        if not os.path.exists(letsencrypt_certs):
+        certbot_certs = "/etc/letsencrypt/live/"
+        if not os.path.exists(certbot_certs):
             return
-        for item in os.listdir(letsencrypt_certs):
-            path = os.path.join(letsencrypt_certs, item)
+        for item in os.listdir(certbot_certs):
+            path = os.path.join(certbot_certs, item)
             if os.path.isdir(path):
                 cert = Functions.load(os.path.join(path, "cert.pem"))
                 key = Functions.load(os.path.join(path, "privkey.pem"))
                 filename = "%s/%s.pem" % (self.certs, item)
                 self.merge_certificate(cert, key, filename)
+
+    def get_certificate_status(self, host):
+        current_time = time.time()
+        filename = "%s/%s.pem" % (self.certs, host)
+        if not os.path.exists(filename):
+            return "not_found"
+
+        try:
+            with open(filename, 'rb') as file:
+                certificate_str = file.read()
+            certificate = crypto.load_certificate(crypto.FILETYPE_PEM, certificate_str)
+            expiration_after = datetime.strptime(certificate.get_notAfter().decode()[:-1], '%Y%m%d%H%M%S').timestamp()
+            if current_time >= expiration_after:
+                return "expired"
+            elif (expiration_after - current_time) // (24 * 3600) <= 15:
+                return "expiring"
+        except Exception as e:
+            Functions.log(Functions.CERTBOT_LOG, Functions.ERROR, "Certificate %s error %s" % (host, e))
+            return "error"
+
+        return "ok"
+
+    def find_missing_certificates(self, hosts):
+        for host in hosts:
+            if host.startswith("-d "):
+                host = host[3:]
+            cert_status = self.get_certificate_status(host)
+            if cert_status != "ok":
+                self.freeze_issue[host] = self.retry_count
+                Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "Freeze issuing ssl for %s due failure. The certificate is %s" % (host, cert_status))

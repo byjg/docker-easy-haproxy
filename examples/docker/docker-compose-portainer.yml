@@ -1,4 +1,4 @@
-# docker volume create certs_letsencrypt
+# docker volume create certs_certbot
 # docker volume create certs_haproxy
 # docker volume create portainer_data
 # docker network create easyhaproxy
@@ -11,13 +11,13 @@ services:
     image: byjg/easy-haproxy
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - certs_letsencrypt:/certs/letsencrypt
+      - certs_certbot:/certs/certbot
 #      - certs_haproxy:/certs/haproxy
 
     environment:
       EASYHAPROXY_DISCOVER: docker
       EASYHAPROXY_LABEL_PREFIX: easyhaproxy
-      EASYHAPROXY_LETSENCRYPT_EMAIL: changeme@example.org
+      EASYHAPROXY_CERTBOT_EMAIL: changeme@example.org
       EASYHAPROXY_SSL_MODE: "default"
       HAPROXY_CUSTOMERRORS: "true"
       HAPROXY_USERNAME: admin
@@ -32,18 +32,18 @@ services:
   portainer:
     image: portainer/portainer-ce:latest
     volumes:
-     - portainer_data:/data portainer
+     - portainer_data:/data
      - /var/run/docker.sock:/var/run/docker.sock
     labels:
       easyhaproxy.http.redirect_ssl: true
-      easyhaproxy.http.letsencrypt: true
+      easyhaproxy.http.certbot: true
       easyhaproxy.http.host: portainer.xpto.us
       easyhaproxy.http.port: 80
       easyhaproxy.http.localport: 9000
 
 
 volumes:
-  certs_letsencrypt:
+  certs_certbot:
     external: true
   certs_haproxy:
     external: true

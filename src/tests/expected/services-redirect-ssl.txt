@@ -75,6 +75,6 @@ backend srv_host1_local_443
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
     server srv-0 5b69bc7fea1b:8080 check weight 1
 
-backend letsencrypt_backend
+backend certbot_backend
     mode http
     server certbot 127.0.0.1:2080

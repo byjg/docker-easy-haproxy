@@ -23,8 +23,9 @@ ssl_mode: default
 logLevel:
   haproxy: INFO
 
-letsencrypt:
-  email: "acme@example.org"
+certbot: {
+  "email": "acme@example.org"
+}
 
 easymapping:
   - port: 80
@@ -32,7 +33,7 @@ easymapping:
       host1.com.br: 
         containers:
           - container:5000
-        letsencrypt: true
+        certbot: true
         redirect_ssl: true
       host2.com.br: 
         containers:
@@ -90,9 +91,10 @@ logLevel:
   easyhaproxy: DEBUG   # Optional (default: DEBUG). Can be: TRACE,DEBUG,INFO,WARN,ERROR,FATAL
   haproxy: INFO        # Optional (default: INFO). Can be: TRACE,DEBUG,INFO,WARN,ERROR,FATAL
 
-# Optional. If you enable `letsencrypt` will need to set up this, otherwise the certificate will be issued
-letsencrypt: 
-  email": "acme@example.org"
+certbot: {       # Optional. If you enable `certbot` will need to setu0p this, 
+                 #           otherwise the certificate will be issued
+  "email": "acme@example.org"
+}
 
 easymapping:
   - port: 80                 # Listen port
@@ -101,7 +103,7 @@ easymapping:
       host1.com.br:          # Hostname
         containers:
           - container:5000   # Endpoints of the hostname above (ip, dns, container, etc)
-        letsencrypt: true    # Optional. it will request a letsencrypt certiticate
+        certbot: true    # Optional. it will request a certbot certiticate
         redirect_ssl: true   # Optional. It will redirect this site to it SSL.
     ssl: true                # Optional. Inform this port will listen to SSL, instead of HTTP
     clone_to_ssl: true       # Optional. Default False. You clone these hosts to its equivalent SSL. 

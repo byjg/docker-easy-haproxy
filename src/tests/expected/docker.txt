@@ -84,8 +84,8 @@ frontend http_in_90
 
     acl is_rule_host2_local_90_1 hdr(host) -i host2.local
     acl is_rule_host2_local_90_2 hdr(host) -i host2.local:90
-    acl is_letsencrypt_host2_local_90 path_beg /.well-known/acme-challenge/
-    use_backend letsencrypt_backend if is_letsencrypt_host2_local_90 is_rule_host2_local_90_1 OR is_letsencrypt_host2_local_90 is_rule_host2_local_90_2
+    acl is_certbot_host2_local_90 path_beg /.well-known/acme-challenge/
+    use_backend certbot_backend if is_certbot_host2_local_90 is_rule_host2_local_90_1 OR is_certbot_host2_local_90 is_rule_host2_local_90_2
     use_backend srv_host2_local_90 if is_rule_host2_local_90_1 OR is_rule_host2_local_90_2
 
 backend srv_host2_local_90
@@ -96,6 +96,6 @@ backend srv_host2_local_90
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
     server srv-0 test_processor_docker:9000 check weight 1
 
-backend letsencrypt_backend
+backend certbot_backend
     mode http
     server certbot 127.0.0.1:2080

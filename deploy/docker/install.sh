@@ -3,7 +3,7 @@
 ASSETS_DIR="$(dirname "${BASH_SOURCE[0]}")"/../../build/assets/certs/haproxy
 
 docker network create easyhaproxy
-docker volume create certs_letsencrypt
+docker volume create certs_certbot
 docker volume create certs_haproxy
 
 docker run -d --rm --name easyhaproxy_install -v certs_haproxy:/certs alpine tail -f /dev/null

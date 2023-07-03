@@ -1,50 +1,26 @@
-from easymapping import HaproxyConfigGenerator
-from functions import Functions, Consts
-import yaml
-import sys
-import os
-import json
 import base64
-import docker
 import socket
+
+import docker
+import yaml
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 
-class ContainerEnv:
-    @staticmethod
-    def read():
-        env_vars = {
-            "customerrors": True if os.getenv("HAPROXY_CUSTOMERRORS") == "true" else False,
-            "ssl_mode": os.getenv("EASYHAPROXY_SSL_MODE").lower() if os.getenv("EASYHAPROXY_SSL_MODE") else 'default'
-        }
-
-        if os.getenv("HAPROXY_PASSWORD"):
-            env_vars["stats"] = {
-                "username": os.getenv("HAPROXY_USERNAME") if os.getenv("HAPROXY_USERNAME") else "admin",
-                "password": os.getenv("HAPROXY_PASSWORD"),
-                "port": os.getenv("HAPROXY_STATS_PORT") if os.getenv("HAPROXY_STATS_PORT") else "1936",
-            }
-
-        env_vars["lookup_label"] = os.getenv("EASYHAPROXY_LABEL_PREFIX") if os.getenv("EASYHAPROXY_LABEL_PREFIX") else "easyhaproxy"
-        if (os.getenv("EASYHAPROXY_LETSENCRYPT_EMAIL")):
-            env_vars["letsencrypt"] = {
-                "email": os.getenv("EASYHAPROXY_LETSENCRYPT_EMAIL"),
-                "server": os.getenv("EASYHAPROXY_LETSENCRYPT_SERVER", "false").lower() in ["true", "1", "yes"]
-            }
-
-        env_vars["logLevel"] = {
-            "easyhaproxy": os.getenv("EASYHAPROXY_LOG_LEVEL") if os.getenv("EASYHAPROXY_LOG_LEVEL") else Functions.DEBUG,
-            "haproxy": os.getenv("HAPROXY_LOG_LEVEL") if os.getenv("HAPROXY_LOG_LEVEL") else Functions.INFO,
-            "certbot": os.getenv("CERTBOT_LOG_LEVEL") if os.getenv("CERTBOT_LOG_LEVEL") else Functions.DEBUG,
-        }
-
-        return env_vars
+from easymapping import HaproxyConfigGenerator
+from functions import Functions, Consts, ContainerEnv
 
 
 class ProcessorInterface:
     static_file = Consts.easyhaproxy_config
 
-    def __init__(self, filename = None):
+    def __init__(self, filename=None):
+        self.certbot_hosts = None
+        self.parsed_object = None
+        self.cfg = None
+        self.hosts = None
+        self.cfg = None
+        self.certbot_hosts = None
+        self.hosts = None
         self.filename = filename
         self.label = ContainerEnv.read()['lookup_label']
         self.refresh()
@@ -60,11 +36,12 @@ class ProcessorInterface:
         elif mode == "kubernetes":
             return Kubernetes()
         else:
-            Functions.log("EASYHAPROXY", Functions.FATAL, "Expected mode to be 'static', 'docker', 'swarm' or 'kubernetes'. I got '%s'" % (mode))
+            Functions.log("EASYHAPROXY", Functions.FATAL,
+                          "Expected mode to be 'static', 'docker', 'swarm' or 'kubernetes'. I got '%s'" % mode)
             return None
 
     def refresh(self):
-        self.letsencrypt_hosts = None
+        self.certbot_hosts = None
         self.parsed_object = None
         self.cfg = None
         self.hosts = None
@@ -72,14 +49,14 @@ class ProcessorInterface:
         self.parse()
 
     def inspect_network(self):
-        #Abstract
+        # Abstract
         pass
 
     def parse(self):
         self.cfg = HaproxyConfigGenerator(ContainerEnv.read())
 
-    def get_letsencrypt_hosts(self):
-        return self.letsencrypt_hosts
+    def get_certbot_hosts(self):
+        return self.certbot_hosts
 
     def get_hosts(self):
         return self.hosts
@@ -87,7 +64,7 @@ class ProcessorInterface:
     def get_parsed_object(self):
         return self.parsed_object
 
-    def get_certs(self, key = None):
+    def get_certs(self, key=None):
         if key is None:
             return self.cfg.certs
         else:
@@ -95,7 +72,7 @@ class ProcessorInterface:
 
     def get_haproxy_conf(self):
         conf = self.cfg.generate(self.parsed_object)
-        self.letsencrypt_hosts = self.cfg.letsencrypt_hosts
+        self.certbot_hosts = self.cfg.certbot_hosts
         self.hosts = self.cfg.serving_hosts
         return conf
 
@@ -108,20 +85,27 @@ class ProcessorInterface:
 
 
 class Static(ProcessorInterface):
+    def __init__(self, filename=None):
+        self.parsed_object = None
+        self.static_content = None
+        self.static_content = None
+        self.cfg = None
+        super().__init__(filename)
+
     def inspect_network(self):
         self.parsed_object = {}
         self.static_content = None
-    
+
     def get_parsed_object(self):
         return self.static_content["easymapping"] if "easymapping" in self.static_content else []
 
     def get_hosts(self):
         hosts = []
-        for object in self.get_parsed_object():
-            if "hosts" not in object:
+        for obj in self.get_parsed_object():
+            if "hosts" not in obj:
                 continue
-            for host in object["hosts"].keys():
-                hosts.append("%s:%s" % (host, object["port"]))
+            for host in obj["hosts"].keys():
+                hosts.append("%s:%s" % (host, obj["port"]))
         return hosts
 
     def parse(self):
@@ -130,18 +114,21 @@ class Static(ProcessorInterface):
 
 
 class Docker(ProcessorInterface):
-    def __init__(self, filename = None):
+    def __init__(self, filename=None):
+        self.parsed_object = None
         self.client = docker.from_env()
         super().__init__()
-    
+
     def inspect_network(self):
         try:
-            ha_proxy_network_name = next(iter(self.client.containers.get(socket.gethostname()).attrs["NetworkSettings"]["Networks"]))
+            ha_proxy_network_name = next(
+                iter(self.client.containers.get(socket.gethostname()).attrs["NetworkSettings"]["Networks"]))
         except:
             # HAProxy is not running in a container, get first container network
             if len(self.client.containers.list()) == 0:
                 return
-            ha_proxy_network_name = next(iter(self.client.containers.get(self.client.containers.list()[0].name).attrs["NetworkSettings"]["Networks"]))
+            ha_proxy_network_name = next(iter(
+                self.client.containers.get(self.client.containers.list()[0].name).attrs["NetworkSettings"]["Networks"]))
 
         ha_proxy_network = self.client.networks.get(ha_proxy_network_name)
 
@@ -157,7 +144,8 @@ class Docker(ProcessorInterface):
 
 
 class Swarm(ProcessorInterface):
-    def __init__(self, filename = None):
+    def __init__(self, filename=None):
+        self.parsed_object = None
         self.client = docker.from_env()
         super().__init__()
 
@@ -201,7 +189,8 @@ class Swarm(ProcessorInterface):
 
 
 class Kubernetes(ProcessorInterface):
-    def __init__(self, filename = None):
+    def __init__(self, filename=None):
+        self.parsed_object = None
         config.load_incluster_config()
         config.verify_ssl = False
         self.api_instance = client.CoreV1Api()
@@ -215,7 +204,7 @@ class Kubernetes(ProcessorInterface):
         return annotations[key]
 
     def inspect_network(self):
-        
+
         ret = self.v1.list_ingress_for_all_namespaces(watch=False)
 
         self.parsed_object = {}
@@ -227,18 +216,14 @@ class Kubernetes(ProcessorInterface):
 
             ssl_hosts = []
 
-            letsencrypt = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.letsencrypt")
+            certbot = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.certbot")
             redirect_ssl = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.redirect_ssl")
             redirect = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.redirect")
             mode = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.mode")
-            listen_port = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.listen_port")
-            if listen_port is None:
-                listen_port = 80
+            listen_port = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.listen_port", 80)
 
-            data = {}
-            data["creation_timestamp"] = ingress.metadata.creation_timestamp.strftime("%x %X")
-            data["resource_version"] = ingress.metadata.resource_version
-            data["namespace"] = ingress.metadata.namespace
+            data = {"creation_timestamp": ingress.metadata.creation_timestamp.strftime("%x %X"),
+                    "resource_version": ingress.metadata.resource_version, "namespace": ingress.metadata.namespace}
 
             ingress_name = ingress.metadata.namespace
 
@@ -252,35 +237,37 @@ class Kubernetes(ProcessorInterface):
                         if tls.secret_name not in self.cert_cache or self.cert_cache[tls.secret_name] != secret.data:
                             self.cert_cache[tls.secret_name] = secret.data
                             Functions.save(
-                                "{0}/{1}.pem".format(Consts.certs_haproxy, tls.secret_name), 
-                                base64.b64decode(secret.data["tls.crt"]).decode('ascii') + "\n" + base64.b64decode(secret.data["tls.key"]).decode('ascii')
+                                "{0}/{1}.pem".format(Consts.certs_haproxy, tls.secret_name),
+                                base64.b64decode(secret.data["tls.crt"]).decode('ascii') + "\n" + base64.b64decode(
+                                    secret.data["tls.key"]).decode('ascii')
                             )
 
                         ssl_hosts.extend(tls.hosts)
                     except Exception as e:
-                        Functions.log("EASYHAPROXY", Functions.WARN, "Ingress %s - Get secret failed: '%s'" % (ingress_name, e))
+                        Functions.log("EASYHAPROXY", Functions.WARN,
+                                      "Ingress %s - Get secret failed: '%s'" % (ingress_name, e))
 
-            Functions.log("EASYHAPROXY", Functions.TRACE, "Ingress %s - SSL Hosts found '%s'" % (ingress_name, ssl_hosts))
+            Functions.log("EASYHAPROXY", Functions.TRACE,
+                          "Ingress %s - SSL Hosts found '%s'" % (ingress_name, ssl_hosts))
 
             for rule in ingress.spec.rules:
                 rule_data = {}
                 port_number = rule.http.paths[0].backend.service.port.number
                 definition = "easyhaproxy.%s_%s" % (rule.host.replace(".", "-"), port_number)
-                rule_data["%s.host" % (definition)] = rule.host
-                rule_data["%s.port" % (definition)] = listen_port
-                rule_data["%s.localport" % (definition)] = port_number
+                rule_data["%s.host" % definition] = rule.host
+                rule_data["%s.port" % definition] = listen_port
+                rule_data["%s.localport" % definition] = port_number
                 if rule.host in ssl_hosts:
-                    rule_data["%s.clone_to_ssl" % (definition)] = 'true'
+                    rule_data["%s.clone_to_ssl" % definition] = 'true'
                 if redirect_ssl is not None:
-                    rule_data["%s.redirect_ssl" % (definition)] = redirect_ssl
-                if letsencrypt is not None:
-                    rule_data["%s.letsencrypt" % (definition)] = letsencrypt
+                    rule_data["%s.redirect_ssl" % definition] = redirect_ssl
+                if certbot is not None:
+                    rule_data["%s.certbot" % definition] = certbot
                 if redirect is not None:
-                    rule_data["%s.redirect" % (definition)] = redirect
+                    rule_data["%s.redirect" % definition] = redirect
                 if mode is not None:
-                    rule_data["%s.mode" % (definition)] = mode
-                rule_data["%s.balance" % (definition)] = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.balance", "roundrobin")
-
+                    rule_data["%s.mode" % definition] = mode
+                rule_data["%s.balance" % definition] = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.balance", "roundrobin")
 
                 service_name = rule.http.paths[0].backend.service.name
                 try:
@@ -288,13 +275,10 @@ class Kubernetes(ProcessorInterface):
                     cluster_ip = api_response.spec.cluster_ip
                 except ApiException as e:
                     cluster_ip = None
-                    Functions.log("EASYHAPROXY", Functions.WARN, "Ingress %s - Service %s - Failed: '%s'" % (ingress_name, service_name, e))
-                
+                    Functions.log("EASYHAPROXY", Functions.WARN,
+                                  "Ingress %s - Service %s - Failed: '%s'" % (ingress_name, service_name, e))
+
                 if cluster_ip is not None:
                     if cluster_ip not in self.parsed_object.keys():
                         self.parsed_object[cluster_ip] = data
                     self.parsed_object[cluster_ip].update(rule_data)
-
-
-
-

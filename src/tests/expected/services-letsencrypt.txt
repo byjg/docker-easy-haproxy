@@ -49,9 +49,9 @@ frontend http_in_80
 
     acl is_rule_test_example_org_80_1 hdr(host) -i test.example.org
     acl is_rule_test_example_org_80_2 hdr(host) -i test.example.org:80
-    acl is_letsencrypt_test_example_org_80 path_beg /.well-known/acme-challenge/
-    use_backend letsencrypt_backend if is_letsencrypt_test_example_org_80 is_rule_test_example_org_80_1 OR is_letsencrypt_test_example_org_80 is_rule_test_example_org_80_2
-    http-request redirect scheme https code 301 if !is_letsencrypt_test_example_org_80 is_rule_test_example_org_80_1 OR !is_letsencrypt_test_example_org_80 is_rule_test_example_org_80_2
+    acl is_certbot_test_example_org_80 path_beg /.well-known/acme-challenge/
+    use_backend certbot_backend if is_certbot_test_example_org_80 is_rule_test_example_org_80_1 OR is_certbot_test_example_org_80 is_rule_test_example_org_80_2
+    http-request redirect scheme https code 301 if !is_certbot_test_example_org_80 is_rule_test_example_org_80_1 OR !is_certbot_test_example_org_80 is_rule_test_example_org_80_2
 
     acl is_rule_test2_example_org_80_1 hdr(host) -i test2.example.org
     acl is_rule_test2_example_org_80_2 hdr(host) -i test2.example.org:80
@@ -90,6 +90,6 @@ backend srv_test_example_org_443
     server srv-0 f5c645a0dfc6:80 check weight 1 verify none
     server srv-1 b63438410b6a:80 check weight 1 verify none
 
-backend letsencrypt_backend
+backend certbot_backend
     mode http
     server certbot 127.0.0.1:2080

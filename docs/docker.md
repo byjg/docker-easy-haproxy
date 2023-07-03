@@ -57,9 +57,9 @@ Please follow the [docker label configuration](container-labels.md) to see other
 
 You can configure the behavior of the EasyHAProxy by setup specific environment variables. To get a list of the variables, please follow the [docker container environment](docker-environment.md)
 
-## Setup certificates with Letsencrypt
+## Setup certificates with ACME (e.g. Letsencrypt)
 
-Follow [this link](letsencrypt.md)
+Follow [this link](acme.md)
 
 ## Setup your own certificates
 
