@@ -1,3 +1,6 @@
+# To install:
+# docker stack deploy -c services.yml services
+#
 # To test:
 # curl -k -H "Host: host1.local" https://127.0.0.1/
 # curl -k -H "Host: host2.local" https://127.0.0.1/
@@ -18,25 +21,6 @@
 version: "3"
 
 services:
-  haproxy:
-    image: byjg/easy-haproxy
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./host2.local.pem:/certs/haproxy/host2.local.pem
-    deploy:
-      replicas: 1
-    environment:
-      EASYHAPROXY_DISCOVER: swarm
-      EASYHAPROXY_SSL_MODE: "loose"
-      HAPROXY_CUSTOMERRORS: "true"
-      HAPROXY_USERNAME: admin
-      HAPROXY_PASSWORD: password
-      HAPROXY_STATS_PORT: 1936
-    ports:
-      - "80:80/tcp"
-      - "443:443/tcp"
-      - "1936:1936/tcp"
-
   container:
     image: byjg/static-httpserver
     deploy:

@@ -1,0 +1,40 @@
+# To Install
+# docker network create --driver overlay --attachable easyhaproxy
+# docker stack deploy -c easyhaproxy.yml easyhaproxy
+
+
+version: "3"
+
+services:
+  haproxy:
+    image: byjg/easy-haproxy:4.3.1-rc2
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./certs:/certs/haproxy
+      - certs_letsencrypt:/certs/letsencrypt
+    deploy:
+      replicas: 1
+    environment:
+      EASYHAPROXY_DISCOVER: swarm
+      EASYHAPROXY_SSL_MODE: "loose"
+      EASYHAPROXY_LETSENCRYPT_EMAIL: changeme@example.org
+      HAPROXY_CUSTOMERRORS: "true"
+      HAPROXY_USERNAME: admin
+      HAPROXY_PASSWORD: password
+      HAPROXY_STATS_PORT: 1936
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+      - "1936:1936/tcp"
+    networks:
+      - easyhaproxy
+
+networks:
+  easyhaproxy:
+    external: true
+
+volumes:
+  certs_letsencrypt:
+  #   external: true
+  # certs_haproxy:
+  #   external: true
