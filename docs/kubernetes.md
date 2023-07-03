@@ -39,7 +39,7 @@ kubectl apply -f \
     https://raw.githubusercontent.com/byjg/docker-easy-haproxy/4.3.1-rc1/deploy/kubernetes/easyhaproxy-daemonset.yml
 ```
 
-If necessary, you can configure environment variables. To get a list of the variables, please follow the [docker container environment](docker-environment.md)
+If necessary, you can configure environment variables. To get a list of the variables, please follow the [environment variable guide](environment-variable.md)
 
 ## Running containers
 

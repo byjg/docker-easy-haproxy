@@ -91,7 +91,7 @@ Please follow the [docker label configuration](container-labels.md) to see other
 
 ## Setup the EasyHAProxy container
 
-You can configure the behavior of the EasyHAProxy by setup specific environment variables. To get a list of the variables, please follow the [docker container environment](docker-environment.md)
+You can configure the behavior of the EasyHAProxy by setup specific environment variables. To get a list of the variables, please follow the [environment variable guide](environment-variable.md)
 
 ## More information
 

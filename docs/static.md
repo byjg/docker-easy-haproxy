@@ -72,7 +72,7 @@ docker run -d \
     byjg/easy-haproxy
 ```
 
-You can find other informations on [docker label configuration](container-labels.md) and [docker container environment](docker-environment.md)
+You can find other informations on [docker label configuration](container-labels.md) and [environment variable guide](environment-variable.md)
 
 ## Yaml Definition
 
