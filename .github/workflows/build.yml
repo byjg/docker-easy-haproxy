@@ -138,12 +138,14 @@ jobs:
           if [ "$TAG" = "$CURRENT_VERSION" ]; then
             echo "Skipping update version..."
           else
-            sed -i "s#easy-haproxy:[a-zA-Z0-9\.]*#easy-haproxy:$TAG#g" deploy/docker/docker-compose.yml 
-            sed -i "s#version: \"[a-zA-Z0-9\.]*\"#version: \"$TAG\"#g" deploy/kubernetes/easyhaproxy-*.yml 
-            sed -i "s#easy-haproxy:[a-zA-Z0-9\.]*#easy-haproxy:$TAG#g" deploy/kubernetes/easyhaproxy-*.yml 
+            sed -i "s#easy-haproxy:[a-zA-Z0-9\.-]*#easy-haproxy:$TAG#g" deploy/docker/docker-compose.yml 
+            sed -i "s#version: \"[a-zA-Z0-9\.-]*\"#version: \"$TAG\"#g" deploy/kubernetes/easyhaproxy-*.yml 
+            sed -i "s#easy-haproxy:[a-zA-Z0-9\.-]*#easy-haproxy:$TAG#g" deploy/kubernetes/easyhaproxy-*.yml
 
-            sed -i "s#easy-haproxy/[a-zA-Z0-9\.]*/#easy-haproxy/$TAG/#g" docs/kubernetes.md
-            sed -i "s#appVersion: \"[a-zA-Z0-9\.]*\"#appVersion: \"$TAG\"#g" helm/easyhaproxy/Chart.yaml
+            sed -i "s#easy-haproxy/[a-zA-Z0-9\.-]*/#easy-haproxy/$TAG/#g" docs/kubernetes.md
+            sed -i "s#appVersion: \"[a-zA-Z0-9\.-]*\"#appVersion: \"$TAG\"#g" helm/easyhaproxy/Chart.yaml
+          
+            find examples -type f -name '*.yml' -exec sed -i "s#\(byjg/easy-haproxy:\)[a-zA-Z0-9\.-]*#\1$TAG#g" {} \; -print
 
             VERSION=$(grep "version: " helm/easyhaproxy/Chart.yaml |  sed 's#version: ##g')
             NEW_VERSION=$(echo $VERSION | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.)

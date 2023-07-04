@@ -19,7 +19,7 @@ version: "3"
 
 services:
   haproxy:
-    image: byjg/easy-haproxy
+    image: byjg/easy-haproxy:4.3.1-rc1
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./host2.local.pem:/certs/haproxy/host2.local.pem
