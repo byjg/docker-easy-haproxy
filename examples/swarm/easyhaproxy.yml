@@ -17,7 +17,7 @@ services:
     environment:
       EASYHAPROXY_DISCOVER: swarm
       EASYHAPROXY_SSL_MODE: "loose"
-      EASYHAPROXY_LETSENCRYPT_EMAIL: changeme@example.org
+      EASYHAPROXY_CERTBOT_EMAIL: changeme@example.org
       HAPROXY_CUSTOMERRORS: "true"
       HAPROXY_USERNAME: admin
       HAPROXY_PASSWORD: password
