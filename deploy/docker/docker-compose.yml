@@ -5,13 +5,13 @@ services:
     image: byjg/easy-haproxy:4.3.1-rc1
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - certs_letsencrypt:/certs/letsencrypt
+      - certs_certbot:/certs/certbot
       - certs_haproxy:/certs/haproxy
 
     environment:
       EASYHAPROXY_DISCOVER: docker
       EASYHAPROXY_LABEL_PREFIX: easyhaproxy
-      EASYHAPROXY_LETSENCRYPT_EMAIL: changeme@example.org
+      EASYHAPROXY_CERTBOT_EMAIL: changeme@example.org
       EASYHAPROXY_SSL_MODE: "default"
       HAPROXY_CUSTOMERRORS: "true"
       HAPROXY_USERNAME: admin
@@ -27,7 +27,7 @@ services:
       - easyhaproxy
 
 volumes:
-  certs_letsencrypt:
+  certs_certbot:
     external: true
   certs_haproxy:
     external: true

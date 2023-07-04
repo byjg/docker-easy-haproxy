@@ -20,7 +20,10 @@ customerrors: true   # Optional (default false)
 
 ssl_mode: default
 
-letsencrypt: {
+logLevel:
+  haproxy: INFO
+
+certbot: {
   "email": "acme@example.org"
 }
 
@@ -30,7 +33,7 @@ easymapping:
       host1.com.br: 
         containers:
           - container:5000
-        letsencrypt: true
+        certbot: true
         redirect_ssl: true
       host2.com.br: 
         containers:
@@ -69,7 +72,7 @@ docker run -d \
     byjg/easy-haproxy
 ```
 
-You can find other informations on [docker label configuration](container-labels.md) and [docker container environment](docker-environment.md)
+You can find other informations on [docker label configuration](container-labels.md) and [environment variable guide](environment-variable.md)
 
 ## Yaml Definition
 
@@ -83,9 +86,18 @@ customerrors: true   # Optional (default false)
 
 ssl_mode: default    # Optional
 
-letsencrypt: {       # Optional. If you enable `letsencrypt` will need to setu0p this, 
-                     #           otherwise the certificate will be issued
-  "email": "acme@example.org"
+logLevel:
+  certbot: DEBUG       # Optional (default: DEBUG). Can be: TRACE,DEBUG,INFO,WARN,ERROR,FATAL
+  easyhaproxy: DEBUG   # Optional (default: DEBUG). Can be: TRACE,DEBUG,INFO,WARN,ERROR,FATAL
+  haproxy: INFO        # Optional (default: INFO). Can be: TRACE,DEBUG,INFO,WARN,ERROR,FATAL
+
+certbot:       
+  email: "acme@example.org"  # If email is defined enable ACME/Certbot
+  autoconfig: ""             # If empty use letsencrypt, otherwise try to set the CA defined. 
+  eab_hmac_key: ""           # If required by the CA, set here.
+  eab_kid: ""                # If required by the CA, set here.
+  server: False              # If empty/False uses Letsencrypt, otherwise the CA Endpoint defined here
+  retry_count: 60            # If the certificate reaches the Rate Limit, try again after 'n' iterations.
 }
 
 easymapping:
@@ -95,7 +107,7 @@ easymapping:
       host1.com.br:          # Hostname
         containers:
           - container:5000   # Endpoints of the hostname above (ip, dns, container, etc)
-        letsencrypt: true    # Optional. it will request a letsencrypt certiticate
+        certbot: true        # Optional. it will request a certbot certificate. Needs certbot.email set.
         redirect_ssl: true   # Optional. It will redirect this site to it SSL.
     ssl: true                # Optional. Inform this port will listen to SSL, instead of HTTP
     clone_to_ssl: true       # Optional. Default False. You clone these hosts to its equivalent SSL. 
@@ -103,7 +115,8 @@ easymapping:
       www.host1.com.br: http://host1.com.br
 ```
 
-**Note**: The only way to pass SSL certificates is to map the certificates to EasyHAProxy as a docker volume. Refer to the [SSL documentation](ssl.md) to learn how to do it. 
+**Note**: The only way to pass SSL certificates in the static configuration file is to map the certificates
+to EasyHAProxy as a docker volume. Refer to the [SSL documentation](ssl.md) to learn how to do it. 
 
 ----
 [Open source ByJG](http://opensource.byjg.com)

@@ -39,7 +39,7 @@ kubectl apply -f \
     https://raw.githubusercontent.com/byjg/docker-easy-haproxy/4.3.1-rc1/deploy/kubernetes/easyhaproxy-daemonset.yml
 ```
 
-If necessary, you can configure environment variables. To get a list of the variables, please follow the [docker container environment](docker-environment.md)
+If necessary, you can configure environment variables. To get a list of the variables, please follow the [environment variable guide](environment-variable.md)
 
 ## Running containers
 
@@ -71,7 +71,7 @@ Once the container is running, EasyHAProxy will detect automatically and start t
 
 You don't need to expose any port in your container.
 
-Caveats:
+Notes:
 
 - At this point, the implementation doesn't support all ingress properties or wildcard domains.
 - The ingress will publish the ports 80 and 443, plus 1936 if stats are enabled.
@@ -79,34 +79,36 @@ Caveats:
 
 ## Kubernetes annotations
 
-| annotation                  | Description                                                                             | Default      | Example      |
-|-----------------------------|-----------------------------------------------------------------------------------------|--------------|--------------|
-| kubernetes.io/ingress.class | (required) Activate EasyHAProxy.                                                        | **required** | easyhaproxy-ingress
-| easyhaproxy.redirect_ssl    | (optional) Boolean. Force redirect all endpoints to HTTPS.                              | false        | true or false
-| easyhaproxy.letsencrypt     | (optional) Boolean. It will request letsencrypt certificates for the ingresses domains. | false        | true or false
-| easyhaproxy.redirect        | (optional) JSON. Key pair with a domain and its destination.                                 | *empty*      | {"domain":"redirect_url"}
-| easyhaproxy.mode            | (optional) Set the HTTP mode for that connection.                                       | http         | http or tcp
-| easyhaproxy.listen_port     | (optional) Set the an additional port for that ingress                                  | http         | http or tcp
+| annotation                       | Description                                                                         | Default      | Example                               |
+|----------------------------------|-------------------------------------------------------------------------------------|--------------|---------------------------------------|
+| kubernetes.io/ingress.class      | (required) Activate EasyHAProxy.                                                    | **required** | easyhaproxy-ingress                   |
+| easyhaproxy.redirect_ssl         | (optional) Boolean. Force redirect all endpoints to HTTPS.                          | false        | true or false                         |
+| easyhaproxy.certbot              | (optional) Boolean. It will request certbot certificates for the ingresses domains. | false        | true or false                         |
+| easyhaproxy.redirect             | (optional) JSON. Key pair with a domain and its destination.                        | *empty*      | {"domain":"redirect_url"}             |
+| easyhaproxy.mode                 | (optional) Set the HTTP mode for that connection.                                   | http         | http or tcp                           |
+| easyhaproxy.listen_port          | (optional) Set the an additional port for that ingress                              | http         | http or tcp                           |
 
 **Important**: The annotations are per ingress and applied to all hosts in that ingress configuration.
 
-## Letsencrypt
+## Certbot / ACME / Letsencrypt
 
-It is necessary add the annotation `easyhaproxy.letsencrypt` to the ingress configuration:
+It is necessary add the annotation `easyhaproxy.certbot` to the ingress configuration:
 
 ```yaml
 kind: Ingress
 metadata:
   annotations:
     kubernetes.io/ingress.class: easyhaproxy-ingress
-    easyhaproxy.letsencrypt: 'true'
+    easyhaproxy.certbot: 'true'
   name: example-ingress
   namespace: example
 spec:
   ....
 ```
 
-Make sure your cluster is accessible both through ports 80 and 443.
+More info [here](acme.md).
+
+Make sure your cluster is accessible both through ports 80 and 443. 
 
 ## Custom SSL Certificates
 

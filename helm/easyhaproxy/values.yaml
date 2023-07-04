@@ -69,7 +69,7 @@ easyhaproxy:
     certbot: DEBUG
     easyhaproxy: DEBUG
     haproxy: DEBUG
-  letsencrypt:
+  certbot:
     email: ""
 
 # Make sure to create this

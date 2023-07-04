@@ -73,6 +73,6 @@ backend srv_hello_com_19901
     server srv-0 3e63154954b0:80 check weight 1
     server srv-1 eb294c110eb1:80 check weight 1
 
-backend letsencrypt_backend
+backend certbot_backend
     mode http
     server certbot 127.0.0.1:2080

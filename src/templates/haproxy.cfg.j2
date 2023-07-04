@@ -1,5 +1,18 @@
+{% set log_definition = data["logLevel"] | default({}) %}
+{% set log_level = log_definition["haproxy"] | default("INFO") | upper %}
+{% if log_level == "TRACE" or log_level == "DEBUG" %}
+{% set haproxy_log_level = "debug" %}
+{% elif log_level == "INFO" %}
+{% set haproxy_log_level = "info" %}
+{% elif log_level == "WARN" %}
+{% set haproxy_log_level = "warning" %}
+{% elif log_level == "ERROR" %}
+{% set haproxy_log_level = "err" %}
+{% elif log_level == "FATAL" %}
+{% set haproxy_log_level = "crit" %}
+{% endif %}
 global
-    log stdout  format raw  local0  info
+    log stdout  format raw  local0  {{ haproxy_log_level }}
     maxconn 2000
 {% if data["ssl_mode"] == "strict" %}
 {% include "ssl_strict.j2" %}
@@ -59,7 +72,7 @@ frontend {{ mode }}_in_{{ o["port"] }}
     {% for k in o["hosts"] -%}
         {% set host = k.replace(".", "_") + "_{0}".format(o["port"]) %}
 backend srv_{{ host }}
-    balance roundrobin
+    balance {{ o["balance"] | default("roundrobin") }}
     mode {{ mode }}
         {% if mode == "http" %}
     option forwardfor
@@ -67,15 +80,15 @@ backend srv_{{ host }}
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
         {% elif mode == "tcp" %}
     option tcp-check
-    tcp-check connect{{ " ssl" if o["health-check"] == "ssl" }}
+    tcp-check connect{{ " ssl" if o["ssl-check"] == "ssl" }}
         {% endif %}
         {% for c in o["hosts"][k]["containers"] %}
-    server srv-{{ loop.index0 }} {{ c }} check weight 1{{ " verify none" if o["health-check"] == "ssl" }}
+    server srv-{{ loop.index0 }} {{ c }} check weight 1{{ " verify none" if o["ssl-check"] == "ssl" }}
         {% endfor %}
     {% endfor %}
 {% endfor %}
 
-backend letsencrypt_backend
+backend certbot_backend
     mode http
     server certbot 127.0.0.1:2080
 
