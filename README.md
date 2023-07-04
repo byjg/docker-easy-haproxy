@@ -35,7 +35,7 @@ Easy to set up and low configuration to numerous features.
 
 EasyHAProxy will discover the services based on the Docker Tags of the containers running on a Docker host or Docker Swarm cluster and dynamically set up the `haproxy.cfg`. Below, EasyHAProxy main features:
 
-- Support Automatic Certificate Management Environment (ACME) protocol compatible with Let's encrypt and other issuers.
+- Support Automatic Certificate Management Environment (ACME) protocol compatible with Let's encrypt and others CA.
 - Set your custom SSL certificates
 - Balance traffic between multiple replicas
 - Set SSL with three different levels of validations and according to the most recent definitions.
@@ -76,7 +76,7 @@ Or you can install using tools:
 If you already set up the EasyHAProxy, is time to go deeper:
 
 - [Custom SSL](docs/ssl.md)
-- Automatic Certificate Issuing (e.g. Let's Encrypt)
+- [Automatic Certificate Issuing](docs/acme.md) (e.g. Letsencrypt)
 
 ## See EasyHAProxy in action
 
