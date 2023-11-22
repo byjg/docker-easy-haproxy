@@ -36,7 +36,7 @@ kubectl label nodes node-01 "easyhaproxy/node=master"
 kubectl create namespace easyhaproxy
 
 kubectl apply -f \
-    https://raw.githubusercontent.com/byjg/docker-easy-haproxy/4.3.1-rc1/deploy/kubernetes/easyhaproxy-daemonset.yml
+    https://raw.githubusercontent.com/byjg/docker-easy-haproxy/4.4.0/deploy/kubernetes/easyhaproxy-daemonset.yml
 ```
 
 If necessary, you can configure environment variables. To get a list of the variables, please follow the [environment variable guide](environment-variable.md)
