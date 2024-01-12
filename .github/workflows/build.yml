@@ -45,7 +45,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -160,14 +160,21 @@ jobs:
             git push
           fi
 
-      - run: curl https://opensource.byjg.com/add-helm.sh | bash /dev/stdin helm easyhaproxy
+  HelmDeploy:
+    if: github.ref == 'refs/heads/master'
+    needs: Helm
+    uses: byjg/byjg.github.io/.github/workflows/add-helm.yaml@master
+    with:
+      repo: ${{ github.event.repository.name }}
+      folder: helm
+      project: easyhaproxy
+    secrets: inherit
 
   Documentation:
-    runs-on: 'ubuntu-latest'
-    needs: Helm
     if: github.ref == 'refs/heads/master'
-    env:
-      DOC_GITHUB_TOKEN: '${{ secrets.DOC_TOKEN }}'
-    steps:
-      - uses: actions/checkout@v2
-      - run: curl https://opensource.byjg.com/add-doc.sh | bash /dev/stdin devops docker-easy-haproxy docs
+    needs: HelmDeploy
+    uses: byjg/byjg.github.io/.github/workflows/add-doc.yaml@master
+    with:
+      folder: devops
+      project: ${{ github.event.repository.name }}
+    secrets: inherit
