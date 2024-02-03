@@ -32,6 +32,7 @@ defaults
 frontend stats
     bind *:1936
     mode http
+    http-request use-service prometheus-exporter if { path /metrics }
     stats enable
     stats hide-version
     stats realm Haproxy\ Statistics
