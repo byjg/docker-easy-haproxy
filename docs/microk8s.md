@@ -2,6 +2,7 @@
 
 Microk8s is a lightweight Kubernetes distribution that can run on a single machine. It is very easy to install and use.
 You can add custom addons to your Microk8s installation.
+
 Here are the steps to install EasyHAProxy on your Microk8s.
 
 ## Enabling EasyHAProxy on MicroK8s
