@@ -1,13 +1,26 @@
-# Limitations
+# Limitations and Considerations
 
-EasyHAProxy currently expects to work in a single replica.
+## EasyHAProxy will not work with --network=host
 
-If more than one replica is running, EasyHAProxy will continue to work. However, each replica will discover the services independently.
+The --network=host option cannot be used with EasyHAProxy due to its networking requirements. 
+EasyHAProxy needs to inspect and interact with Docker containers from within the Docker network 
+where it's running. Using the --network=host option bypasses Docker networking, 
+preventing EasyHAProxy from accessing and configuring containers effectively.
 
-It means replicas can be out-of-sync for a few seconds because each replica will discover the pods separately.
+## Considerations for Multiple Replica Deployments in EasyHAProxy
 
-For Letsencrypt, this is worse because each replica will have a Letsencrypt certificate, and issuing a new one can fail because the
-letsencrypt challenge can be directed to the other replica. Also, you can hit the certificate issue limit. So if you intend to run multiple replicas **do not** activate letsencrypt.
+EasyHAProxy currently operates under the assumption of a single replica deployment.
+
+In the event of multiple replicas, EasyHAProxy can still operate; however, each replica will independently 
+discover services. This may lead to temporary inconsistencies among replicas as they may be out-of-sync 
+for a few seconds due to separate service discovery processes.
+
+However, it's crucial to highlight that running multiple replicas of EasyHAProxy can significantly 
+impact Letsencrypt certificate issuance. Each replica will possess its own Letsencrypt certificate, 
+potentially leading to challenges with certificate issuance. Challenges may be directed to different replicas,
+leading to potential failures in issuing new certificates and encountering certificate issuance limits. 
+Therefore, if you intend to run multiple replicas, it's advised to avoid activating Letsencrypt to mitigate 
+these issues.
 
 ----
 [Open source ByJG](http://opensource.byjg.com)
