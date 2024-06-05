@@ -19,7 +19,6 @@ We have three main branches in this project:
 
 ### Code Style and Guidelines
 
-- **Follow PSR Standards**: We follow [PSR-1](https://www.php-fig.org/psr/psr-1/), [PSR-2](https://www.php-fig.org/psr/psr-2/), and [PSR-12](https://www.php-fig.org/psr/psr-12/).
 - **Write Clear Commit Messages**: Use the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification.
 - **Documentation**: Update the documentation for any new features or changes.
 
