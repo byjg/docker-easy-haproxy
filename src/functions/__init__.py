@@ -41,8 +41,8 @@ class ContainerEnv:
             "eab_kid": os.getenv("EASYHAPROXY_CERTBOT_EAB_KID", ""),
             "eab_hmac_key": os.getenv("EASYHAPROXY_CERTBOT_EAB_HMAC_KEY", ""),
             "retry_count": int(os.getenv("EASYHAPROXY_CERTBOT_RETRY_COUNT", 60)),
-            "preferred_challenges": int(os.getenv("EASYHAPROXY_CERTBOT_PREFERRED_CHALLENGES", "http")),
-            "manual_auth_hook": int(os.getenv("EASYHAPROXY_CERTBOT_MANUAL_AUTH_HOOK", False)),
+            "preferred_challenges": os.getenv("EASYHAPROXY_CERTBOT_PREFERRED_CHALLENGES", "http"),
+            "manual_auth_hook": os.getenv("EASYHAPROXY_CERTBOT_MANUAL_AUTH_HOOK", False),
         }
 
         if env_vars["certbot"]["autoconfig"] != "" and not env_vars["certbot"]["server"] and env_vars["certbot"]["email"] != "":
