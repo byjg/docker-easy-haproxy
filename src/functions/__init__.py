@@ -41,6 +41,8 @@ class ContainerEnv:
             "eab_kid": os.getenv("EASYHAPROXY_CERTBOT_EAB_KID", ""),
             "eab_hmac_key": os.getenv("EASYHAPROXY_CERTBOT_EAB_HMAC_KEY", ""),
             "retry_count": int(os.getenv("EASYHAPROXY_CERTBOT_RETRY_COUNT", 60)),
+            "preferred_challenges": int(os.getenv("EASYHAPROXY_CERTBOT_PREFERRED_CHALLENGES", "http")),
+            "manual_auth_hook": int(os.getenv("EASYHAPROXY_CERTBOT_MANUAL_AUTH_HOOK", False)),
         }
 
         if env_vars["certbot"]["autoconfig"] != "" and not env_vars["certbot"]["server"] and env_vars["certbot"]["email"] != "":
@@ -285,8 +287,8 @@ class Certbot:
         self.eab_hmac_key = self.set_eab_hmac_key(env["certbot"]["eab_hmac_key"])
         self.freeze_issue = {}
         self.retry_count = env["certbot"]["retry_count"]
-        self.certbot_preferred_challenges = env["certbot"]["preferred_challenges"] or "http"
-        self.certbot_manual_auth_hook = env["certbot"]["manual_auth_hook"] or False
+        self.certbot_preferred_challenges = env["certbot"]["preferred_challenges"]
+        self.certbot_manual_auth_hook = env["certbot"]["manual_auth_hook"]
 
     @staticmethod
     def set_acme_server(acme_server):
