@@ -76,7 +76,6 @@ jobs:
             tags = `${{ join(steps.meta.outputs.tags, ',') }}`
             result = []
             tags.split("\n").forEach(function (item) {
-              echo item;
               short_tag = item.trim().split(":")[1]; 
               if (short_tag == "master" || short_tag == "main") {
                 result.push("latest");
@@ -86,7 +85,8 @@ jobs:
             })
             return result.join(",");
           result-encoding: string
-      - name: Get result
+
+      - name: Get Tags
         run: echo "${{ steps.tags.outputs.result }}"
 
       # Build and push Docker image with Buildx (don't push on PR)
