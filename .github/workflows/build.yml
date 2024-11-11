@@ -76,13 +76,12 @@ jobs:
             tags = `${{ join(steps.meta.outputs.tags, ',') }}`
             result = []
             tags.split("\n").forEach(function (item) {
+              echo item;
               short_tag = item.trim().split(":")[1]; 
-              result.push(short_tag);
-              if (short_tag != "latest") {
-                result.push(short_tag);
-              }
               if (short_tag == "master" || short_tag == "main") {
                 result.push("latest");
+              } else if (short_tag != "latest") {
+                result.push(short_tag);
               }
             })
             return result.join(",");
