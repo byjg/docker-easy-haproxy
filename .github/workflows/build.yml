@@ -77,8 +77,12 @@ jobs:
             result = []
             tags.split("\n").forEach(function (item) {
               short_tag = item.trim().split(":")[1]; 
+              result.push(short_tag);
               if (short_tag != "latest") {
                 result.push(short_tag);
+              }
+              if (short_tag == "master" || short_tag == "main") {
+                result.push("latest");
               }
             })
             return result.join(",");
@@ -97,7 +101,7 @@ jobs:
             RELEASE_VERSION_ARG="${{ steps.tags.outputs.result }}"
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' || github.event.inputs.push == 'true' }}
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.tags.outputs.result }}
           labels: ${{ steps.meta.outputs.labels }}
     
     outputs:
