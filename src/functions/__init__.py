@@ -361,7 +361,7 @@ class Certbot:
                                      '    --standalone'
                                     )
 
-            if self.certbot_manual_auth_hook != False:
+            if self.certbot_manual_auth_hook:
                 certbot_certonly += '    --manual --manual-auth-hook \'{hook}\''.format(hook=self.certbot_manual_auth_hook)
 
             ret_reload = False
