@@ -2,15 +2,19 @@
 
 ## Setup Docker EasyHAProxy
 
-This method involves using a standalone Docker installation to discover containers and configure HAProxy.
+This method involves using a standalone Docker installation to discover containers 
+and configure HAProxy.
 
-EasyHAProxy inspects Docker containers and retrieves labels to configure HAProxy. Once it identifies a container with at least the label 'easyhaproxy.http.host,' it configures HAProxy to redirect traffic to that container. To accomplish this, EasyHAProxy may need to attach the same network to its container.
+EasyHAProxy inspects Docker containers and retrieves labels to configure HAProxy. 
+Once it identifies a container with at least the label 'easyhaproxy.http.host,' 
+it configures HAProxy to redirect traffic to that container. 
+To accomplish this, EasyHAProxy may need to attach the same network to its container.
 
-It's recommended to create a network external to EasyHAProxy.
+It's recommended to create a network external to EasyHAProxy, although it's not mandatory.
 
 Limitations:
  - You cannot mix Docker containers with Swarm containers.
- - This method does not work with containers that use the '--network=host' option.
+ - This method does not work with containers that use the '--network=host' option. (see [limitations](limitations.md))
 
 e.g.:
 

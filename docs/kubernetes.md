@@ -9,7 +9,8 @@ EasyHAProxy immediately sets up HAProxy and begins serving traffic.
 For Kubernetes installations, there are three available installation modes:
 - DaemonSet: This mode exposes ports 80, 443, and 1936.
 - NodePort: Ports 31080, 31443, and 31936 are exposed.
-- ClusterIP: In this mode, no ports are exposed externally, and HAProxy is accessible only within the cluster.
+- ClusterIP: In this mode, no ports are exposed externally, and HAProxy is accessible only 
+  within the cluster.
 
 To install EasyHAProxy in your Kubernetes cluster, follow these steps:
 

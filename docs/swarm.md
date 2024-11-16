@@ -16,7 +16,7 @@ It's recommended to create a network external to EasyHAProxy.
 
 Limitations:
  - You cannot mix Docker containers with Swarm containers.
- - This method does not work with containers that use the '--network=host' option."
+ - This method does not work with containers that use the '--network=host' option. (see [limitations](limitations.md))
 
 e.g.:
 
