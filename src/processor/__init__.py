@@ -8,6 +8,7 @@ from kubernetes.client.rest import ApiException
 
 from easymapping import HaproxyConfigGenerator
 from functions import Functions, Consts, ContainerEnv
+from functions import loggerEasyHaproxy
 
 
 class ProcessorInterface:
@@ -36,8 +37,7 @@ class ProcessorInterface:
         elif mode == "kubernetes":
             return Kubernetes()
         else:
-            Functions.log("EASYHAPROXY", Functions.FATAL,
-                          "Expected mode to be 'static', 'docker', 'swarm' or 'kubernetes'. I got '%s'" % mode)
+            loggerEasyHaproxy.fatal("Expected mode to be 'static', 'docker', 'swarm' or 'kubernetes'. I got '%s'" % mode)
             return None
 
     def refresh(self):
@@ -244,11 +244,9 @@ class Kubernetes(ProcessorInterface):
 
                         ssl_hosts.extend(tls.hosts)
                     except Exception as e:
-                        Functions.log("EASYHAPROXY", Functions.WARN,
-                                      "Ingress %s - Get secret failed: '%s'" % (ingress_name, e))
+                        loggerEasyHaproxy.warn("Ingress %s - Get secret failed: '%s'" % (ingress_name, e))
 
-            Functions.log("EASYHAPROXY", Functions.TRACE,
-                          "Ingress %s - SSL Hosts found '%s'" % (ingress_name, ssl_hosts))
+            loggerEasyHaproxy.debug("Ingress %s - SSL Hosts found '%s'" % (ingress_name, ssl_hosts))
 
             for rule in ingress.spec.rules:
                 rule_data = {}
@@ -275,8 +273,7 @@ class Kubernetes(ProcessorInterface):
                     cluster_ip = api_response.spec.cluster_ip
                 except ApiException as e:
                     cluster_ip = None
-                    Functions.log("EASYHAPROXY", Functions.WARN,
-                                  "Ingress %s - Service %s - Failed: '%s'" % (ingress_name, service_name, e))
+                    loggerEasyHaproxy.warn("Ingress %s - Service %s - Failed: '%s'" % (ingress_name, service_name, e))
 
                 if cluster_ip is not None:
                     if cluster_ip not in self.parsed_object.keys():

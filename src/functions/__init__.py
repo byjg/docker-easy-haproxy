@@ -1,13 +1,14 @@
 import os
 import shlex
 import subprocess
+import sys
 import time
+import logging
 from datetime import datetime
 from multiprocessing import Process
 
 import requests
 from OpenSSL import crypto
-
 
 class ContainerEnv:
     @staticmethod
@@ -82,7 +83,7 @@ class ContainerEnv:
                     env_vars["certbot"]["eab_hmac_key"] = os.environ['EASYHAPROXY_CERTBOT_EAB_HMAC_KEY'] = resp["eab_hmac_key"]
                 else:
                     del os.environ["EASYHAPROXY_CERTBOT_EMAIL"]
-                    Functions.log(Functions.CERTBOT_LOG, Functions.ERROR, "Could not obtain ZeroSSL credentials " + resp["error"]["type"])
+                    loggerCertbot.error("Could not obtain ZeroSSL credentials " + resp["error"]["type"])
 
             os.environ['EASYHAPROXY_CERTBOT_SERVER'] = env_vars["certbot"]["server"]
 
@@ -102,22 +103,25 @@ class Functions:
     ERROR = "ERROR"
     FATAL = "FATAL"
 
-    debug_log = None
-
     @staticmethod
     def skip_log(source, log_level_str):
-        level = os.getenv("%s_LOG_LEVEL" % (source.upper()), "").upper()
+        level = os.getenv("%s_LOG_LEVEL" % (source.name.upper()), "").upper()
         level_importance = {
-            Functions.TRACE: 0,
-            Functions.DEBUG: 1,
-            Functions.INFO: 2,
-            Functions.WARN: 3,
-            Functions.ERROR: 4,
-            Functions.FATAL: 5
+            Functions.TRACE: logging.DEBUG,
+            Functions.DEBUG: logging.DEBUG,
+            Functions.INFO: logging.INFO,
+            Functions.WARN: logging.WARNING,
+            Functions.ERROR: logging.ERROR,
+            Functions.FATAL: logging.FATAL
         }
-        level_required = 1 if level not in level_importance else level_importance[level]
-        level_asked = 1 if log_level_str.upper() not in level_importance else level_importance[log_level_str.upper()]
-        return level_asked < level_required
+        selected_level = level_importance[level] if level in level_importance else logging.INFO
+
+        log_source_handler = logging.StreamHandler(sys.stdout)
+        log_source_formatter = logging.Formatter('%(name)s [%(asctime)s] %(levelname)s - %(message)s')
+        log_source_handler.setFormatter(log_source_formatter)
+        source.setLevel(selected_level)
+        source.addHandler(log_source_handler)
+        return selected_level
 
     @staticmethod
     def load(filename):
@@ -130,24 +134,7 @@ class Functions:
             file.write(contents)
 
     @staticmethod
-    def log(source, level, message):
-        if message is None or message == "":
-            return
-
-        if Functions.skip_log(source, level):
-            return
-
-        if not isinstance(message, (list, tuple)):
-            message = [message]
-
-        for line in message:
-            log = "[%s] %s [%s]: %s" % (source, datetime.now().strftime("%x %X"), level, line.rstrip())
-            print(log)
-            if Functions.debug_log is not None:
-                Functions.debug_log.append(log)
-
-    @staticmethod
-    def run_bash(source, command, log_output=True, return_result=True):
+    def run_bash(log_source, command, log_output=True, return_result=True):
         if not isinstance(command, (list, tuple)):
             command = shlex.split(command)
 
@@ -161,22 +148,24 @@ class Functions:
 
             while True:
                 line = process.stdout.readline().rstrip()
+                error_line = process.stderr.readline().rstrip()
                 output.append(line) if return_result else None
-                Functions.log(source, Functions.INFO, line) if log_output else None
-                Functions.log(source, Functions.WARN, process.stderr.readline())
+                log_source.info(line) if log_output and len(line) > 0 else None
+                log_source.warning(error_line) if len(error_line) > 0 else None
                 return_code = process.poll()
                 if return_code is not None:
                     lines = []
+                    error_line = process.stderr.readline().rstrip()
                     for line in process.stdout.readlines():
                         output.append(line.rstrip()) if return_result else None
                         lines.append(line.rstrip())
-                    Functions.log(source, Functions.INFO, lines) if log_output else None
-                    Functions.log(source, Functions.WARN, process.stderr.readlines())
+                    log_source.info(lines) if log_output and len(lines) > 0 else None
+                    log_source.warning(error_line) if len(error_line) > 0 else None
                     break
 
             return [return_code, output]
         except Exception as e:
-            Functions.log(source, Functions.ERROR, "%s" % e)
+            log_source.error("%s" % e)
             return [-99, e]
 
 
@@ -212,12 +201,11 @@ class DaemonizeHAProxy:
         if action == "start":
             return "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg %s -p %s -S /var/run/haproxy.sock" % (custom_config_files, pid_file)
         else:
-            return_code, output = Functions().run_bash(Functions.HAPROXY_LOG, "cat %s" % pid_file, log_output=False)
+            return_code, output = Functions().run_bash(loggerHaproxy, "cat %s" % pid_file, log_output=False)
             pid = "".join(output)
             return "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg %s -p %s -x /var/run/haproxy.sock -sf %s" % (custom_config_files, pid_file, pid)
 
     def __prepare(self, command):
-        source = Functions.HAPROXY_LOG
         if not isinstance(command, (list, tuple)):
             command = shlex.split(command)
 
@@ -230,20 +218,19 @@ class DaemonizeHAProxy:
                                             universal_newlines=True)
 
         except Exception as e:
-            Functions.log(source, Functions.ERROR, "%s" % e)
+            loggerHaproxy.error("%s" % e)
 
     def __start(self):
-        source = Functions.HAPROXY_LOG
         try:
             with self.process.stdout:
                 for line in iter(self.process.stdout.readline, b''):
-                    Functions.log(source, Functions.INFO, line)
+                    loggerHaproxy.info(line)
 
             return_code = self.process.wait()
-            Functions.log(source, Functions.DEBUG, "Return code %s" % return_code)
+            loggerHaproxy.debug("Return code %s" % return_code)
 
         except Exception as e:
-            Functions.log(source, Functions.ERROR, "%s" % e)
+            loggerHaproxy.error("%s" % e)
 
     def is_alive(self):
         return self.thread.is_alive()
@@ -330,14 +317,13 @@ class Certbot:
                 elif host in self.freeze_issue:
                     freeze_count = self.freeze_issue.pop(host, 0)
                     if freeze_count > 0:
-                        Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG,
-                                      "Waiting freezing period (%d) for %s due previous errors" % (freeze_count, host))
+                        loggerCertbot.debug("Waiting freezing period (%d) for %s due previous errors" % (freeze_count, host))
                         self.freeze_issue[host] = freeze_count-1
                 elif cert_status == "not_found" or cert_status == "expired":
-                    Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "[%s] Request new certificate for %s" % (cert_status, host))
+                    loggerCertbot.debug("[%s] Request new certificate for %s" % (cert_status, host))
                     request_certs.append(host_arg)
                 elif cert_status == "expiring":
-                    Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "[%s] Renew certificate for %s" % (cert_status, host))
+                    loggerCertbot.debug("[%s] Renew certificate for %s" % (cert_status, host))
                     renew_certs.append(host_arg)
 
             certbot_certonly = ('/usr/bin/certbot certonly {acme_server}'
@@ -368,11 +354,11 @@ class Certbot:
             return_code_issue = 0
             return_code_renew = 0
             if len(request_certs) > 0:
-                return_code_issue, output = Functions.run_bash(Functions.CERTBOT_LOG, certbot_certonly, return_result=False)
+                return_code_issue, output = Functions.run_bash(loggerCertbot, certbot_certonly, return_result=False)
                 ret_reload = True
 
             if len(renew_certs) > 0:
-                return_code_renew, output = Functions.run_bash(Functions.CERTBOT_LOG, "/usr/bin/certbot renew", return_result=False)
+                return_code_renew, output = Functions.run_bash(loggerCertbot, "/usr/bin/certbot renew", return_result=False)
                 ret_reload = True
 
             if ret_reload:
@@ -385,7 +371,7 @@ class Certbot:
 
             return ret_reload
         except Exception as e:
-            Functions.log(Functions.CERTBOT_LOG, Functions.ERROR, "%s" % e)
+            loggerCertbot.error("%s" % e)
             return False
 
     @staticmethod
@@ -420,7 +406,7 @@ class Certbot:
             elif (expiration_after - current_time) // (24 * 3600) <= 15:
                 return "expiring"
         except Exception as e:
-            Functions.log(Functions.CERTBOT_LOG, Functions.ERROR, "Certificate %s error %s" % (host, e))
+            loggerCertbot.error("Certificate %s error %s" % (host, e))
             return "error"
 
         return "ok"
@@ -432,4 +418,15 @@ class Certbot:
             cert_status = self.get_certificate_status(host)
             if cert_status != "ok":
                 self.freeze_issue[host] = self.retry_count
-                Functions.log(Functions.CERTBOT_LOG, Functions.DEBUG, "Freeze issuing ssl for %s due failure. The certificate is %s" % (host, cert_status))
+                loggerCertbot.debug("Freeze issuing ssl for %s due failure. The certificate is %s" % (host, cert_status))
+
+# ####################################################################################################################
+# Setup Global Log
+loggerInit = logging.getLogger(Functions.INIT_LOG)
+loggerHaproxy = logging.getLogger(Functions.HAPROXY_LOG)
+loggerEasyHaproxy = logging.getLogger(Functions.EASYHAPROXY_LOG)
+loggerCertbot = logging.getLogger(Functions.CERTBOT_LOG)
+Functions.skip_log(loggerInit, Functions.INIT_LOG)
+Functions.skip_log(loggerHaproxy, Functions.HAPROXY_LOG)
+Functions.skip_log(loggerEasyHaproxy, Functions.EASYHAPROXY_LOG)
+Functions.skip_log(loggerCertbot, Functions.CERTBOT_LOG)

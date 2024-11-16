@@ -1,26 +1,37 @@
+import logging
 import os
 import random
 import re
 import string
+from logging import Logger
 
-from functions import Functions
+from functions import Functions, loggerEasyHaproxy, loggerCertbot, loggerHaproxy
 
+from io import StringIO
+
+log_stream = StringIO() # Create StringIO object
+log_handler = logging.StreamHandler(log_stream)
+log_formatter = logging.Formatter('%(levelname)s - %(message)s')
+log_handler.setFormatter(log_formatter)
+loggerDebug = logging.getLogger(__name__)
+loggerDebug.setLevel(logging.DEBUG)
+loggerDebug.addHandler(log_handler)
 
 def test_functions_check_local_level():
-    assert Functions.skip_log('CERTBOT', Functions.INFO) == False
-    assert Functions.skip_log('HAPOROXY', Functions.INFO) == False
-    assert Functions.skip_log('EASYHAPROXY', Functions.INFO) == False
+    assert Functions.skip_log(loggerCertbot, Functions.INFO) == logging.INFO
+    assert Functions.skip_log(loggerHaproxy, Functions.INFO) == logging.INFO
+    assert Functions.skip_log(loggerEasyHaproxy, Functions.INFO) == logging.INFO
 
     os.environ['CERTBOT_LOG_LEVEL'] = 'warn'
-    assert Functions.skip_log('CERTBOT', Functions.INFO) == True
+    assert Functions.skip_log(loggerCertbot, Functions.WARN) == logging.WARNING
     del os.environ['CERTBOT_LOG_LEVEL']
 
     os.environ['HAPROXY_LOG_LEVEL'] = 'warn'
-    assert Functions.skip_log('HAPROXY', Functions.INFO) == True
+    assert Functions.skip_log(loggerHaproxy, Functions.INFO) == logging.WARNING
     del os.environ['HAPROXY_LOG_LEVEL']
 
     os.environ['EASYHAPROXY_LOG_LEVEL'] = 'warn'
-    assert Functions.skip_log('EASYHAPROXY', Functions.INFO) == True
+    assert Functions.skip_log(loggerEasyHaproxy, Functions.INFO) == logging.WARNING
     del os.environ['EASYHAPROXY_LOG_LEVEL']
 
 
@@ -35,122 +46,94 @@ def test_function_load_and_save():
     finally:
         os.unlink(filename)
 
-
-def test_functions_check_log_sanity():
-    print()
-    Functions.log(Functions.EASYHAPROXY_LOG, Functions.INFO, "Test 1")
-    assert Functions.debug_log is None
-
-    Functions.debug_log = []
-    try:
-        Functions.log(Functions.EASYHAPROXY_LOG, Functions.INFO, "Test 2")
-        assert len(Functions.debug_log) == 1
-        assert re.match("\[EASYHAPROXY\] .* \[INFO\]: Test 2", Functions.debug_log[0])
-
-        os.environ['CERTBOT_LOG_LEVEL'] = 'DEBUG'
-        Functions.log(Functions.EASYHAPROXY_LOG, Functions.INFO, "Test 3")
-        assert len(Functions.debug_log) == 2
-        assert re.match("\[EASYHAPROXY\] .* \[INFO\]: Test 3", Functions.debug_log[1])
-
-        os.environ['EASYHAPROXY_LOG_LEVEL'] = 'warn'
-        Functions.log(Functions.EASYHAPROXY_LOG, Functions.INFO, "Test 4")  # Should not log to debug
-        assert len(Functions.debug_log) == 2
-
-    finally:
-        del os.environ['EASYHAPROXY_LOG_LEVEL']
-        Functions.debug_log = None
-
-
 def test_functions_run_bash_log_output():
     print()
-    Functions.debug_log = []
     try:
-        return_code, result = Functions.run_bash(Functions.EASYHAPROXY_LOG, "echo 'test run 1'", log_output=True,
+        return_code, result = Functions.run_bash(loggerDebug, "echo 'test run 1'", log_output=True,
                                                  return_result=False)
         assert return_code == 0
         assert result == []
-        assert len(Functions.debug_log) == 1
-        assert re.match("\[EASYHAPROXY\] .* \[INFO\]: test run 1", Functions.debug_log[0])
+        log_value = log_stream.getvalue()
+        assert len(log_value) > 0
+        assert log_value == "INFO - test run 1\n"
     finally:
-        Functions.debug_log = None
+        log_stream.truncate(0)
 
 
 def test_functions_run_bash_no_log_output():
     print()
-    Functions.debug_log = []
     try:
-        return_code, result = Functions.run_bash(Functions.EASYHAPROXY_LOG, "echo 'test run 2'", log_output=False,
+        return_code, result = Functions.run_bash(loggerDebug, "echo 'test run 2'", log_output=False,
                                                  return_result=False)
         assert return_code == 0
         assert result == []
-        assert len(Functions.debug_log) == 0
+        assert len(log_stream.getvalue()) == 0
     finally:
-        Functions.debug_log = None
+        log_stream.truncate(0)
 
 
 def test_functions_run_bash_return():
     print()
-    Functions.debug_log = []
     try:
-        return_code, result = Functions.run_bash(Functions.EASYHAPROXY_LOG, "echo 'test run 3'", log_output=False,
+        return_code, result = Functions.run_bash(loggerDebug, "echo 'test run 3'", log_output=False,
                                                  return_result=True)
         assert return_code == 0
-        assert len(Functions.debug_log) == 0
+        assert len(log_stream.getvalue()) == 0
         assert "".join(result) == 'test run 3'
     finally:
-        Functions.debug_log = None
+        log_stream.truncate(0)
 
 
 def test_functions_run_bash_log_and_return_output():
     print()
-    Functions.debug_log = []
     try:
-        return_code, result = Functions.run_bash(Functions.EASYHAPROXY_LOG, "echo 'test run 4'", log_output=True, return_result=True)
+        return_code, result = Functions.run_bash(loggerDebug, "echo 'test run 4'", log_output=True, return_result=True)
         assert return_code == 0
         assert "".join(result) == 'test run 4'
-        assert len(Functions.debug_log) == 1
-        assert re.match("\[EASYHAPROXY\] .* \[INFO\]: test run 4", Functions.debug_log[0])
+        log_value = log_stream.getvalue().strip("\x00")
+        assert len(log_value) > 0
+        assert log_value == "INFO - test run 4\n"
     finally:
-        Functions.debug_log = None
+        log_stream.truncate(0)
 
 
 def test_functions_run_bash_ok():
     print()
-    Functions.debug_log = []
     try:
-        return_code, result = Functions.run_bash(Functions.EASYHAPROXY_LOG, "%s/fixtures/run_bash.sh" % os.path.dirname(__file__), log_output=True,
+        return_code, result = Functions.run_bash(loggerDebug, "%s/fixtures/run_bash.sh" % os.path.dirname(__file__), log_output=True,
                                                  return_result=False)
         assert return_code == 0
         assert result == []
-        assert len(Functions.debug_log) == 1
-        assert re.match("\[EASYHAPROXY\] .* \[INFO\]: Processing run_bash.sh", Functions.debug_log[0])
+        log_value = log_stream.getvalue().strip("\x00")
+        assert len(log_value) > 1
+        assert log_value == "INFO - Processing run_bash.sh\n"
     finally:
-        Functions.debug_log = None
+        log_stream.truncate(0)
 
 
 def test_functions_run_bash_fail():
     print()
-    Functions.debug_log = []
     try:
-        return_code, result = Functions.run_bash(Functions.EASYHAPROXY_LOG, "%s/fixtures/run_bash.sh 15" % os.path.dirname(__file__), log_output=True,
+        return_code, result = Functions.run_bash(loggerDebug, "%s/fixtures/run_bash.sh 15" % os.path.dirname(__file__), log_output=True,
                                                  return_result=False)
         assert return_code == 15
         assert result == []
-        assert len(Functions.debug_log) == 1
-        assert re.match("\[EASYHAPROXY\] .* \[INFO\]: Processing run_bash.sh", Functions.debug_log[0])
+        log_value = log_stream.getvalue().strip("\x00")
+        assert len(log_value) > 0
+        assert log_value == "INFO - Processing run_bash.sh\n"
     finally:
-        Functions.debug_log = None
+        log_stream.truncate(0)
 
 
 def test_functions_run_command_not_found():
     print()
-    Functions.debug_log = []
     try:
-        return_code, result = Functions.run_bash(Functions.EASYHAPROXY_LOG, "no_command_here", log_output=True,
+        return_code, result = Functions.run_bash(loggerDebug, "no_command_here", log_output=True,
                                                  return_result=False)
         assert return_code == -99
         assert str(result) == "[Errno 2] No such file or directory: 'no_command_here'"
-        assert len(Functions.debug_log) == 1
-        assert re.match("\[EASYHAPROXY\] .* \[ERROR\]: \[Errno 2\] No such file or directory: 'no_command_here'", Functions.debug_log[0])
+        log_value = log_stream.getvalue().strip("\x00")
+        assert len(log_value) > 0
+        assert log_value == "ERROR - [Errno 2] No such file or directory: 'no_command_here'\n"
     finally:
-        Functions.debug_log = None
+        log_stream.truncate(0)
