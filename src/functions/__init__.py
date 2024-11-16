@@ -104,7 +104,7 @@ class Functions:
     FATAL = "FATAL"
 
     @staticmethod
-    def skip_log(source, log_level_str):
+    def setup_log(source):
         level = os.getenv("%s_LOG_LEVEL" % (source.name.upper()), "").upper()
         level_importance = {
             Functions.TRACE: logging.DEBUG,
@@ -426,7 +426,7 @@ loggerInit = logging.getLogger(Functions.INIT_LOG)
 loggerHaproxy = logging.getLogger(Functions.HAPROXY_LOG)
 loggerEasyHaproxy = logging.getLogger(Functions.EASYHAPROXY_LOG)
 loggerCertbot = logging.getLogger(Functions.CERTBOT_LOG)
-Functions.skip_log(loggerInit, Functions.INIT_LOG)
-Functions.skip_log(loggerHaproxy, Functions.HAPROXY_LOG)
-Functions.skip_log(loggerEasyHaproxy, Functions.EASYHAPROXY_LOG)
-Functions.skip_log(loggerCertbot, Functions.CERTBOT_LOG)
+Functions.setup_log(loggerInit)
+Functions.setup_log(loggerHaproxy)
+Functions.setup_log(loggerEasyHaproxy)
+Functions.setup_log(loggerCertbot)

@@ -18,20 +18,20 @@ loggerDebug.setLevel(logging.DEBUG)
 loggerDebug.addHandler(log_handler)
 
 def test_functions_check_local_level():
-    assert Functions.skip_log(loggerCertbot, Functions.INFO) == logging.INFO
-    assert Functions.skip_log(loggerHaproxy, Functions.INFO) == logging.INFO
-    assert Functions.skip_log(loggerEasyHaproxy, Functions.INFO) == logging.INFO
+    assert Functions.setup_log(loggerCertbot) == logging.INFO
+    assert Functions.setup_log(loggerHaproxy) == logging.INFO
+    assert Functions.setup_log(loggerEasyHaproxy) == logging.INFO
 
     os.environ['CERTBOT_LOG_LEVEL'] = 'warn'
-    assert Functions.skip_log(loggerCertbot, Functions.WARN) == logging.WARNING
+    assert Functions.setup_log(loggerCertbot) == logging.WARNING
     del os.environ['CERTBOT_LOG_LEVEL']
 
     os.environ['HAPROXY_LOG_LEVEL'] = 'warn'
-    assert Functions.skip_log(loggerHaproxy, Functions.INFO) == logging.WARNING
+    assert Functions.setup_log(loggerHaproxy) == logging.WARNING
     del os.environ['HAPROXY_LOG_LEVEL']
 
     os.environ['EASYHAPROXY_LOG_LEVEL'] = 'warn'
-    assert Functions.skip_log(loggerEasyHaproxy, Functions.INFO) == logging.WARNING
+    assert Functions.setup_log(loggerEasyHaproxy) == logging.WARNING
     del os.environ['EASYHAPROXY_LOG_LEVEL']
 
 
