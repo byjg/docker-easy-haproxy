@@ -63,8 +63,8 @@ def main():
 
     Functions.log(Functions.INIT_LOG, Functions.INFO, "                      _                               ")
     Functions.log(Functions.INIT_LOG, Functions.INFO, " ___ __ _ ____  _ ___| |_  __ _ _ __ _ _ _____ ___  _ ")
-    Functions.log(Functions.INIT_LOG, Functions.INFO, "/ -_) _` (_-< || |___| ' \/ _` | '_ \ '_/ _ \ \ / || |")
-    Functions.log(Functions.INIT_LOG, Functions.INFO, "\___\__,_/__/\_, |   |_||_\__,_| .__/_| \___/_\_\\_, |")
+    Functions.log(Functions.INIT_LOG, Functions.INFO, "/ -_) _` (_-< || |___| ' \\/ _` | '_ \\ '_/ _ \\ \\ / || |")
+    Functions.log(Functions.INIT_LOG, Functions.INFO, "\\___\\__,_/__/\\_, |   |_||_\\__,_| .__/_| \\___/_\\_\\_, |")
     Functions.log(Functions.INIT_LOG, Functions.INFO, "             |__/              |_|               |__/ ")
 
     Functions.log(Functions.INIT_LOG, Functions.INFO, "Release: %s" % (os.getenv("RELEASE_VERSION")))

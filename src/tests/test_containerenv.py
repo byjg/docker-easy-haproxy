@@ -18,7 +18,9 @@ def test_container_env_empty():
                            "eab_kid": "",
                            "email": "",
                            "server": False,
-                           "retry_count": 60}
+                           "retry_count": 60,
+                           "preferred_challenges": "http",
+                           "manual_auth_hook": False}
            } == ContainerEnv.read()
 
     # os.environ['CERTBOT_LOG_LEVEL'] = 'warn'
@@ -41,7 +43,9 @@ def test_container_env_customerrors():
                                "eab_kid": "",
                                "email": "",
                                "server": False,
-                               "retry_count": 60}
+                               "retry_count": 60,
+                               "preferred_challenges": "http",
+                               "manual_auth_hook": False}
                } == ContainerEnv.read()
     finally:
         del os.environ['HAPROXY_CUSTOMERRORS']
@@ -64,7 +68,9 @@ def test_container_env_sslmode():
                                "eab_kid": "",
                                "email": "",
                                "server": False,
-                               "retry_count": 60}
+                               "retry_count": 60,
+                               "preferred_challenges": "http",
+                               "manual_auth_hook": False}
                } == ContainerEnv.read()
     finally:
         del os.environ['EASYHAPROXY_SSL_MODE']
@@ -88,7 +94,9 @@ def test_container_env_stats():
                                "eab_kid": "",
                                "email": "",
                                "server": False,
-                               "retry_count": 60}
+                               "retry_count": 60,
+                               "preferred_challenges": "http",
+                               "manual_auth_hook": False}
                } == ContainerEnv.read()
     finally:
         del os.environ['HAPROXY_USERNAME']
@@ -118,7 +126,9 @@ def test_container_env_stats_password():
                                "eab_kid": "",
                                "email": "",
                                "server": False,
-                               "retry_count": 60}
+                               "retry_count": 60,
+                               "preferred_challenges": "http",
+                               "manual_auth_hook": False}
                } == ContainerEnv.read()
     finally:
         del os.environ['HAPROXY_PASSWORD']
@@ -148,7 +158,9 @@ def test_container_env_stats_password_2():
                                "eab_kid": "",
                                "email": "",
                                "server": False,
-                               "retry_count": 60}
+                               "retry_count": 60,
+                               "preferred_challenges": "http",
+                               "manual_auth_hook": False}
                } == ContainerEnv.read()
     finally:
         del os.environ['HAPROXY_USERNAME']
@@ -174,7 +186,9 @@ def test_container_env_certbot_email():
                        'eab_kid': "",
                        "email": "acme@example.org",
                        "server": False,
-                       "retry_count": 60
+                       "retry_count": 60,
+                       "preferred_challenges": "http",
+                       "manual_auth_hook": False
                    }
                } == ContainerEnv.read()
     finally:
@@ -187,6 +201,8 @@ def test_container_env_certbot_full():
     os.environ['EASYHAPROXY_CERTBOT_EAB_KID'] = 'eab_kid'
     os.environ['EASYHAPROXY_CERTBOT_EAB_HMAC_KEY'] = 'eab_hmac_key'
     os.environ['EASYHAPROXY_CERTBOT_RETRY_COUNT'] = "10"
+    os.environ['EASYHAPROXY_CERTBOT_PREFERRED_CHALLENGES'] = "dns"
+    os.environ['EASYHAPROXY_CERTBOT_MANUAL_AUTH_HOOK'] = "something_manual_auth_hook"
     try:
         assert {
             "customerrors": False,
@@ -203,7 +219,9 @@ def test_container_env_certbot_full():
                "server": "schema://url/a",
                'eab_hmac_key': 'eab_hmac_key',
                'eab_kid': 'eab_kid',
-               'retry_count': 10
+               'retry_count': 10,
+               "preferred_challenges": "dns",
+               "manual_auth_hook": "something_manual_auth_hook"
            }
         } == ContainerEnv.read()
     finally:
@@ -212,6 +230,8 @@ def test_container_env_certbot_full():
         del os.environ['EASYHAPROXY_CERTBOT_EAB_KID']
         del os.environ['EASYHAPROXY_CERTBOT_EAB_HMAC_KEY']
         del os.environ['EASYHAPROXY_CERTBOT_RETRY_COUNT']
+        del os.environ['EASYHAPROXY_CERTBOT_PREFERRED_CHALLENGES']
+        del os.environ['EASYHAPROXY_CERTBOT_MANUAL_AUTH_HOOK']
 
 
 def test_container_log_level():
@@ -234,7 +254,9 @@ def test_container_log_level():
                'eab_kid': "",
                "email": "",
                "server": False,
-               "retry_count": 60
+               "retry_count": 60,
+               "preferred_challenges": "http",
+               "manual_auth_hook": False
            }
        } == ContainerEnv.read()
     finally:

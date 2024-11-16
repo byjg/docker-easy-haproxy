@@ -41,6 +41,8 @@ class ContainerEnv:
             "eab_kid": os.getenv("EASYHAPROXY_CERTBOT_EAB_KID", ""),
             "eab_hmac_key": os.getenv("EASYHAPROXY_CERTBOT_EAB_HMAC_KEY", ""),
             "retry_count": int(os.getenv("EASYHAPROXY_CERTBOT_RETRY_COUNT", 60)),
+            "preferred_challenges": os.getenv("EASYHAPROXY_CERTBOT_PREFERRED_CHALLENGES", "http"),
+            "manual_auth_hook": os.getenv("EASYHAPROXY_CERTBOT_MANUAL_AUTH_HOOK", False),
         }
 
         if env_vars["certbot"]["autoconfig"] != "" and not env_vars["certbot"]["server"] and env_vars["certbot"]["email"] != "":
@@ -285,6 +287,8 @@ class Certbot:
         self.eab_hmac_key = self.set_eab_hmac_key(env["certbot"]["eab_hmac_key"])
         self.freeze_issue = {}
         self.retry_count = env["certbot"]["retry_count"]
+        self.certbot_preferred_challenges = env["certbot"]["preferred_challenges"]
+        self.certbot_manual_auth_hook = env["certbot"]["manual_auth_hook"]
 
     @staticmethod
     def set_acme_server(acme_server):
@@ -337,9 +341,7 @@ class Certbot:
                     renew_certs.append(host_arg)
 
             certbot_certonly = ('/usr/bin/certbot certonly {acme_server}'
-                                '    --standalone'
-                                '    --preferred-challenges http'
-                                '    --http-01-port 2080'
+                                '    --preferred-challenges {challenge}'
                                 '    --agree-tos'
                                 '    --issuance-timeout 90'
                                 '    --no-eff-email'
@@ -350,8 +352,17 @@ class Certbot:
                                                                      eab_hmac_key=self.eab_hmac_key,
                                                                      certs=' '.join(request_certs),
                                                                      email=self.email,
+                                                                     challenge=self.certbot_preferred_challenges,
                                                                      acme_server=self.acme_server)
                                 )
+
+            if 'http' in self.certbot_preferred_challenges:
+                certbot_certonly += ('    --http-01-port 2080'
+                                     '    --standalone'
+                                    )
+
+            if self.certbot_manual_auth_hook:
+                certbot_certonly += '    --manual --manual-auth-hook \'{hook}\''.format(hook=self.certbot_manual_auth_hook)
 
             ret_reload = False
             return_code_issue = 0
