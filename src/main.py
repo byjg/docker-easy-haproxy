@@ -25,7 +25,7 @@ def start():
     old_haproxy = None
     haproxy = DaemonizeHAProxy()
     current_custom_config_files = haproxy.get_custom_config_files()
-    haproxy.haproxy("start")
+    haproxy.haproxy(DaemonizeHAProxy.HAPROXY_START)
     haproxy.sleep()
 
     certbot = Certbot(Consts.certs_certbot)
@@ -47,7 +47,7 @@ def start():
                 old_haproxy = haproxy
                 haproxy = DaemonizeHAProxy()
                 current_custom_config_files = haproxy.get_custom_config_files()
-                haproxy.haproxy("reload")
+                haproxy.haproxy(DaemonizeHAProxy.HAPROXY_RELOAD)
                 old_haproxy.terminate()
 
         except Exception as e:

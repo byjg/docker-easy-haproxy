@@ -6,6 +6,7 @@ import time
 import logging
 from datetime import datetime
 from multiprocessing import Process
+from typing import Final
 
 import requests
 from OpenSSL import crypto
@@ -91,17 +92,17 @@ class ContainerEnv:
 
 
 class Functions:
-    HAPROXY_LOG = "HAPROXY"
-    EASYHAPROXY_LOG = "EASYHAPROXY"
-    CERTBOT_LOG = "CERTBOT"
-    INIT_LOG = "INIT"
+    HAPROXY_LOG: Final[str] = "HAPROXY"
+    EASYHAPROXY_LOG: Final[str] = "EASYHAPROXY"
+    CERTBOT_LOG: Final[str] = "CERTBOT"
+    INIT_LOG: Final[str] = "INIT"
 
-    TRACE = "TRACE"
-    DEBUG = "DEBUG"
-    INFO = "INFO"
-    WARN = "WARN"
-    ERROR = "ERROR"
-    FATAL = "FATAL"
+    TRACE: Final[str] = "TRACE"
+    DEBUG: Final[str] = "DEBUG"
+    INFO: Final[str] = "INFO"
+    WARN: Final[str] = "WARN"
+    ERROR: Final[str] = "ERROR"
+    FATAL: Final[str] = "FATAL"
 
     @staticmethod
     def setup_log(source):
@@ -178,6 +179,9 @@ class Consts:
 
 
 class DaemonizeHAProxy:
+    HAPROXY_START: Final[str] = "start"
+    HAPROXY_RELOAD: Final[str] = "reload"
+
     def __init__(self, custom_config_folder = None):
         self.process = None
         self.thread = None
@@ -196,9 +200,9 @@ class DaemonizeHAProxy:
     def get_haproxy_command(self, action, pid_file="/run/haproxy.pid"):
         custom_config_files = ""
         if len(list(self.get_custom_config_files().keys())) != 0:
-            custom_config_files = "-f %s" % (self.custom_config_folder)
+            custom_config_files = "-f %s" % self.custom_config_folder
 
-        if action == "start":
+        if action == DaemonizeHAProxy.HAPROXY_START:
             return "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg %s -p %s -S /var/run/haproxy.sock" % (custom_config_files, pid_file)
         else:
             return_code, output = Functions().run_bash(loggerHaproxy, "cat %s" % pid_file, log_output=False)

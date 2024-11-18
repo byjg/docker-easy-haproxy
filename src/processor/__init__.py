@@ -1,5 +1,6 @@
 import base64
 import socket
+from typing import Final
 
 import docker
 import yaml
@@ -12,6 +13,11 @@ from functions import loggerEasyHaproxy
 
 
 class ProcessorInterface:
+    STATIC: Final[str] = "static"
+    DOCKER: Final[str] = "docker"
+    SWARM: Final[str] = "swarm"
+    KUBERNETES: Final[str] = "kubernetes"
+
     static_file = Consts.easyhaproxy_config
 
     def __init__(self, filename=None):
@@ -28,13 +34,13 @@ class ProcessorInterface:
 
     @staticmethod
     def factory(mode):
-        if mode == "static":
+        if mode == ProcessorInterface.STATIC:
             return Static(ProcessorInterface.static_file)
-        elif mode == "docker":
+        elif mode == ProcessorInterface.DOCKER:
             return Docker()
-        elif mode == "swarm":
+        elif mode == ProcessorInterface.SWARM:
             return Swarm()
-        elif mode == "kubernetes":
+        elif mode == ProcessorInterface.KUBERNETES:
             return Kubernetes()
         else:
             loggerEasyHaproxy.fatal("Expected mode to be 'static', 'docker', 'swarm' or 'kubernetes'. I got '%s'" % mode)
