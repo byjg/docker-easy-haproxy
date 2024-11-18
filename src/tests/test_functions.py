@@ -87,7 +87,9 @@ def test_functions_run_bash_return():
 def test_functions_run_bash_log_and_return_output():
     print()
     try:
-        return_code, result = Functions.run_bash(loggerDebug, "echo 'test run 4'", log_output=True, return_result=True)
+        return_code, result = Functions.run_bash(loggerDebug, "echo 'test run 4'",
+                                                 log_output=True,
+                                                 return_result=True)
         assert return_code == 0
         assert "".join(result) == 'test run 4'
         log_value = log_stream.getvalue().strip("\x00")
@@ -100,7 +102,8 @@ def test_functions_run_bash_log_and_return_output():
 def test_functions_run_bash_ok():
     print()
     try:
-        return_code, result = Functions.run_bash(loggerDebug, "%s/fixtures/run_bash.sh" % os.path.dirname(__file__), log_output=True,
+        return_code, result = Functions.run_bash(loggerDebug, "%s/fixtures/run_bash.sh" % os.path.dirname(__file__),
+                                                 log_output=True,
                                                  return_result=False)
         assert return_code == 0
         assert result == []
@@ -114,7 +117,8 @@ def test_functions_run_bash_ok():
 def test_functions_run_bash_fail():
     print()
     try:
-        return_code, result = Functions.run_bash(loggerDebug, "%s/fixtures/run_bash.sh 15" % os.path.dirname(__file__), log_output=True,
+        return_code, result = Functions.run_bash(loggerDebug, "%s/fixtures/run_bash.sh 15" % os.path.dirname(__file__),
+                                                 log_output=True,
                                                  return_result=False)
         assert return_code == 15
         assert result == []
@@ -128,7 +132,8 @@ def test_functions_run_bash_fail():
 def test_functions_run_command_not_found():
     print()
     try:
-        return_code, result = Functions.run_bash(loggerDebug, "no_command_here", log_output=True,
+        return_code, result = Functions.run_bash(loggerDebug, "no_command_here",
+                                                 log_output=True,
                                                  return_result=False)
         assert return_code == -99
         assert str(result) == "[Errno 2] No such file or directory: 'no_command_here'"

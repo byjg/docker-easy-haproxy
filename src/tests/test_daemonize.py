@@ -22,7 +22,7 @@ def test_daemonize_haproxy_get_haproxy_command_reload():
     command = daemon.get_haproxy_command(DaemonizeHAProxy.HAPROXY_RELOAD)
     assert command == "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg  -p /run/haproxy.pid -x /var/run/haproxy.sock -sf "
 
-def test_daemonize_haproxy_check_config():
+def test_daemonize_haproxy2_check_config():
     daemon = DaemonizeHAProxy(os.path.abspath(os.path.dirname(__file__))  + '/fixtures')
     filed = daemon.get_custom_config_files()
     assert filed == {
@@ -30,13 +30,13 @@ def test_daemonize_haproxy_check_config():
         os.path.dirname(__file__) + "/fixtures/10_haproxy.cfg": os.path.getmtime(os.path.dirname(__file__) + "/fixtures/10_haproxy.cfg")
     }
 
-def test_daemonize_haproxy_get_haproxy_command_start():
+def test_daemonize_haproxy2_get_haproxy_command_start():
     daemon = DaemonizeHAProxy(os.path.abspath(os.path.dirname(__file__))  + '/fixtures')
     command = daemon.get_haproxy_command(DaemonizeHAProxy.HAPROXY_START)
     assert command == "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -f %s -p /run/haproxy.pid -S /var/run/haproxy.sock" % (os.path.dirname(__file__) + "/fixtures")
 
 
-def test_daemonize_haproxy_get_haproxy_command_reload():
+def test_daemonize_haproxy2_get_haproxy_command_reload():
     tmp_pid_file = "/tmp/tmp_pid.txt"
     Functions.save(tmp_pid_file, "10")
 
