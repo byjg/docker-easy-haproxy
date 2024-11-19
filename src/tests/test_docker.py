@@ -64,7 +64,7 @@ def test_processor_docker():
 
         os.environ['EASYHAPROXY_CERTBOT_EMAIL'] = 'docker@example.org'
 
-        static = ProcessorInterface.factory("docker")
+        static = ProcessorInterface.factory(ProcessorInterface.DOCKER)
         assert static.get_certbot_hosts() is None
 
         assert {
