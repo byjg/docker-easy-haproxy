@@ -7,6 +7,9 @@ metadata:
   labels:
     {{- include "easyhaproxy.labels" . | nindent 4 }}
 spec:
+{{- if .Values.service.create }}
+  replicas: {{ .Values.replicaCount | default 1 }}
+{{- end }}
   selector:
     matchLabels:
       {{- include "easyhaproxy.selectorLabels" . | nindent 6 }}
@@ -15,6 +18,7 @@ spec:
       labels:
         {{- include "easyhaproxy.selectorLabels" . | nindent 8 }}
     spec:
+{{- if not .Values.service.create }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -24,6 +28,7 @@ spec:
                 operator: In
                 values:
                   {{- toYaml .Values.masterNode.values | nindent 18 }}
+{{- end }}
       serviceAccountName: {{ include "easyhaproxy.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}

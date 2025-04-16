@@ -72,7 +72,8 @@ easyhaproxy:
   certbot:
     email: ""
 
-# Make sure to create this
+# Master node configuration - only used when service.create is false (DaemonSet mode)
+# When service.create is true (Deployment with ClusterIP/NodePort), this is ignored
 masterNode:
   label: easyhaproxy/node
   values: 
