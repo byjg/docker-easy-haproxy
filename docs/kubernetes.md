@@ -2,15 +2,18 @@
 
 ## Setup Kubernetes EasyHAProxy
 
-EasyHAProxy for Kubernetes queries all ingress definitions with the annotation `kubernetes.io/ingress.class: easyhaproxy-ingress`. Once find the annotation, it will immediately set up HAProxy and start to serve it.
+EasyHAProxy for Kubernetes operates by querying all ingress definitions with the annotation 
+`kubernetes.io/ingress.class: easyhaproxy-ingress`. Upon finding this annotation, 
+EasyHAProxy immediately sets up HAProxy and begins serving traffic.
 
-There are three installation modes:
+For Kubernetes installations, there are three available installation modes:
+- DaemonSet: This mode exposes ports 80, 443, and 1936.
+- NodePort: Ports 31080, 31443, and 31936 are exposed.
+- ClusterIP: In this mode, no ports are exposed externally, and HAProxy is accessible only 
+  within the cluster.
 
-- DaemonSet: It will expose ports 80, 443 and 1936
-- NodePort: It will expose the ports 31080, 31443 and 31936
-- ClusterIP: it will node expose any port. The HAProxy will be accessible only inside the cluster.
+To install EasyHAProxy in your Kubernetes cluster, follow these steps:
 
-To install EasyHAProxy in your cluster, follow these steps:
 
 ### 1) Identify the node where your EasyHAProxy container will run
 
@@ -36,7 +39,7 @@ kubectl label nodes node-01 "easyhaproxy/node=master"
 kubectl create namespace easyhaproxy
 
 kubectl apply -f \
-    https://raw.githubusercontent.com/byjg/docker-easy-haproxy/4.4.0/deploy/kubernetes/easyhaproxy-daemonset.yml
+    https://raw.githubusercontent.com/byjg/docker-easy-haproxy/4.5.0/deploy/kubernetes/easyhaproxy-daemonset.yml
 ```
 
 If necessary, you can configure environment variables. To get a list of the variables, please follow the [environment variable guide](environment-variable.md)
@@ -79,14 +82,14 @@ Notes:
 
 ## Kubernetes annotations
 
-| annotation                       | Description                                                                         | Default      | Example                               |
-|----------------------------------|-------------------------------------------------------------------------------------|--------------|---------------------------------------|
-| kubernetes.io/ingress.class      | (required) Activate EasyHAProxy.                                                    | **required** | easyhaproxy-ingress                   |
-| easyhaproxy.redirect_ssl         | (optional) Boolean. Force redirect all endpoints to HTTPS.                          | false        | true or false                         |
-| easyhaproxy.certbot              | (optional) Boolean. It will request certbot certificates for the ingresses domains. | false        | true or false                         |
-| easyhaproxy.redirect             | (optional) JSON. Key pair with a domain and its destination.                        | *empty*      | {"domain":"redirect_url"}             |
-| easyhaproxy.mode                 | (optional) Set the HTTP mode for that connection.                                   | http         | http or tcp                           |
-| easyhaproxy.listen_port          | (optional) Set the an additional port for that ingress                              | http         | http or tcp                           |
+| annotation                       | Description                                                                         | Default      | Example                    |
+|----------------------------------|-------------------------------------------------------------------------------------|--------------|----------------------------|
+| kubernetes.io/ingress.class      | (required) Activate EasyHAProxy.                                                    | **required** | easyhaproxy-ingress        |
+| easyhaproxy.redirect_ssl         | (optional) Boolean. Force redirect all endpoints to HTTPS.                          | false        | true or false              |
+| easyhaproxy.certbot              | (optional) Boolean. It will request certbot certificates for the ingresses domains. | false        | true or false              |
+| easyhaproxy.redirect             | (optional) JSON. Key pair with a domain and its destination.                        | *empty*      | \{"domain":"redirect_url"} |
+| easyhaproxy.mode                 | (optional) Set the HTTP mode for that connection.                                   | http         | http or tcp                |
+| easyhaproxy.listen_port          | (optional) Set the an additional port for that ingress                              | http         | http or tcp                |
 
 **Important**: The annotations are per ingress and applied to all hosts in that ingress configuration.
 

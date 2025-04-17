@@ -8,20 +8,24 @@ Most of the issuers offers Automatic Issuing free of cost.
 
 ## Environment Variables
 
-To enable the ACME protocol we need to enable Certbot in EasyHAProxy by setting up to 4 environment variables:
+To enable the ACME protocol we need to enable Certbot in EasyHAProxy by setting up to the following environment variables:
 
-| Environment Variable             | Required? | Description                                                                                                                      |
-|----------------------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------|
-| EASYHAPROXY_CERTBOT_EMAIL        | YES       | Your email in the certificate authority.                                                                                         | 
-| EASYHAPROXY_CERTBOT_AUTOCONFIG   | -         | Will use pre-sets for your Certificate Authority (CA). See table below.                                                          |
-| EASYHAPROXY_CERTBOT_SERVER       | -         | The ACME Endpoint of your certificate authority. If you use AUTOCONFIG, it is set automatically. See table below.                |
-| EASYHAPROXY_CERTBOT_EAB_KID      | -         | External Account Binding (EAB) Key Identifier (KID) provided by your certificate authority. Some CA require it. See table below. | 
-| EASYHAPROXY_CERTBOT_EAB_HMAC_KEY | -         | External Account Binding (EAB) HMAC Key provided by your certificate authority. Some CA require it. See table below.             |
-| EASYHAPROXY_CERTBOT_RETRY_COUNT  | -         | Wait 'n' requests before retrying issue invalid requests. Default 60.                                                            | 
+| Environment Variable                     | Required? | Description                                                                                                                      |
+|------------------------------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------|
+| EASYHAPROXY_CERTBOT_EMAIL                | YES       | Your email in the certificate authority.                                                                                         |
+| EASYHAPROXY_CERTBOT_AUTOCONFIG           | -         | Will use pre-sets for your Certificate Authority (CA). See table below.                                                          |
+| EASYHAPROXY_CERTBOT_SERVER               | -         | The ACME Endpoint of your certificate authority. If you use AUTOCONFIG, it is set automatically. See table below.                |
+| EASYHAPROXY_CERTBOT_EAB_KID              | -         | External Account Binding (EAB) Key Identifier (KID) provided by your certificate authority. Some CA require it. See table below. |
+| EASYHAPROXY_CERTBOT_EAB_HMAC_KEY         | -         | External Account Binding (EAB) HMAC Key provided by your certificate authority. Some CA require it. See table below.             |
+| EASYHAPROXY_CERTBOT_RETRY_COUNT          | -         | Wait 'n' requests before retrying issue invalid requests. Default 60.                                                            |
+| EASYHAPROXY_CERTBOT_PREFERRED_CHALLENGES | -         | The preferred challenges for Certbot. Available: `http`                                                                          |
+| EASYHAPROXY_CERTBOT_MANUAL_AUTH_HOOK     | -         | The path to a script that will be executed (default: None)                                                                       |
 
 ## Auto Config Certificate Authority (CA)
 
 Here are detailed instructions per Certificate Authority (CA). If anyone is missing, please let's know.
+
+Possible values for: `EASYHAPROXY_CERTBOT_AUTOCONFIG`
 
 | CA                   | Auto Config      | Free? | Account Required?  | EAB KID? | EAB HMAC Key? | More Info                                                                                                                                                          |
 |----------------------|------------------|-------|--------------------|----------|---------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|

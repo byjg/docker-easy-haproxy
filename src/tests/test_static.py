@@ -6,7 +6,7 @@ from processor import ProcessorInterface
 
 def test_processor_static():
     ProcessorInterface.static_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "./fixtures/static.yml")
-    static = ProcessorInterface.factory("static")
+    static = ProcessorInterface.factory(ProcessorInterface.STATIC)
 
     parsed_object = [
         {
