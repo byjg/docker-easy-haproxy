@@ -13,7 +13,7 @@ class DockerLabelHandler:
     def get_lookup_label(self):
         return self.__label_base
 
-    def create(self, key):
+    def format(self, key):
         if isinstance(key, str):
             return "{}.{}".format(self.__label_base, key)
 
@@ -33,6 +33,17 @@ class DockerLabelHandler:
         if self.has_label(label):
             return json.loads(self.__data[label])
         return default_value
+
+    def get_pattern(self, label):
+        label += "."
+        matching_elements = [element for element in self.__data if element.startswith(label)]
+        result_dict = {}
+
+        for element in matching_elements:
+            plugin_name = element[len(label):]
+            result_dict[plugin_name] = self.get(element)
+
+        return result_dict if result_dict else False
 
     def set_data(self, data):
         self.__data = data
@@ -89,26 +100,26 @@ class HaproxyConfigGenerator:
             # Parse each definition found. 
             for definition in sorted(definitions.keys()):
                 mode = self.label.get(
-                    self.label.create([definition, "mode"]),
+                    self.label.format([definition, "mode"]),
                     "http"
                 )
 
                 # TODO: we can ignore "host" in TCP, but it would break the template
-                host_label = self.label.create([definition, "host"])
+                host_label = self.label.format([definition, "host"])
                 if not self.label.has_label(host_label):
                     continue
 
                 port = self.label.get(
-                    self.label.create([definition, "port"]),
+                    self.label.format([definition, "port"]),
                     "80"
                 )
 
                 certbot = self.label.get_bool(
-                    self.label.create([definition, "certbot"]),
+                    self.label.format([definition, "certbot"]),
                     False
                 ) and self.mapping["certbot"]["email"] != ""
                 clone_to_ssl = self.label.get_bool(
-                    self.label.create([definition, "clone_to_ssl"])
+                    self.label.format([definition, "clone_to_ssl"])
                 )
 
                 if port not in easymapping:
@@ -122,14 +133,16 @@ class HaproxyConfigGenerator:
 
                 # TODO: this could use `EXPOSE` from `Dockerfile`?
                 ct_port = self.label.get(
-                    self.label.create([definition, "localport"]),
+                    self.label.format([definition, "localport"]),
                     "80"
                 )
 
                 easymapping[port]["ssl-check"] = self.label.get(
-                    self.label.create([definition, "ssl-check"]),
+                    self.label.format([definition, "ssl-check"]),
                     ""
                 )
+
+                plugins = self.label.get_pattern(self.label.format([definition, "plugin"]))
 
                 for hostname in sorted(d[host_label].split(",")):
                     hostname = hostname.strip()
@@ -140,16 +153,19 @@ class HaproxyConfigGenerator:
                     easymapping[port]["hosts"][hostname]["containers"] += ["{}:{}".format(container, ct_port)]
                     easymapping[port]["hosts"][hostname]["certbot"] = certbot
                     easymapping[port]["hosts"][hostname]["redirect_ssl"] = self.label.get_bool(
-                        self.label.create([definition, "redirect_ssl"])
+                        self.label.format([definition, "redirect_ssl"])
                     )
                     easymapping[port]["hosts"][hostname]["balance"] = self.label.get(
-                        self.label.create([definition, "balance"]),
+                        self.label.format([definition, "balance"]),
                         "roundrobin"
                     )
 
                     easymapping[port]["redirect"] = self.label.get_json(
-                        self.label.create([definition, "redirect"])
+                        self.label.format([definition, "redirect"])
                     )
+
+                    if (plugins):
+                        easymapping[port]["hosts"][hostname]["plugins"] = plugins
 
                     if certbot or clone_to_ssl:
                         if "443" not in easymapping:
@@ -168,13 +184,13 @@ class HaproxyConfigGenerator:
                             hostname) if certbot and hostname not in self.certbot_hosts else self.certbot_hosts
 
                     # handle SSL
-                    ssl_label = self.label.create([definition, "sslcert"])
+                    ssl_label = self.label.format([definition, "sslcert"])
                     if self.label.has_label(ssl_label):
                         filename = "{}.pem".format(d[host_label])
                         easymapping[port]["ssl"] = True if not clone_to_ssl else False
                         self.certs[filename] = base64.b64decode(d[ssl_label]).decode('ascii')
 
-                    if self.label.get_bool(self.label.create([definition, "ssl"])):
+                    if self.label.get_bool(self.label.format([definition, "ssl"])):
                         easymapping[port]["ssl"] = True if not clone_to_ssl else False
 
         return easymapping.values()

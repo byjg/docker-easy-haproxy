@@ -109,6 +109,10 @@ easymapping:
           - container:5000   # Endpoints of the hostname above (ip, dns, container, etc)
         certbot: true        # Optional. it will request a certbot certificate. Needs certbot.email set.
         redirect_ssl: true   # Optional. It will redirect this site to it SSL.
+        balance: roundrobin  # Optional. Default `roundrobin`. Can be roundrobin, leastconn, source
+        plugin:              # Optional. Default `none`.
+          - name1: args1
+          - name2: args2
     ssl: true                # Optional. Inform this port will listen to SSL, instead of HTTP
     clone_to_ssl: true       # Optional. Default False. You clone these hosts to its equivalent SSL. 
     redirect:
