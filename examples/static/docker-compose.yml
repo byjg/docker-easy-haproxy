@@ -5,7 +5,7 @@ version: "3"
 
 services:
   haproxy:
-    image: byjg/easy-haproxy:4.5.0
+    image: byjg/easy-haproxy:4.6.0
     volumes:
       - ./conf/:/etc/haproxy/static/
       - ./host1.local.pem:/certs/haproxy/host1.local.pem
