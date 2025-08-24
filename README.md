@@ -93,5 +93,6 @@ Click on the image to see the videos (use HD for better visualization)
 
 [Here is the code](https://gist.github.com/byjg/e125e478a0562190176d69ea795fd3d4) applied in the examples above.
 
+
 ----
 [Open source ByJG](http://opensource.byjg.com)
