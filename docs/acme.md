@@ -6,6 +6,46 @@ allowing the automated deployment of public key infrastructure.
 
 Most of the issuers offers Automatic Issuing free of cost.
 
+## Supported ACME Challenge Methods
+
+Easy HAProxy supports the following ACME challenge types:
+
+- **HTTP-01 Challenge (Default and Only)**  
+  The ACME server validates ownership by making an HTTP request to a temporary endpoint served on port 80. Easy HAProxy provisions a standalone Certbot responder on an internal port and routes `/.well-known/acme-challenge/` traffic to it.
+
+> Note:
+> - TLS-ALPN-01 is not supported natively by Easy HAProxy.
+> - DNS-01 (often used for wildcard certificates) is not supported natively. If you need DNS-01, obtain certificates externally and mount them via `sslcert` as static certificates.
+
+## How ACME works with Easy HAProxy
+
+At a high level, ACME with Easy HAProxy works in two stages:
+
+1. Global ACME/Certbot setup (one-time per EasyHAProxy instance)
+   - Choose your Certificate Authority (CA) either by:
+     - Using AUTOCONFIG with `EASYHAPROXY_CERTBOT_AUTOCONFIG` (e.g., zerossl, letsencrypt_test, google, etc.), or
+     - Manually setting `EASYHAPROXY_CERTBOT_SERVER` (and `EASYHAPROXY_CERTBOT_EAB_KID` / `EASYHAPROXY_CERTBOT_EAB_HMAC_KEY` when your CA requires EAB).
+   - Always set your contact email via `EASYHAPROXY_CERTBOT_EMAIL`.
+   - Ensure ports 80 and 443 are publicly reachable on the EasyHAProxy host.
+   - Persist the folder `/certs/certbot` on a durable volume so issued/renewed certificates survive container restarts and avoid hitting CA rate limits.
+   - Challenge method is HTTP-01 only; EasyHAProxy configures a standalone Certbot responder internally.
+
+2. Enable ACME per domain (per service/app)
+   - Add the label `easyhaproxy.<definition>.certbot=true` to the service you want a certificate for.
+   - Ensure the service is exposed on HTTP port 80 from EasyHAProxy’s perspective (e.g., `easyhaproxy.<definition>.port=80`). ACME HTTP-01 will not work if the front port is not 80.
+   - Provide the domain via `easyhaproxy.<definition>.host=yourdomain.tld` (and additional labels per your install method).
+
+What happens under the hood
+- When a labeled domain is detected and a certificate is needed, EasyHAProxy runs Certbot with `--preferred-challenges http` and a standalone responder bound to internal port 2080.
+- HAProxy temporarily routes `/.well-known/acme-challenge/` for that domain to the Certbot responder, allowing the CA to validate via HTTP-01.
+- On success, EasyHAProxy merges the issued cert and key and stores them under `/certs/certbot` (one PEM per domain), then reloads HAProxy to serve HTTPS for that domain.
+- Certificates are monitored and renewed automatically before expiry.
+
+Tips
+- Do not map port 443 for your backend app; EasyHAProxy will terminate TLS at the proxy once the certificate is issued.
+- If you do not set `EASYHAPROXY_CERTBOT_EMAIL`, EasyHAProxy will not request certificates.
+- DNS-01 is not supported natively; for wildcards or DNS-only environments, issue certificates externally and mount them via `sslcert` as static certificates.
+
 ## Environment Variables
 
 To enable the ACME protocol we need to enable Certbot in EasyHAProxy by setting up to the following environment variables:

@@ -1,4 +1,4 @@
-FROM alpine:3.20
+FROM alpine:3.22
 
 ARG RELEASE_VERSION_ARG
 
@@ -6,6 +6,7 @@ ENV RELEASE_VERSION=$RELEASE_VERSION_ARG
 ENV TZ="Etc/UTC"
 
 RUN apk add --no-cache haproxy bash python3 py3-pip py-yaml certbot openssl \
+    && apk add --no-cache --virtual .build-deps build-base python3-dev musl-dev linux-headers \
     && pip3 install --upgrade pip --break-system-packages
 
 RUN openssl dhparam -out /etc/haproxy/dhparam 2048 \
@@ -18,6 +19,8 @@ COPY build/assets /
 COPY src/ /scripts/
 
 RUN pip install -r requirements.txt --break-system-packages
+
+RUN apk del .build-deps
 
 RUN pytest -s -vv tests/
 

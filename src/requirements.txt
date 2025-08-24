@@ -6,3 +6,4 @@ docker
 kubernetes
 deepdiff
 pyopenssl
+psutil

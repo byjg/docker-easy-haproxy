@@ -11,11 +11,14 @@
     acl is_rule_{{ host }}_2 hdr(host) -i {{ k }}:{{ o["port"] }}
     {% if certbot %}
     acl is_certbot_{{ host }} path_beg /.well-known/acme-challenge/
-    use_backend certbot_backend if is_certbot_{{ host }} is_rule_{{ host }}_1 OR is_certbot_{{ host }} is_rule_{{ host }}_2
     {% endif %}
     {% if o["hosts"][k]["redirect_ssl"] %}
     http-request redirect scheme https code 301 if {% if certbot %}!is_certbot_{{ host }} {% endif %}is_rule_{{ host }}_1 OR {% if certbot %}!is_certbot_{{ host }} {% endif %}is_rule_{{ host }}_2
-    {% else %}
+    {% endif %}
+    {% if certbot %}
+    use_backend certbot_backend if is_certbot_{{ host }} is_rule_{{ host }}_1 OR is_certbot_{{ host }} is_rule_{{ host }}_2
+    {% endif %}
+    {% if not o["hosts"][k]["redirect_ssl"] %}
     use_backend srv_{{ host }} if is_rule_{{ host }}_1 OR is_rule_{{ host }}_2
     {% endif %}
     {% endfor %}
