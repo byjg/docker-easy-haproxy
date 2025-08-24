@@ -1,0 +1,41 @@
+# This example shows how to setup HTTP-01 ACME CA Challenge
+#
+# You need
+# - public IP pointing your machine
+# - open ports 80 and 443 in your firewall
+
+version: "3"
+
+services:
+  haproxy:
+    image: byjg/easy-haproxy:4.5.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Persist the CERTBOT to avoid re-challenge when the server restarts
+      - ./certs/certbot:/certs/certbot
+    environment:
+      EASYHAPROXY_DISCOVER: docker
+      HAPROXY_CUSTOMERRORS: "true"
+      HAPROXY_USERNAME: admin
+      HAPROXY_PASSWORD: password
+      HAPROXY_STATS_PORT: 1936
+      # SETUP THE EMAIL for CertBot
+      EASYHAPROXY_CERTBOT_EMAIL: user@example.com
+      # Let's encrypt don´t need AUTOCONFIG, just email.
+      # If you want other, please refer to the documentation
+      # EASYHAPROXY_CERTBOT_AUTOCONFIG: zerossl
+
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+      - "1936:1936/tcp"
+
+  container:
+    image: byjg/static-httpserver
+    labels:
+      # Setup here the domain will have the SSL issued
+      easyhaproxy.http.redirect_ssl: true
+      easyhaproxy.http.host: test.xpto.us
+      easyhaproxy.http.localport: 8080
+      easyhaproxy.http.certbot: true
+
