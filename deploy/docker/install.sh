@@ -7,7 +7,7 @@ docker volume create certs_certbot
 docker volume create certs_haproxy
 
 docker run -d --rm --name easyhaproxy_install -v certs_haproxy:/certs alpine tail -f /dev/null
-docker cp $ASSETS_DIR/.place_holder_cert.pem easyhaproxy_install:/certs/.place_holder_cert.pem
+docker cp $ASSETS_DIR/place_holder_cert.pem easyhaproxy_install:/certs/place_holder_cert.pem
 docker stop easyhaproxy_install
 
 echo

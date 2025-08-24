@@ -2,12 +2,12 @@ import os
 import shlex
 import subprocess
 import sys
+import psutil
 import time
 import logging
 from datetime import datetime
 from multiprocessing import Process
 from typing import Final
-
 import requests
 from OpenSSL import crypto
 
@@ -120,6 +120,7 @@ class Functions:
         log_source_handler = logging.StreamHandler(sys.stdout)
         log_source_formatter = logging.Formatter('%(name)s [%(asctime)s] %(levelname)s - %(message)s')
         log_source_handler.setFormatter(log_source_formatter)
+        log_source_handler.addFilter(SingleLineNonEmptyFilter())
         source.setLevel(selected_level)
         source.addHandler(log_source_handler)
         return selected_level
@@ -202,18 +203,26 @@ class DaemonizeHAProxy:
         if len(list(self.get_custom_config_files().keys())) != 0:
             custom_config_files = "-f %s" % self.custom_config_folder
 
-        if action == DaemonizeHAProxy.HAPROXY_START:
+        if action == DaemonizeHAProxy.HAPROXY_START or not os.path.exists(pid_file):
             return "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg %s -p %s -S /var/run/haproxy.sock" % (custom_config_files, pid_file)
         else:
             return_code, output = Functions().run_bash(loggerHaproxy, "cat %s" % pid_file, log_output=False)
-            pid = "".join(output)
-            return "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg %s -p %s -x /var/run/haproxy.sock -sf %s" % (custom_config_files, pid_file, pid)
+            pid = "".join(output).rstrip()
+            if psutil.pid_exists(int(pid)):
+                return "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg %s -p %s -x /var/run/haproxy.sock -sf %s" % (custom_config_files, pid_file, pid)
+            else:
+                os.unlink(pid_file)
+                loggerHaproxy.warning(
+                    "PID file %s does not exist. Restarting haproxy instead of reload." % pid_file
+                )
+                return self.get_haproxy_command(DaemonizeHAProxy.HAPROXY_START, pid_file)
 
     def __prepare(self, command):
         if not isinstance(command, (list, tuple)):
             command = shlex.split(command)
 
         try:
+            loggerHaproxy.debug("HAPROXY command: %s" % command)
             self.process = subprocess.Popen(command,
                                             shell=False,
                                             stdout=subprocess.PIPE,
@@ -228,7 +237,7 @@ class DaemonizeHAProxy:
         try:
             with self.process.stdout:
                 for line in iter(self.process.stdout.readline, b''):
-                    loggerHaproxy.info(line)
+                    loggerHaproxy.info(line.rstrip())
 
             return_code = self.process.wait()
             loggerHaproxy.debug("Return code %s" % return_code)
@@ -354,6 +363,11 @@ class Certbot:
             if self.certbot_manual_auth_hook:
                 certbot_certonly += '    --manual --manual-auth-hook \'{hook}\''.format(hook=self.certbot_manual_auth_hook)
 
+            if loggerCertbot.level == logging.DEBUG:
+                certbot_certonly += '    -v'
+
+            loggerCertbot.debug("certbot_certonly: %s" % certbot_certonly)
+
             ret_reload = False
             return_code_issue = 0
             return_code_renew = 0
@@ -423,6 +437,38 @@ class Certbot:
             if cert_status != "ok":
                 self.freeze_issue[host] = self.retry_count
                 loggerCertbot.debug("Freeze issuing ssl for %s due failure. The certificate is %s" % (host, cert_status))
+
+
+
+class SingleLineNonEmptyFilter(logging.Filter):
+    """
+    Logging filter that ensures messages are single-line and non-empty.
+    - Collapses newlines into spaces and strips surrounding whitespace.
+    - Drops the record if the resulting message is empty.
+    """
+    def filter(self, record: logging.LogRecord) -> int:
+        try:
+            msg = record.getMessage()
+        except Exception:
+            # If formatting fails, drop the record
+            return 0
+
+        # Convert any non-string to string representation
+        if not isinstance(msg, str):
+            msg = str(msg)
+
+        # Collapse multi-line to single line and trim
+        sanitized = " ".join(msg.splitlines()).strip()
+
+        if sanitized == "":
+            return 0
+
+        # If we changed the message, update the record and clear args
+        if sanitized != record.getMessage():
+            record.msg = sanitized
+            record.args = ()
+        return 1
+
 
 # ####################################################################################################################
 # Setup Global Log

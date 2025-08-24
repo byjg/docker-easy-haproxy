@@ -51,8 +51,8 @@ frontend http_in_80
     acl is_rule_test_example_org_80_1 hdr(host) -i test.example.org
     acl is_rule_test_example_org_80_2 hdr(host) -i test.example.org:80
     acl is_certbot_test_example_org_80 path_beg /.well-known/acme-challenge/
-    use_backend certbot_backend if is_certbot_test_example_org_80 is_rule_test_example_org_80_1 OR is_certbot_test_example_org_80 is_rule_test_example_org_80_2
     http-request redirect scheme https code 301 if !is_certbot_test_example_org_80 is_rule_test_example_org_80_1 OR !is_certbot_test_example_org_80 is_rule_test_example_org_80_2
+    use_backend certbot_backend if is_certbot_test_example_org_80 is_rule_test_example_org_80_1 OR is_certbot_test_example_org_80 is_rule_test_example_org_80_2
 
     acl is_rule_test2_example_org_80_1 hdr(host) -i test2.example.org
     acl is_rule_test2_example_org_80_2 hdr(host) -i test2.example.org:80
