@@ -42,6 +42,7 @@ def test_processor_docker():
                                           "easyhaproxy.http.port": "80",
                                           "easyhaproxy.http.localport": "8080",
                                           "easyhaproxy.http.host": "host1.local",
+                                          "easyhaproxy.http.plugin.xyz": "host1.local",
 
                                           "easyhaproxy.http2.port": "90",
                                           "easyhaproxy.http2.localport": "9000",
@@ -71,6 +72,7 @@ def test_processor_docker():
             'easyhaproxy.http.host': 'host1.local',
             'easyhaproxy.http.localport': '8080',
             'easyhaproxy.http.port': '80',
+            'easyhaproxy.http.plugin.xyz': "host1.local",
             'easyhaproxy.http2.host': 'host2.local',
             'easyhaproxy.http2.localport': '9000',
             'easyhaproxy.http2.port': '90',
