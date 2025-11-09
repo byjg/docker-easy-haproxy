@@ -1,3 +1,7 @@
+---
+sidebar_position: 9
+---
+
 # Setup custom certificates
 
 You can use your own certificates with EasyHAProxy. You just need to let EasyHAProxy know that certificate.  

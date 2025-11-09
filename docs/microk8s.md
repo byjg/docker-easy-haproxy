@@ -1,3 +1,7 @@
+---
+sidebar_position: 6
+---
+
 # Microk8s Add-ons
 
 Microk8s is a lightweight Kubernetes distribution that can run on a single machine. It is very easy to install and use.

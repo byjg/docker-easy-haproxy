@@ -80,6 +80,16 @@ If you already set up the EasyHAProxy, is time to go deeper:
 - [Custom SSL](docs/ssl.md)
 - [Automatic Certificate Issuing](docs/acme.md) (e.g. Letsencrypt)
 
+## Configuration Reference
+
+Detailed configuration guides for advanced setups:
+
+- [Container Labels](docs/container-labels.md) - Configure Docker/Swarm containers with labels
+- [Environment Variables](docs/environment-variable.md) - Configure EasyHAProxy behavior
+- [Volumes](docs/volumes.md) - Map volumes for certificates, config, and custom files
+- [Other Configurations](docs/other.md) - Additional configurations (ports, custom errors, etc.)
+- [Limitations](docs/limitations.md) - Important limitations and considerations
+
 ## See EasyHAProxy in action
 
 Click on the image to see the videos (use HD for better visualization)

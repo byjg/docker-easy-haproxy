@@ -1,3 +1,7 @@
+---
+sidebar_position: 15
+---
+
 # Limitations and Considerations
 
 ## EasyHAProxy will not work with --network=host

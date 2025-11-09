@@ -1,3 +1,7 @@
+---
+sidebar_position: 5
+---
+
 # Helm 3
 
 Helm is a package manager for Kubernetes. It allows you to install and manage applications on Kubernetes.

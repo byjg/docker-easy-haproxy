@@ -1,3 +1,7 @@
+---
+sidebar_position: 12
+---
+
 # Docker environment variables
 
 | Environment Variable     | Description                                                                                                                                                                                    | Default       |
