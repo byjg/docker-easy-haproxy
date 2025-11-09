@@ -19,6 +19,9 @@ sidebar_position: 12
 | HAPROXY_STATS_PORT       | (Optional) The HAProxy port to the statistics. If set to `false`, disable statistics                                                                                                           | `1936`        |
 | HAPROXY_CUSTOMERRORS     | (Optional) If HAProxy will use custom HTML errors. true/false.                                                                                                                                 | `false`       |
 
+:::note ACME/Certbot Environment Variables
+For ACME/Certbot configuration (Let's Encrypt, ZeroSSL, etc.), see the [ACME documentation](acme.md#environment-variables) for the complete list of `EASYHAPROXY_CERTBOT_*` variables.
+:::
 
 ----
 [Open source ByJG](http://opensource.byjg.com)

@@ -13,9 +13,9 @@ Here are the steps to install EasyHAProxy on your Microk8s.
 
 EasyHAProxy is being part of official MicroK8s Community edition since MicroK8s version 1.27.
 
-Just enable the community add-on
+Just enable the community add-on:
 
-```
+```bash title="Enable community addons"
 microk8s enable community
 ```
 
@@ -34,7 +34,7 @@ addons:
 
 However, if you are using MicroK8s before 1.27 you need to enable it directly from the ByJG repository by accessing the microk8s host machine and run:
 
-```shell
+```bash title="Add ByJG addon repository"
 microk8s addons repo add byjg https://github.com/byjg/microk8s-addons.git
 ```
 
@@ -58,19 +58,21 @@ Once you have enable the EasyHAProxy from the community repository or from ByJG 
 
 Usage:
 
-Install as a Daemonset
+Install as a Daemonset:
 
-```shell
+```bash title="Install as DaemonSet"
 microk8s enable easyhaproxy
 ```
 
-Install as a NodePort
+Install as a NodePort:
 
-```shell
+```bash title="Install as NodePort"
 microk8s enable easyhaproxy --nodeport
 ```
 
-**Remember**: you need to disable any ingress controller you have previously installed, for example, nginx, traefik, etc. before install EasyHaProxy.
+:::warning Disable Other Ingress Controllers
+You need to disable any ingress controller you have previously installed (e.g., nginx, traefik, etc.) before installing EasyHAProxy to avoid conflicts.
+:::
 
 For more parameters you can refer to the [Kubernetes](kubernetes.md) page.
 

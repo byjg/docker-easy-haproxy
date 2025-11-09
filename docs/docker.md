@@ -16,19 +16,20 @@ To accomplish this, EasyHAProxy may need to attach the same network to its conta
 
 It's recommended to create a network external to EasyHAProxy, although it's not mandatory.
 
-Limitations:
- - You cannot mix Docker containers with Swarm containers.
- - This method does not work with containers that use the '--network=host' option. (see [limitations](limitations.md))
+:::warning Limitations
+- You cannot mix Docker containers with Swarm containers.
+- This method does not work with containers that use the `--network=host` option. See [limitations](limitations.md) for details.
+:::
 
-e.g.:
+For example:
 
-```bash
+```bash title="Create EasyHAProxy network"
 docker network create easyhaproxy
 ```
 
-And then run the EasyHAProxy
+And then run the EasyHAProxy:
 
-```bash
+```bash title="Run EasyHAProxy container"
 docker run -d \
       --name easy-haproxy-container \
       -v /var/run/docker.sock:/var/run/docker.sock \
@@ -45,9 +46,9 @@ Mapping to `/var/run/docker.sock` is necessary to discover the docker containers
 
 ## Running containers
 
-To make your containers "discoverable" by EasyHAProxy, that is the minimum configuration you need:
+To make your containers "discoverable" by EasyHAProxy, this is the minimum configuration you need:
 
-```bash
+```bash title="Run container with EasyHAProxy labels"
 docker run -d \
       --label easyhaproxy.http.host=example.org \
       --label easyhaproxy.http.port=80 \

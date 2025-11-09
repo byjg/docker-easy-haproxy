@@ -10,9 +10,11 @@ This method will use a static configuration, which is simpler and easier than cr
 
 You can use this configuration to set up external servers unrelated to docker or Kubernetes.
 
-Another advantage is that EasyHAProxy will monitor for changes in this file and automatically reconfigure HAProxy when any changes are detected.
+:::tip Live Reload
+EasyHAProxy monitors this file for changes and automatically reconfigures HAProxy when any changes are detected.
+:::
 
-First, Create a YAML:
+First, create a YAML configuration:
 
 ```yaml
 stats:
@@ -60,9 +62,9 @@ easymapping:
           - domain:8181
 ```
 
-Then map this file to `/etc/haproxy/static/config.yml` in your EasyHAProxy container as:
+Then map this file to `/etc/haproxy/static/config.yml` in your EasyHAProxy container:
 
-```bash
+```bash title="Run EasyHAProxy with static configuration"
 docker run -d \
       --name easy-haproxy-container \
       -v /var/run/docker.sock:/var/run/docker.sock \
@@ -119,8 +121,9 @@ easymapping:
       www.host1.com.br: http://host1.com.br
 ```
 
-**Note**: The only way to pass SSL certificates in the static configuration file is to map the certificates
-to EasyHAProxy as a docker volume. Refer to the [SSL documentation](ssl.md) to learn how to do it. 
+:::note SSL Certificates in Static Mode
+The only way to provide SSL certificates in static configuration mode is to map the certificates to EasyHAProxy as a docker volume. Refer to the [SSL documentation](ssl.md) to learn how to configure this.
+::: 
 
 ----
 [Open source ByJG](http://opensource.byjg.com)

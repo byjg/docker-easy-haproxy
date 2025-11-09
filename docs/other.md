@@ -12,9 +12,9 @@ Some ports on the EasyHAProxy container and in the firewall are required to be o
 - If you enable the HAProxy statistics, you must also expose the port defined in `HAPROXY_STATS_PORT` environment variable (default 1936). Be aware that statistics are enabled by default with no password.
 - Every port defined in `easyhaproxy.[definitions].port` also should be exposed. 
 
-e.g.
+For example:
 
-```bash
+```bash title="Expose required ports"
 docker run \
     /* other parameters */
     -p 80:80 \
@@ -27,7 +27,7 @@ docker run \
 
 The docker volume or a way to call the API needs to pass to the EasyHAProxy container.
 
-```bash
+```bash title="Mount Docker socket"
 docker run \
     /* other parameters */
     -v /var/run/docker.sock:/var/run/docker.sock \
@@ -38,7 +38,7 @@ docker run \
 
 You can concatenate valid HAProxy `.cfg` files to the dynamically generated `haproxy.cfg` by mapping the folder `/etc/haproxy/conf.d`.
 
-```bash
+```bash title="Mount custom config directory"
 docker run \
     /* other parameters */
     -v /your/local/conf.d:/etc/haproxy/conf.d \
