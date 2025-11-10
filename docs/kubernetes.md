@@ -97,7 +97,7 @@ You don't need to expose any port in your container.
 | easyhaproxy.certbot              | (optional) Boolean. It will request certbot certificates for the ingresses domains. | false        | true or false              |
 | easyhaproxy.redirect             | (optional) JSON. Key pair with a domain and its destination.                        | *empty*      | \{"domain":"redirect_url"} |
 | easyhaproxy.mode                 | (optional) Set the HTTP mode for that connection.                                   | http         | http or tcp                |
-| easyhaproxy.listen_port          | (optional) Set the an additional port for that ingress                              | http         | http or tcp                |
+| easyhaproxy.listen_port          | (optional) Override the HTTP listen port created for that ingress                   | 80           | 8081                       |
 
 **Important**: The annotations are per ingress and applied to all hosts in that ingress configuration.
 

@@ -35,7 +35,7 @@ version: "3"
 
 services:
   haproxy:
-    image: byjg/easy-haproxy:4.3.1-rc1
+    image: byjg/easy-haproxy:4.6.0
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     deploy:

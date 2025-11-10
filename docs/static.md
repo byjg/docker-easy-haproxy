@@ -67,7 +67,6 @@ Then map this file to `/etc/haproxy/static/config.yml` in your EasyHAProxy conta
 ```bash title="Run EasyHAProxy with static configuration"
 docker run -d \
       --name easy-haproxy-container \
-      -v /var/run/docker.sock:/var/run/docker.sock \
       -v /my/static/:/etc/haproxy/static/ \
       -e EASYHAPROXY_DISCOVER="static" \
       # + Environment Variables \
@@ -78,7 +77,11 @@ docker run -d \
     byjg/easy-haproxy
 ```
 
-You can find other informations on [docker label configuration](container-labels.md) and [environment variable guide](environment-variable.md)
+:::tip Docker Socket Optional
+Mounting `/var/run/docker.sock` is not required in static discovery mode. Add it only if you are simultaneously discovering Docker containers.
+:::
+
+You can find other information on [docker label configuration](container-labels.md) and [environment variable guide](environment-variable.md)
 
 ## Yaml Definition
 

@@ -6,7 +6,7 @@ sidebar_position: 11
 
 ## Container (Docker or Swarm) labels
 
-| Tag                                   | Description                                                                                                                                         | Default      | Example                                                                                                          |
+| Label                                 | Description                                                                                                                                         | Default      | Example                                                                                                          |
 |---------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|--------------|------------------------------------------------------------------------------------------------------------------|
 | easyhaproxy.[definition].host         | Host(s) HAProxy is listening. More than one host use comma as delimiter                                                                             | **required** | somehost.com OR host1.com,host2.com                                                                              |
 | easyhaproxy.[definition].mode         | (Optional) Is this `http` or `tcp` mode in HAProxy.                                                                                                 | http         | http or tcp                                                                                                      |
@@ -18,7 +18,7 @@ sidebar_position: 11
 | easyhaproxy.[definition].ssl-check    | (Optional) `ssl`, enable health check via SSL in `mode tcp`                                                                                         | *empty*      | ssl                                                                                                              |
 | easyhaproxy.[definition].certbot      | (Optional) Generate certificate with certbot. Do not use with `sslcert` parameter. More info [here](acme.md).                                       | false        | true OR false                                                                                                    |
 | easyhaproxy.[definition].redirect_ssl | (Optional) Redirect all requests to https                                                                                                           | false        | true OR false                                                                                                    |
-| easyhaproxy.[definition].clone_to_ssl | (Optional) It copies the configuration to HTTPS(443) and disable SSL from the current config. **Do not use* this with `ssl` or `certbot` parameters | false        | true OR false                                                                                                    |
+| easyhaproxy.[definition].clone_to_ssl | (Optional) It copies the configuration to HTTPS(443) and disable SSL from the current config. **Do not use** this with `ssl` or `certbot` parameters | false        | true OR false                                                                                                    |
 | easyhaproxy.[definition].balance      | (Optional) HAProxy balance algorithm. See [HAProxy documentation](https://cbonte.github.io/haproxy-dconv/1.8/configuration.html#4.2-balance)        | roundrobin   | roundrobin, source, uri, url_param, hdr, rdp-cookie, leastconn, first, static-rr, rdp-cookie, hdr_dom, map-based |
 
 :::info Understanding Definitions
@@ -27,7 +27,7 @@ The `[definition]` is a string identifier that groups related configuration labe
 A single container can have multiple definitions to expose different services or ports.
 :::
 
-## Configuations
+## Configurations
 
 ### Single Definition
 
