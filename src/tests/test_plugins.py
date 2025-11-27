@@ -20,6 +20,7 @@ from plugins import PluginManager, PluginContext
 from plugins.builtin.cloudflare import CloudflarePlugin
 from plugins.builtin.cleanup import CleanupPlugin
 from plugins.builtin.deny_pages import DenyPagesPlugin
+from plugins.builtin.ip_whitelist import IpWhitelistPlugin
 import easymapping
 
 
@@ -320,6 +321,110 @@ class TestDenyPagesPlugin:
         assert "http-request deny deny_status 404 if denied_path" in haproxy_config
 
 
+class TestIpWhitelistPlugin:
+    """Test cases for IpWhitelistPlugin (DOMAIN plugin)"""
+
+    def test_ip_whitelist_plugin_initialization(self):
+        """Test plugin initializes with correct defaults"""
+        plugin = IpWhitelistPlugin()
+        assert plugin.name == "ip_whitelist"
+        assert plugin.enabled is True
+        assert plugin.allowed_ips == []
+        assert plugin.status_code == 403
+
+    def test_ip_whitelist_plugin_configuration(self):
+        """Test plugin configuration"""
+        plugin = IpWhitelistPlugin()
+
+        # Test allowed IPs
+        plugin.configure({"allowed_ips": "192.168.1.0/24,10.0.0.1,172.16.0.0/16"})
+        assert plugin.allowed_ips == ["192.168.1.0/24", "10.0.0.1", "172.16.0.0/16"]
+
+        # Test status code
+        plugin.configure({"status_code": "404"})
+        assert plugin.status_code == 404
+
+        # Test enabled
+        plugin.configure({"enabled": "false"})
+        assert plugin.enabled is False
+
+    def test_ip_whitelist_plugin_generates_config(self):
+        """Test plugin generates correct HAProxy config"""
+        plugin = IpWhitelistPlugin()
+        plugin.configure({
+            "allowed_ips": "192.168.1.0/24,10.0.0.1",
+            "status_code": "403"
+        })
+
+        context = PluginContext(
+            parsed_object={},
+            easymapping=[],
+            container_env={},
+            domain="example.com",
+            port="80",
+            host_config={}
+        )
+
+        result = plugin.process(context)
+
+        assert result.haproxy_config is not None
+        assert "IP Whitelist" in result.haproxy_config
+        assert "acl whitelisted_ip src 192.168.1.0/24 10.0.0.1" in result.haproxy_config
+        assert "http-request deny deny_status 403 if !whitelisted_ip" in result.haproxy_config
+        assert result.metadata["domain"] == "example.com"
+        assert result.metadata["allowed_ips"] == ["192.168.1.0/24", "10.0.0.1"]
+        assert result.metadata["status_code"] == 403
+
+    def test_ip_whitelist_plugin_disabled(self):
+        """Test plugin returns empty config when disabled"""
+        plugin = IpWhitelistPlugin()
+        plugin.configure({"enabled": "false", "allowed_ips": "192.168.1.0/24"})
+
+        context = PluginContext(
+            parsed_object={},
+            easymapping=[],
+            container_env={},
+            domain="example.com"
+        )
+
+        result = plugin.process(context)
+        assert result.haproxy_config == ""
+        assert result.metadata == {}
+
+    def test_ip_whitelist_plugin_no_ips(self):
+        """Test plugin returns empty config when no IPs configured"""
+        plugin = IpWhitelistPlugin()
+
+        context = PluginContext(
+            parsed_object={},
+            easymapping=[],
+            container_env={},
+            domain="example.com"
+        )
+
+        result = plugin.process(context)
+        assert result.haproxy_config == ""
+
+    def test_ip_whitelist_plugin_in_haproxy_config(self):
+        """Test IP Whitelist plugin integration in full HAProxy config generation"""
+        # Use fixture with ip_whitelist plugin enabled via labels
+        line_list = load_fixture("services-with-ip-whitelist")
+
+        result = {
+            "customerrors": False,
+            "certbot": {"email": "test@example.com"},
+            "stats": {"port": 0}
+        }
+
+        cfg = easymapping.HaproxyConfigGenerator(result)
+        haproxy_config = cfg.generate(line_list)
+
+        # Verify IP Whitelist config is in the output
+        assert "IP Whitelist - Only allow specific IPs" in haproxy_config
+        assert "acl whitelisted_ip src 192.168.1.0/24 10.0.0.5" in haproxy_config
+        assert "http-request deny deny_status 403 if !whitelisted_ip" in haproxy_config
+
+
 class TestPluginManager:
     """Test cases for PluginManager"""
 
@@ -332,15 +437,17 @@ class TestPluginManager:
         assert "cloudflare" in manager.plugins
         assert "cleanup" in manager.plugins
         assert "deny_pages" in manager.plugins
+        assert "ip_whitelist" in manager.plugins
 
         # Verify plugin types
         assert len(manager.global_plugins) == 1  # cleanup
-        assert len(manager.domain_plugins) == 2  # cloudflare, deny_pages
+        assert len(manager.domain_plugins) == 3  # cloudflare, deny_pages, ip_whitelist
 
         # Verify plugin instances
         assert manager.plugins["cloudflare"].name == "cloudflare"
         assert manager.plugins["cleanup"].name == "cleanup"
         assert manager.plugins["deny_pages"].name == "deny_pages"
+        assert manager.plugins["ip_whitelist"].name == "ip_whitelist"
 
     def test_plugin_manager_executes_global_plugins(self):
         """Test plugin manager executes global plugins correctly"""
