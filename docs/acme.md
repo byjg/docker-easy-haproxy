@@ -1,3 +1,7 @@
+---
+sidebar_position: 10
+---
+
 # SSL - Automatic Certificate Management Environment (ACME)
 
 The Automatic Certificate Management Environment (ACME) protocol 
@@ -13,9 +17,11 @@ Easy HAProxy supports the following ACME challenge types:
 - **HTTP-01 Challenge (Default and Only)**  
   The ACME server validates ownership by making an HTTP request to a temporary endpoint served on port 80. Easy HAProxy provisions a standalone Certbot responder on an internal port and routes `/.well-known/acme-challenge/` traffic to it.
 
-> Note:
-> - TLS-ALPN-01 is not supported natively by Easy HAProxy.
-> - DNS-01 (often used for wildcard certificates) is not supported natively. If you need DNS-01, obtain certificates externally and mount them via `sslcert` as static certificates.
+:::info Challenge Support
+- **HTTP-01**: Fully supported (default)
+- **TLS-ALPN-01**: Not supported natively by Easy HAProxy
+- **DNS-01**: Not supported natively. If you need DNS-01 for wildcard certificates, obtain certificates externally and mount them via `sslcert` as static certificates.
+:::
 
 ## How ACME works with Easy HAProxy
 
@@ -69,7 +75,7 @@ Possible values for: `EASYHAPROXY_CERTBOT_AUTOCONFIG`
 
 | CA                   | Auto Config      | Free? | Account Required?  | EAB KID? | EAB HMAC Key? | More Info                                                                                                                                                          |
 |----------------------|------------------|-------|--------------------|----------|---------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Let's Encrypt        | -                | Yes   | No                 | No       | No            | -                                                                                                                                                                  |
+| Let's Encrypt        | letsencrypt      | Yes   | No                 | No       | No            | Default when no AUTOCONFIG is set                                                                                                                                  |
 | Let's Encrypt (Test) | letsencrypt_test | Yes   | No                 | No       | No            | -                                                                                                                                                                  |
 | ZeroSSL              | zerossl          | Yes   | No                 | No       | No            | [Link](https://zerossl.com/documentation/acme/)                                                                                                                    |
 | BuyPass              | buypass          | Yes   | No                 | No       | No            | [Link](https://community.buypass.com/t/63d4ay/buypass-go-ssl-endpoints-updated-14-05-2020)                                                                         |
@@ -104,16 +110,18 @@ docker run \
     byjg/easy-haproxy
 ```
 
-Notes:
+:::note Configuration Notes
+- The `EASYHAPROXY_CERTBOT_AUTOCONFIG` is not required for Let's Encrypt (it's the default). In this example, the certificate will be issued by ZeroSSL.
+- If you don't set the `EASYHAPROXY_CERTBOT_EMAIL` environment variable, EasyHAProxy will fail silently and **will not request** certificates.
+- Ports 80 and 443 must be accessible through the internet as a [Let's Encrypt requirement](https://letsencrypt.org/docs/allow-port-80/)
+:::
 
-- The `EASYHAPROXY_CERTBOT_AUTOCONFIG` is not required for Let's Encrypt. In this example, the certificate will be issued by ZeroSSL.
-- If you don't setup `EASYHAPROXY_CERTBOT_EMAIL` environment variable, EasyHAProxy will fail silently and **will not request** a certificate.
-- The ports 80 and 443 needs to accessible through the internet as [Let's Encrypt requirement](https://letsencrypt.org/docs/allow-port-80/)
-
-In order to avoid several certificate issuing, 
-**It is required you to persist the container folder `/certs/certbot` outside the container.**
-You cannot delete or change it contents. 
-If you do not persist, or change/delete the contents, Issue a certificate might not work properly and hit rate limit. 
+:::danger Important: Persist Certbot Certificates
+To avoid hitting rate limits and certificate issuing problems:
+- **You must persist** the container folder `/certs/certbot` outside the container
+- **Never delete or modify** its contents manually
+- If you don't persist this folder, or if you delete/modify its contents, certificate issuing may not work properly and you may hit rate limits
+::: 
 
 If you are using Let's Encrypt, be aware of it rate limits:
  
@@ -134,10 +142,10 @@ docker run \
     some/myimage
 ```
 
-Requirements:
-
-- Your container **must** listen to port 80. The CA will not issue the certificate if `easyhaproxy.<definition>.port` is in another port, and EasyHAProxy will fail silently.
-- You cannot set port 443 for the container with the Letsencrypt because EasyHAProxy will create this port automatically once the certificate is issued.
+:::warning ACME Requirements
+- Your container **must** be configured to listen on port 80 (`easyhaproxy.<definition>.port=80`). The CA will not issue certificates if using another port, and EasyHAProxy will fail silently.
+- Do not set port 443 for the container when using ACME, because EasyHAProxy will create the HTTPS binding automatically once the certificate is issued.
+:::
 
 ----
 [Open source ByJG](http://opensource.byjg.com)

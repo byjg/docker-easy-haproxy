@@ -1,10 +1,16 @@
+---
+sidebar_position: 1
+---
+
 # Kubernetes
 
 ## Setup Kubernetes EasyHAProxy
 
-EasyHAProxy for Kubernetes operates by querying all ingress definitions with the annotation 
-`kubernetes.io/ingress.class: easyhaproxy-ingress`. Upon finding this annotation, 
+:::info How it works
+EasyHAProxy for Kubernetes operates by querying all ingress definitions with the annotation
+`kubernetes.io/ingress.class: easyhaproxy-ingress`. Upon finding this annotation,
 EasyHAProxy immediately sets up HAProxy and begins serving traffic.
+:::
 
 For Kubernetes installations, there are three available installation modes:
 - DaemonSet: This mode exposes ports 80, 443, and 1936.
@@ -17,9 +23,11 @@ To install EasyHAProxy in your Kubernetes cluster, follow these steps:
 
 ### 1) Identify the node where your EasyHAProxy container will run
 
-EasyHAProxy will be limited to a single node. To understand that see [limitations](limitations.md) page.
+:::warning Single Node Deployment
+EasyHAProxy will be limited to a single node. To understand why, see the [limitations](limitations.md) page.
+:::
 
-```bash
+```bash title="List available nodes"
 $ kubectl get nodes
 
 NAME      STATUS   ROLES    AGE    VERSION
@@ -29,13 +37,13 @@ node-02   Ready    <none>   561d   v1.21.13-3
 
 Add the EasyHAProxy label to the node.
 
-```bash
+```bash title="Label the node for EasyHAProxy"
 kubectl label nodes node-01 "easyhaproxy/node=master"
 ```
 
 ### 2) Install EasyHAProxy with Kubernetes Manifest
 
-```bash
+```bash title="Install EasyHAProxy"
 kubectl create namespace easyhaproxy
 
 kubectl apply -f \
@@ -74,11 +82,11 @@ Once the container is running, EasyHAProxy will detect automatically and start t
 
 You don't need to expose any port in your container.
 
-Notes:
-
-- At this point, the implementation doesn't support all ingress properties or wildcard domains.
-- The ingress will publish the ports 80 and 443, plus 1936 if stats are enabled.
-- EasyHAProxy will read all `spec.rules[].host` spec, however it will parse only the first path `spec.rules[].http.paths[0].port.number` for each rule, and ignore the other paths.
+:::note Important Limitations
+- The implementation doesn't support all ingress properties or wildcard domains at this time.
+- The ingress will publish ports 80 and 443, plus 1936 if stats are enabled.
+- EasyHAProxy will read all `spec.rules[].host` specifications, however it will parse only the **first path** `spec.rules[].http.paths[0].port.number` for each rule, and ignore the other paths.
+:::
 
 ## Kubernetes annotations
 
@@ -89,7 +97,7 @@ Notes:
 | easyhaproxy.certbot              | (optional) Boolean. It will request certbot certificates for the ingresses domains. | false        | true or false              |
 | easyhaproxy.redirect             | (optional) JSON. Key pair with a domain and its destination.                        | *empty*      | \{"domain":"redirect_url"} |
 | easyhaproxy.mode                 | (optional) Set the HTTP mode for that connection.                                   | http         | http or tcp                |
-| easyhaproxy.listen_port          | (optional) Set the an additional port for that ingress                              | http         | http or tcp                |
+| easyhaproxy.listen_port          | (optional) Override the HTTP listen port created for that ingress                   | 80           | 8081                       |
 
 **Important**: The annotations are per ingress and applied to all hosts in that ingress configuration.
 

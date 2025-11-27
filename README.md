@@ -11,18 +11,19 @@
 
 ## Service discovery for HAProxy
 
-EasyHAProxy dynamically creates the `haproxy.cfg` based on the labels defined in docker containers.
+EasyHAProxy dynamically creates the `haproxy.cfg` based on metadata collected from your workloads (Docker labels, Swarm service labels, or Kubernetes ingress annotations).
 
 EasyHAProxy can detect and configure HAProxy automatically on the following platforms:
 
 - Docker
 - Docker Swarm
 - Kubernetes
+- Static YAML definitions (`EASYHAPROXY_DISCOVER=static`)
 
 ## Who is using?
 
 EasyHAProxy is part of some projects:
-- Dokku 
+- Dokku
 - MicroK8s
 - DigitalOcean Marketplace
 
@@ -34,12 +35,12 @@ Easy to set up and low configuration to numerous features.
 
 ## Features
 
-EasyHAProxy will discover the services based on the Docker Tags of the containers running on a Docker host or Docker Swarm cluster and dynamically set up the `haproxy.cfg`. Below, EasyHAProxy main features:
+EasyHAProxy will discover services based on Docker (or Swarm) labels and Kubernetes ingress annotations, then dynamically build the `haproxy.cfg`. Below, EasyHAProxy main features:
 
-- Support Automatic Certificate Management Environment (ACME) protocol compatible with Let's encrypt and others CA.
+- Support Automatic Certificate Management Environment (ACME) protocol compatible with Let's Encrypt and other CAs.
 - Set your custom SSL certificates
 - Balance traffic between multiple replicas
-- Set SSL with three different levels of validations and according to the most recent definitions.
+- Set SSL policies (`strict`, `default`, `loose`) via `EASYHAPROXY_SSL_MODE`.
 - Set up HAProxy to listen to TCP.
 - Add redirects.
 - Enable/disable Stats on port 1936 with a custom password.
@@ -79,6 +80,16 @@ If you already set up the EasyHAProxy, is time to go deeper:
 
 - [Custom SSL](docs/ssl.md)
 - [Automatic Certificate Issuing](docs/acme.md) (e.g. Letsencrypt)
+
+## Configuration Reference
+
+Detailed configuration guides for advanced setups:
+
+- [Container Labels](docs/container-labels.md) - Configure Docker/Swarm containers with labels
+- [Environment Variables](docs/environment-variable.md) - Configure EasyHAProxy behavior
+- [Volumes](docs/volumes.md) - Map volumes for certificates, config, and custom files
+- [Other Configurations](docs/other.md) - Additional configurations (ports, custom errors, etc.)
+- [Limitations](docs/limitations.md) - Important limitations and considerations
 
 ## See EasyHAProxy in action
 

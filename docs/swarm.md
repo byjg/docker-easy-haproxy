@@ -1,3 +1,7 @@
+---
+sidebar_position: 2
+---
+
 # Swarm
 
 ## Setup Docker EasyHAProxy
@@ -6,21 +10,21 @@ This method involves using a Docker Swarm installation to discover containers an
 
 EasyHAProxy inspects Docker containers within the Swarm and retrieves labels to configure HAProxy. Once it identifies a container with at least the label 'easyhaproxy.http.host,' it configures HAProxy to redirect traffic to that container. To accomplish this, EasyHAProxy may need to attach the same network to its container.
 
-Utilizing Docker Swarm offers several advantages, including:
- - Container Discovery: Docker Swarm facilitates the discovery of containers within the cluster, 
-   streamlining the process of identifying services for HAProxy configuration.
- - Remote Node Management: Docker Swarm allows for the management of containers across multiple nodes, 
-   providing flexibility and scalability in deploying services while ensuring seamless HAProxy configuration across the cluster.
+:::tip Docker Swarm Advantages
+- **Container Discovery**: Docker Swarm facilitates the discovery of containers within the cluster, streamlining the process of identifying services for HAProxy configuration.
+- **Remote Node Management**: Docker Swarm allows for the management of containers across multiple nodes, providing flexibility and scalability in deploying services while ensuring seamless HAProxy configuration across the cluster.
+:::
 
 It's recommended to create a network external to EasyHAProxy.
 
-Limitations:
- - You cannot mix Docker containers with Swarm containers.
- - This method does not work with containers that use the '--network=host' option. (see [limitations](limitations.md))
+:::warning Limitations
+- You cannot mix Docker containers with Swarm containers.
+- This method does not work with containers that use the `--network=host` option. See [limitations](limitations.md) for details.
+:::
 
-e.g.:
+For example:
 
-```bash
+```bash title="Create overlay network"
 docker network create -d overlay --attachable easyhaproxy
 ```
 
@@ -31,7 +35,7 @@ version: "3"
 
 services:
   haproxy:
-    image: byjg/easy-haproxy:4.3.1-rc1
+    image: byjg/easy-haproxy:4.6.0
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     deploy:
@@ -55,15 +59,17 @@ networks:
     external: true
 ```
 
-And then:
+Deploy the stack:
 
-```bash
+```bash title="Deploy EasyHAProxy stack"
 docker stack deploy --compose-file docker-compose.yml easyhaproxy
 ```
 
 Mapping to `/var/run/docker.sock` is necessary to discover the docker containers and get the labels;
 
-**Do not** add more than one replica for EasyHAProxy. To understand that see [limitations](limitations.md) page.
+:::danger Single Replica Only
+**Do not** add more than one replica for EasyHAProxy. To understand why, see the [limitations](limitations.md) page.
+:::
 
 ## Running containers
 

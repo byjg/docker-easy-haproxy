@@ -1,4 +1,12 @@
+---
+sidebar_position: 13
+---
+
 # Volumes
+
+:::info Volume Mapping
+These volumes allow you to persist certificates, provide custom configurations, and extend EasyHAProxy functionality.
+:::
 
 You can map the following volumes:
 

@@ -1,3 +1,7 @@
+---
+sidebar_position: 5
+---
+
 # Helm 3
 
 Helm is a package manager for Kubernetes. It allows you to install and manage applications on Kubernetes.
@@ -6,9 +10,11 @@ Helm is a package manager for Kubernetes. It allows you to install and manage ap
 
 ### 1) Identify the node where your EasyHAProxy container will run
 
-EasyHAProxy will be limited to a single node. To understand that see [limitations](limitations.md) page.
+:::warning Single Node Deployment
+EasyHAProxy will be limited to a single node. To understand why, see the [limitations](limitations.md) page.
+:::
 
-```bash
+```bash title="List available nodes"
 $ kubectl get nodes
 
 NAME      STATUS   ROLES    AGE    VERSION
@@ -18,15 +24,15 @@ node-02   Ready    <none>   561d   v1.21.13-3
 
 Add the EasyHAProxy label to the node.
 
-```bash
+```bash title="Label the node for EasyHAProxy"
 kubectl label nodes node-01 "easyhaproxy/node=master"
 ```
 
 ### 2) Install EasyHAProxy
 
-Minimal configuration
+Minimal configuration:
 
-```bash
+```bash title="Install with Helm (minimal)"
 helm repo add byjg https://opensource.byjg.com/helm
 helm repo update byjg
 kubectl create namespace easyhaproxy
@@ -39,7 +45,7 @@ helm upgrade --install ingress byjg/easyhaproxy \
 
 Customizing Helm Values:
 
-```yaml
+```yaml title="values.yaml"
 easyhaproxy:
   stats:
     username: admin

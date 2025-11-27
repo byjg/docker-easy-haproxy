@@ -1,3 +1,7 @@
+---
+sidebar_position: 8
+---
+
 # DigitalOcean
 
 DigitalOcean is a cloud infrastructure provider focused on simplifying web infrastructure for software developers.
