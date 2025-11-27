@@ -251,6 +251,13 @@ class Kubernetes(ProcessorInterface):
             redirect = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.redirect")
             mode = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.mode")
             listen_port = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.listen_port", 80)
+            plugins = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.plugins")
+
+            # Extract plugin-specific configurations
+            plugin_annotations = {}
+            for annotation_key, annotation_value in ingress.metadata.annotations.items():
+                if annotation_key.startswith("easyhaproxy.plugin."):
+                    plugin_annotations[annotation_key] = annotation_value
 
             data = {"creation_timestamp": ingress.metadata.creation_timestamp.strftime("%x %X"),
                     "resource_version": ingress.metadata.resource_version, "namespace": ingress.metadata.namespace}
@@ -296,6 +303,16 @@ class Kubernetes(ProcessorInterface):
                 if mode is not None:
                     rule_data["%s.mode" % definition] = mode
                 rule_data["%s.balance" % definition] = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.balance", "roundrobin")
+
+                # Add plugin configuration
+                if plugins is not None:
+                    rule_data["%s.plugins" % definition] = plugins
+
+                # Add plugin-specific configurations
+                for plugin_key, plugin_value in plugin_annotations.items():
+                    # Convert easyhaproxy.plugin.X.Y to easyhaproxy.{definition}.plugin.X.Y
+                    plugin_config_key = plugin_key.replace("easyhaproxy.plugin.", "%s.plugin." % definition)
+                    rule_data[plugin_config_key] = plugin_value
 
                 service_name = rule.http.paths[0].backend.service.name
                 try:

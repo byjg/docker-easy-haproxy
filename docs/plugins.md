@@ -236,11 +236,52 @@ http-request deny content-type 'text/html' string 'JWT has expired' if { var(txn
 
 ## Configuration Methods
 
-Plugins can be configured using three methods, listed in order of precedence (highest to lowest):
+Plugins can be configured using different methods depending on your deployment environment:
 
-### 1. Container Labels (Domain Plugins Only)
+### 1. Kubernetes Annotations (Ingress Resources)
 
-Enable and configure domain plugins for specific containers:
+Enable and configure domain plugins for specific Kubernetes ingresses:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: easyhaproxy-ingress
+    # Enable plugins
+    easyhaproxy.plugins: "jwt_validator,deny_pages"
+    # Configure jwt_validator plugin
+    easyhaproxy.plugin.jwt_validator.algorithm: "RS256"
+    easyhaproxy.plugin.jwt_validator.issuer: "https://auth.example.com/"
+    easyhaproxy.plugin.jwt_validator.audience: "https://api.example.com"
+    easyhaproxy.plugin.jwt_validator.pubkey_path: "/etc/haproxy/jwt_keys/api_pubkey.pem"
+    # Configure deny_pages plugin
+    easyhaproxy.plugin.deny_pages.paths: "/admin,/private"
+    easyhaproxy.plugin.deny_pages.status_code: "403"
+  name: api-ingress
+  namespace: production
+spec:
+  rules:
+  - host: api.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: api-service
+            port:
+              number: 8080
+        pathType: ImplementationSpecific
+```
+
+**Annotation format:**
+- Enable plugins: `easyhaproxy.plugins: plugin1,plugin2`
+- Configure plugin: `easyhaproxy.plugin.<plugin_name>.<config_key>: value`
+
+See the [Kubernetes guide](kubernetes.md#using-plugins-with-kubernetes) for more examples.
+
+### 2. Container Labels (Docker/Docker Compose)
+
+Enable and configure domain plugins for specific Docker containers:
 
 ```yaml
 services:
@@ -262,7 +303,7 @@ services:
 
 **Where `<definition>` is:** `http`, `https`, `tcp`, etc.
 
-### 2. Static YAML Configuration
+### 3. Static YAML Configuration
 
 Configure plugins globally in `/etc/haproxy/static/config.yaml`:
 
@@ -288,7 +329,7 @@ plugins:
       enabled: false  # Disable globally, enable per-container via labels
 ```
 
-### 3. Environment Variables
+### 4. Environment Variables
 
 Configure plugins via environment variables:
 
@@ -461,11 +502,18 @@ DEBUG: Plugin cloudflare metadata: {'domain': 'example.com', 'ip_list_path': '/e
 ### Configuration Not Applied
 
 **Check precedence order:**
+
+For Kubernetes deployments:
+1. Ingress annotations (highest)
+2. YAML configuration
+3. Environment variables (lowest)
+
+For Docker deployments:
 1. Container labels (highest)
 2. YAML configuration
 3. Environment variables (lowest)
 
-Container labels override YAML and env vars.
+Per-ingress/per-container settings override global configuration.
 
 ### Plugin Output Missing
 
