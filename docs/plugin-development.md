@@ -47,7 +47,7 @@ This guide explains how to create custom plugins for EasyHAProxy. For informatio
 
 ## Built-in Plugins Reference
 
-EasyHAProxy includes four built-in plugins that serve as both functional tools and reference implementations for plugin development.
+EasyHAProxy includes five built-in plugins that serve as both functional tools and reference implementations for plugin development.
 
 ### CloudflarePlugin (DOMAIN)
 
@@ -151,14 +151,59 @@ http-request deny deny_status 403 if !whitelisted_ip
 
 **Usage:** See [IP Whitelist Plugin documentation](plugins.md#ip-whitelist-plugin-domain)
 
+### JwtValidatorPlugin (DOMAIN)
+
+**Purpose:** Validate JWT authentication tokens
+
+**Type:** DOMAIN - Executes once per domain
+
+**Source:** `src/plugins/builtin/jwt_validator.py`
+
+**Configuration Options:**
+- `enabled` (bool) - Enable/disable plugin (default: `true`)
+- `algorithm` (str) - JWT signing algorithm (default: `RS256`)
+- `issuer` (str) - Expected JWT issuer (optional, `none`/`null` skips validation)
+- `audience` (str) - Expected JWT audience (optional, `none`/`null` skips validation)
+- `pubkey_path` (str) - Path to public key file (required if `pubkey` not provided)
+- `pubkey` (str) - Public key content as string (required if `pubkey_path` not provided)
+
+**What it does:**
+- Validates JWT tokens using HAProxy's JWT functionality
+- Checks Authorization header presence
+- Validates algorithm, issuer, audience, signature, and expiration
+- Optionally skips issuer/audience validation if set to "none"
+
+**HAProxy config generated:**
+```
+# JWT Validator - Validate JWT tokens
+http-request deny content-type 'text/html' string 'Missing Authorization HTTP header' unless { req.hdr(authorization) -m found }
+
+# Extract JWT header and payload
+http-request set-var(txn.alg) http_auth_bearer,jwt_header_query('$.alg')
+http-request set-var(txn.iss) http_auth_bearer,jwt_payload_query('$.iss')
+http-request set-var(txn.aud) http_auth_bearer,jwt_payload_query('$.aud')
+http-request set-var(txn.exp) http_auth_bearer,jwt_payload_query('$.exp','int')
+
+# Validate JWT
+http-request deny content-type 'text/html' string 'Unsupported JWT signing algorithm' unless { var(txn.alg) -m str RS256 }
+http-request deny content-type 'text/html' string 'Invalid JWT signature' unless { http_auth_bearer,jwt_verify(txn.alg,"/etc/haproxy/jwt_keys/api_pubkey.pem") -m int 1 }
+
+# Validate expiration
+http-request set-var(txn.now) date()
+http-request deny content-type 'text/html' string 'JWT has expired' if { var(txn.exp),sub(txn.now) -m int lt 0 }
+```
+
+**Usage:** See [JWT Validator Plugin documentation](plugins.md#jwt-validator-plugin-domain)
+
 ### Summary Table
 
-| Plugin         | Type   | Purpose                      | Config Generated |
-|----------------|--------|------------------------------|------------------|
-| `cloudflare`   | DOMAIN | Restore original visitor IPs | ✅ Yes            |
-| `cleanup`      | GLOBAL | Clean up temp files          | ❌ No             |
-| `deny_pages`   | DOMAIN | Block specific paths         | ✅ Yes            |
-| `ip_whitelist` | DOMAIN | Restrict to specific IPs     | ✅ Yes            |
+| Plugin          | Type   | Purpose                      | Config Generated |
+|-----------------|--------|------------------------------|------------------|
+| `cloudflare`    | DOMAIN | Restore original visitor IPs | ✅ Yes            |
+| `cleanup`       | GLOBAL | Clean up temp files          | ❌ No             |
+| `deny_pages`    | DOMAIN | Block specific paths         | ✅ Yes            |
+| `ip_whitelist`  | DOMAIN | Restrict to specific IPs     | ✅ Yes            |
+| `jwt_validator` | DOMAIN | Validate JWT tokens          | ✅ Yes            |
 
 ### Learning from Built-in Plugins
 
@@ -184,11 +229,18 @@ http-request deny deny_status 403 if !whitelisted_ip
    - Negated ACLs (`if !whitelisted_ip`)
    - CIDR range support
 
+5. **JwtValidatorPlugin** shows:
+   - Complex HAProxy JWT validation
+   - Optional validation (skip with "none"/"null")
+   - Dynamic file path generation based on domain
+   - Multiple configuration options
+
 **View the source code:**
 - [cloudflare.py](https://github.com/byjg/docker-easy-haproxy/blob/master/src/plugins/builtin/cloudflare.py)
 - [cleanup.py](https://github.com/byjg/docker-easy-haproxy/blob/master/src/plugins/builtin/cleanup.py)
 - [deny_pages.py](https://github.com/byjg/docker-easy-haproxy/blob/master/src/plugins/builtin/deny_pages.py)
 - [ip_whitelist.py](https://github.com/byjg/docker-easy-haproxy/blob/master/src/plugins/builtin/ip_whitelist.py)
+- [jwt_validator.py](https://github.com/byjg/docker-easy-haproxy/blob/master/src/plugins/builtin/jwt_validator.py)
 
 ## Plugin API Reference
 

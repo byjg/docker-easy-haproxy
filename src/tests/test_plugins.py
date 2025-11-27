@@ -21,6 +21,7 @@ from plugins.builtin.cloudflare import CloudflarePlugin
 from plugins.builtin.cleanup import CleanupPlugin
 from plugins.builtin.deny_pages import DenyPagesPlugin
 from plugins.builtin.ip_whitelist import IpWhitelistPlugin
+from plugins.builtin.jwt_validator import JwtValidatorPlugin
 import easymapping
 
 
@@ -425,6 +426,198 @@ class TestIpWhitelistPlugin:
         assert "http-request deny deny_status 403 if !whitelisted_ip" in haproxy_config
 
 
+class TestJwtValidatorPlugin:
+    """Test cases for JwtValidatorPlugin (DOMAIN plugin)"""
+
+    def test_jwt_validator_plugin_initialization(self):
+        """Test plugin initializes with correct defaults"""
+        plugin = JwtValidatorPlugin()
+        assert plugin.name == "jwt_validator"
+        assert plugin.enabled is True
+        assert plugin.algorithm == "RS256"
+        assert plugin.issuer is None
+        assert plugin.audience is None
+        assert plugin.pubkey_path is None
+        assert plugin.pubkey is None
+
+    def test_jwt_validator_plugin_configuration(self):
+        """Test plugin configuration"""
+        plugin = JwtValidatorPlugin()
+
+        # Test basic config
+        plugin.configure({
+            "algorithm": "RS512",
+            "issuer": "https://auth.example.com/",
+            "audience": "https://api.example.com",
+            "pubkey_path": "/etc/haproxy/keys/api.pem"
+        })
+        assert plugin.algorithm == "RS512"
+        assert plugin.issuer == "https://auth.example.com/"
+        assert plugin.audience == "https://api.example.com"
+        assert plugin.pubkey_path == "/etc/haproxy/keys/api.pem"
+
+        # Test empty values skip validation (use fresh plugin)
+        plugin2 = JwtValidatorPlugin()
+        plugin2.configure({
+            "issuer": "",
+            "audience": ""
+        })
+        assert plugin2.issuer is None
+        assert plugin2.audience is None
+
+        # Test not providing issuer/audience at all (use fresh plugin)
+        plugin2b = JwtValidatorPlugin()
+        plugin2b.configure({
+            "algorithm": "RS256",
+            "pubkey_path": "/etc/haproxy/keys/api.pem"
+        })
+        assert plugin2b.issuer is None
+        assert plugin2b.audience is None
+
+        # Test enabled (use fresh plugin)
+        plugin3 = JwtValidatorPlugin()
+        plugin3.configure({"enabled": "false"})
+        assert plugin3.enabled is False
+
+    def test_jwt_validator_plugin_generates_config_with_path(self):
+        """Test plugin generates correct HAProxy config using pubkey_path"""
+        plugin = JwtValidatorPlugin()
+        plugin.configure({
+            "algorithm": "RS256",
+            "issuer": "https://auth.example.com/",
+            "audience": "https://api.example.com",
+            "pubkey_path": "/etc/haproxy/jwt_keys/api_pubkey.pem"
+        })
+
+        context = PluginContext(
+            parsed_object={},
+            easymapping=[],
+            container_env={},
+            domain="api.example.com",
+            port="80",
+            host_config={}
+        )
+
+        result = plugin.process(context)
+
+        assert result.haproxy_config is not None
+        assert "JWT Validator" in result.haproxy_config
+        assert "Missing Authorization HTTP header" in result.haproxy_config
+        assert "http-request set-var(txn.alg) http_auth_bearer,jwt_header_query('$.alg')" in result.haproxy_config
+        assert "http-request set-var(txn.iss) http_auth_bearer,jwt_payload_query('$.iss')" in result.haproxy_config
+        assert "http-request set-var(txn.aud) http_auth_bearer,jwt_payload_query('$.aud')" in result.haproxy_config
+        assert "http-request set-var(txn.exp) http_auth_bearer,jwt_payload_query('$.exp','int')" in result.haproxy_config
+        assert "var(txn.alg) -m str RS256" in result.haproxy_config
+        assert "var(txn.iss) -m str https://auth.example.com/" in result.haproxy_config
+        assert "var(txn.aud) -m str https://api.example.com" in result.haproxy_config
+        assert 'jwt_verify(txn.alg,"/etc/haproxy/jwt_keys/api_pubkey.pem")' in result.haproxy_config
+        assert "JWT has expired" in result.haproxy_config
+        assert result.metadata["domain"] == "api.example.com"
+        assert result.metadata["algorithm"] == "RS256"
+        assert result.metadata["validates_issuer"] is True
+        assert result.metadata["validates_audience"] is True
+
+    def test_jwt_validator_plugin_generates_config_with_pubkey_content(self):
+        """Test plugin generates correct HAProxy config using pubkey content"""
+        plugin = JwtValidatorPlugin()
+        plugin.configure({
+            "algorithm": "RS256",
+            "pubkey": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqh...\n-----END PUBLIC KEY-----"
+        })
+
+        context = PluginContext(
+            parsed_object={},
+            easymapping=[],
+            container_env={},
+            domain="api.example.com",
+            port="80",
+            host_config={}
+        )
+
+        result = plugin.process(context)
+
+        assert result.haproxy_config is not None
+        assert "JWT Validator" in result.haproxy_config
+        assert "/etc/haproxy/jwt_keys/api_example_com_pubkey.pem" in result.haproxy_config
+        assert result.metadata["pubkey_content"] == "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqh...\n-----END PUBLIC KEY-----"
+
+    def test_jwt_validator_plugin_no_issuer_audience_validation(self):
+        """Test plugin skips issuer/audience validation when not configured"""
+        plugin = JwtValidatorPlugin()
+        plugin.configure({
+            "pubkey_path": "/etc/haproxy/jwt_keys/api_pubkey.pem"
+        })
+
+        context = PluginContext(
+            parsed_object={},
+            easymapping=[],
+            container_env={},
+            domain="api.example.com",
+            port="80",
+            host_config={}
+        )
+
+        result = plugin.process(context)
+
+        assert result.haproxy_config is not None
+        assert "Invalid JWT issuer" not in result.haproxy_config
+        assert "Invalid JWT audience" not in result.haproxy_config
+        assert result.metadata["validates_issuer"] is False
+        assert result.metadata["validates_audience"] is False
+
+    def test_jwt_validator_plugin_disabled(self):
+        """Test plugin returns empty config when disabled"""
+        plugin = JwtValidatorPlugin()
+        plugin.configure({
+            "enabled": "false",
+            "pubkey_path": "/etc/haproxy/jwt_keys/api_pubkey.pem"
+        })
+
+        context = PluginContext(
+            parsed_object={},
+            easymapping=[],
+            container_env={},
+            domain="api.example.com"
+        )
+
+        result = plugin.process(context)
+        assert result.haproxy_config == ""
+        assert result.metadata == {}
+
+    def test_jwt_validator_plugin_no_pubkey(self):
+        """Test plugin returns empty config when no pubkey configured"""
+        plugin = JwtValidatorPlugin()
+
+        context = PluginContext(
+            parsed_object={},
+            easymapping=[],
+            container_env={},
+            domain="api.example.com"
+        )
+
+        result = plugin.process(context)
+        assert result.haproxy_config == ""
+
+    def test_jwt_validator_plugin_in_haproxy_config(self):
+        """Test JWT Validator plugin integration in full HAProxy config generation"""
+        line_list = load_fixture("services-with-jwt-validator")
+
+        result = {
+            "customerrors": False,
+            "certbot": {"email": "test@example.com"},
+            "stats": {"port": 0}
+        }
+
+        cfg = easymapping.HaproxyConfigGenerator(result)
+        haproxy_config = cfg.generate(line_list)
+
+        # Verify JWT Validator config is in the output
+        assert "JWT Validator - Validate JWT tokens" in haproxy_config
+        assert "Missing Authorization HTTP header" in haproxy_config
+        assert "http-request set-var(txn.alg) http_auth_bearer,jwt_header_query('$.alg')" in haproxy_config
+        assert "jwt_verify" in haproxy_config
+
+
 class TestPluginManager:
     """Test cases for PluginManager"""
 
@@ -438,16 +631,18 @@ class TestPluginManager:
         assert "cleanup" in manager.plugins
         assert "deny_pages" in manager.plugins
         assert "ip_whitelist" in manager.plugins
+        assert "jwt_validator" in manager.plugins
 
         # Verify plugin types
         assert len(manager.global_plugins) == 1  # cleanup
-        assert len(manager.domain_plugins) == 3  # cloudflare, deny_pages, ip_whitelist
+        assert len(manager.domain_plugins) == 4  # cloudflare, deny_pages, ip_whitelist, jwt_validator
 
         # Verify plugin instances
         assert manager.plugins["cloudflare"].name == "cloudflare"
         assert manager.plugins["cleanup"].name == "cleanup"
         assert manager.plugins["deny_pages"].name == "deny_pages"
         assert manager.plugins["ip_whitelist"].name == "ip_whitelist"
+        assert manager.plugins["jwt_validator"].name == "jwt_validator"
 
     def test_plugin_manager_executes_global_plugins(self):
         """Test plugin manager executes global plugins correctly"""

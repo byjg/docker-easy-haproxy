@@ -165,6 +165,75 @@ http-request deny deny_status 403 if !whitelisted_ip
 
 **Important:** This blocks ALL IPs except those in the whitelist. Make sure to include your own IP!
 
+### JWT Validator Plugin (Domain)
+
+Validates JWT (JSON Web Token) authentication tokens using HAProxy's built-in JWT functionality.
+
+**Why use it:** Protect APIs and services with JWT authentication without needing application-level code.
+
+**Configuration options:**
+- `enabled` - Enable/disable plugin (default: `true`)
+- `algorithm` - JWT signing algorithm (default: `RS256`)
+- `issuer` - Expected JWT issuer (optional, set to `none`/`null` to skip validation)
+- `audience` - Expected JWT audience (optional, set to `none`/`null` to skip validation)
+- `pubkey_path` - Path to public key file (required if `pubkey` not provided)
+- `pubkey` - Public key content as string (required if `pubkey_path` not provided)
+
+**Enable via container label:**
+```yaml
+services:
+  api:
+    labels:
+      easyhaproxy.http.host: api.example.com
+      easyhaproxy.http.plugins: jwt_validator
+      easyhaproxy.http.plugin.jwt_validator.algorithm: RS256
+      easyhaproxy.http.plugin.jwt_validator.issuer: https://auth.example.com/
+      easyhaproxy.http.plugin.jwt_validator.audience: https://api.example.com
+      easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+    volumes:
+      - ./pubkey.pem:/etc/haproxy/jwt_keys/api_pubkey.pem:ro
+```
+
+**Skip issuer/audience validation:**
+```yaml
+labels:
+  easyhaproxy.http.plugin.jwt_validator.issuer: none
+  easyhaproxy.http.plugin.jwt_validator.audience: none
+  easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+```
+
+**HAProxy config generated:**
+```
+# JWT Validator - Validate JWT tokens
+http-request deny content-type 'text/html' string 'Missing Authorization HTTP header' unless { req.hdr(authorization) -m found }
+
+# Extract JWT header and payload
+http-request set-var(txn.alg) http_auth_bearer,jwt_header_query('$.alg')
+http-request set-var(txn.iss) http_auth_bearer,jwt_payload_query('$.iss')
+http-request set-var(txn.aud) http_auth_bearer,jwt_payload_query('$.aud')
+http-request set-var(txn.exp) http_auth_bearer,jwt_payload_query('$.exp','int')
+
+# Validate JWT
+http-request deny content-type 'text/html' string 'Unsupported JWT signing algorithm' unless { var(txn.alg) -m str RS256 }
+http-request deny content-type 'text/html' string 'Invalid JWT issuer' unless { var(txn.iss) -m str https://auth.example.com/ }
+http-request deny content-type 'text/html' string 'Invalid JWT audience' unless { var(txn.aud) -m str https://api.example.com }
+http-request deny content-type 'text/html' string 'Invalid JWT signature' unless { http_auth_bearer,jwt_verify(txn.alg,"/etc/haproxy/jwt_keys/api_pubkey.pem") -m int 1 }
+
+# Validate expiration
+http-request set-var(txn.now) date()
+http-request deny content-type 'text/html' string 'JWT has expired' if { var(txn.exp),sub(txn.now) -m int lt 0 }
+```
+
+**What it validates:**
+- ✅ Authorization header presence
+- ✅ JWT signing algorithm (RS256, RS512, etc.)
+- ✅ JWT issuer (if configured)
+- ✅ JWT audience (if configured)
+- ✅ JWT signature using public key
+- ✅ JWT expiration time
+
+**Important:** Requires HAProxy 2.5+ with JWT support. Mount public key file as read-only volume.
+
 ## Configuration Methods
 
 Plugins can be configured using three methods, listed in order of precedence (highest to lowest):
@@ -239,6 +308,23 @@ EASYHAPROXY_PLUGIN_CLOUDFLARE_IP_LIST_PATH=/etc/haproxy/cloudflare_ips.lst
 - Configure plugin: `EASYHAPROXY_PLUGIN_<PLUGIN_NAME>_<CONFIG_KEY>=value`
 
 ## Common Use Cases
+
+### Protect API with JWT Authentication
+
+Secure your API endpoints with JWT token validation:
+
+```yaml
+services:
+  api:
+    labels:
+      easyhaproxy.http.host: api.example.com
+      easyhaproxy.http.plugins: jwt_validator
+      easyhaproxy.http.plugin.jwt_validator.issuer: https://auth0.myapp.com/
+      easyhaproxy.http.plugin.jwt_validator.audience: https://api.example.com
+      easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+    volumes:
+      - ./auth_pubkey.pem:/etc/haproxy/jwt_keys/api_pubkey.pem:ro
+```
 
 ### Restrict Admin Panel to Office IPs
 
