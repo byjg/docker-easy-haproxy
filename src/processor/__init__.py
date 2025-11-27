@@ -116,6 +116,30 @@ class Static(ProcessorInterface):
 
     def parse(self):
         self.static_content = yaml.load(Functions.load(self.filename), Loader=yaml.FullLoader)
+
+        # Merge plugin config from YAML with env vars
+        if "plugins" in self.static_content:
+            # Get env var config
+            container_env = ContainerEnv.read()
+
+            # Merge YAML plugins config with env config
+            # YAML config takes precedence over env vars
+            if "plugins" not in self.static_content:
+                self.static_content["plugins"] = container_env.get("plugins", {})
+            else:
+                # Merge configs - YAML overrides env vars
+                yaml_plugins = self.static_content["plugins"]
+                env_plugins = container_env.get("plugins", {})
+
+                # Merge individual plugin configs
+                for plugin_name, plugin_config in env_plugins.get("config", {}).items():
+                    if plugin_name not in yaml_plugins:
+                        yaml_plugins[plugin_name] = {}
+                    # Env vars fill in missing keys, YAML takes precedence
+                    for key, value in plugin_config.items():
+                        if key not in yaml_plugins[plugin_name]:
+                            yaml_plugins[plugin_name][key] = value
+
         self.cfg = HaproxyConfigGenerator(self.static_content)
 
 

@@ -88,6 +88,7 @@ Detailed configuration guides for advanced setups:
 - [Container Labels](docs/container-labels.md) - Configure Docker/Swarm containers with labels
 - [Environment Variables](docs/environment-variable.md) - Configure EasyHAProxy behavior
 - [Volumes](docs/volumes.md) - Map volumes for certificates, config, and custom files
+- [Plugins](docs/plugins.md) - Extend HAProxy with custom plugins
 - [Other Configurations](docs/other.md) - Additional configurations (ports, custom errors, etc.)
 - [Limitations](docs/limitations.md) - Important limitations and considerations
 

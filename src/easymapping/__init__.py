@@ -54,11 +54,52 @@ class HaproxyConfigGenerator:
         self.serving_hosts = []
         self.certs = {}
 
+        # Initialize plugin system
+        try:
+            from plugins import PluginManager
+            self.plugin_manager = PluginManager(
+                plugins_dir="/etc/haproxy/plugins",
+                abort_on_error=self.mapping.get("plugins", {}).get("abort_on_error", False)
+            )
+            self.plugin_manager.load_plugins()
+            self.plugin_manager.configure_plugins(self.mapping.get("plugins", {}))
+            self.global_plugin_configs = []
+        except Exception as e:
+            # If plugin system fails to initialize, log but continue
+            import logging
+            logging.warning(f"Failed to initialize plugin system: {e}")
+            self.plugin_manager = None
+            self.global_plugin_configs = []
+
     def generate(self, container_metadata={}):
         self.mapping.setdefault("easymapping", [])
 
         if container_metadata != {}:
             self.mapping["easymapping"] = self.parse(container_metadata)
+
+        # Execute global plugins
+        if self.plugin_manager:
+            try:
+                from plugins import PluginContext
+                global_context = PluginContext(
+                    parsed_object=container_metadata,
+                    easymapping=self.mapping.get("easymapping", []),
+                    container_env=self.mapping,
+                    domain=None,
+                    port=None,
+                    host_config=None
+                )
+
+                # Get enabled plugins from config
+                enabled_list = self.mapping.get("plugins", {}).get("enabled")
+                if enabled_list and len(enabled_list) > 0 and enabled_list[0] == "":
+                    enabled_list = None
+
+                global_results = self.plugin_manager.execute_global_plugins(global_context, enabled_list)
+                self.global_plugin_configs = [r.haproxy_config for r in global_results if r.haproxy_config]
+            except Exception as e:
+                import logging
+                logging.warning(f"Failed to execute global plugins: {e}")
 
         file_loader = FileSystemLoader('templates')
         env = Environment(loader=file_loader)
@@ -66,7 +107,7 @@ class HaproxyConfigGenerator:
         env.lstrip_blocks = True
         env.rstrip_blocks = True
         template = env.get_template('haproxy.cfg.j2')
-        return template.render(data=self.mapping)
+        return template.render(data=self.mapping, global_plugin_configs=self.global_plugin_configs)
 
     def parse(self, container_metadata):
         easymapping = dict()
@@ -150,6 +191,45 @@ class HaproxyConfigGenerator:
                     easymapping[port]["redirect"] = self.label.get_json(
                         self.label.create([definition, "redirect"])
                     )
+
+                    # Execute domain plugins for this host
+                    if self.plugin_manager:
+                        try:
+                            from plugins import PluginContext
+
+                            domain_context = PluginContext(
+                                parsed_object=container_metadata,
+                                easymapping=easymapping,
+                                container_env=self.mapping,
+                                domain=hostname,
+                                port=port,
+                                host_config=easymapping[port]["hosts"][hostname]
+                            )
+
+                            # Check if plugins are enabled for this domain (from labels)
+                            enabled_plugins = None
+                            if self.label.has_label(self.label.create([definition, "plugins"])):
+                                enabled_plugins = self.label.get(
+                                    self.label.create([definition, "plugins"]),
+                                    ""
+                                ).split(",")
+                                enabled_plugins = [p.strip() for p in enabled_plugins if p.strip()]
+
+                            domain_results = self.plugin_manager.execute_domain_plugins(
+                                domain_context,
+                                enabled_list=enabled_plugins
+                            )
+
+                            # Store domain plugin configs for this host
+                            easymapping[port]["hosts"][hostname]["plugin_configs"] = [
+                                r.haproxy_config for r in domain_results if r.haproxy_config
+                            ]
+                        except Exception as e:
+                            import logging
+                            logging.warning(f"Failed to execute domain plugins for {hostname}: {e}")
+                            easymapping[port]["hosts"][hostname]["plugin_configs"] = []
+                    else:
+                        easymapping[port]["hosts"][hostname]["plugin_configs"] = []
 
                     if certbot or clone_to_ssl:
                         if "443" not in easymapping:
