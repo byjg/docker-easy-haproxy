@@ -1,5 +1,6 @@
 import base64
 import json
+import os
 import re
 
 from jinja2 import Environment, FileSystemLoader
@@ -91,9 +92,10 @@ class HaproxyConfigGenerator:
                 )
 
                 # Get enabled plugins from config
-                enabled_list = self.mapping.get("plugins", {}).get("enabled")
+                enabled_list = self.mapping.get("plugins", {}).get("enabled", [])
+                # If enabled list contains only empty string, treat as no plugins enabled
                 if enabled_list and len(enabled_list) > 0 and enabled_list[0] == "":
-                    enabled_list = None
+                    enabled_list = []
 
                 global_results = self.plugin_manager.execute_global_plugins(global_context, enabled_list)
                 self.global_plugin_configs = [r.haproxy_config for r in global_results if r.haproxy_config]
@@ -101,7 +103,8 @@ class HaproxyConfigGenerator:
                 import logging
                 logging.warning(f"Failed to execute global plugins: {e}")
 
-        file_loader = FileSystemLoader('templates')
+        templates_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'templates')
+        file_loader = FileSystemLoader(templates_dir)
         env = Environment(loader=file_loader)
         env.trim_blocks = True
         env.lstrip_blocks = True
@@ -207,7 +210,7 @@ class HaproxyConfigGenerator:
                             )
 
                             # Check if plugins are enabled for this domain (from labels)
-                            enabled_plugins = None
+                            enabled_plugins = []
                             if self.label.has_label(self.label.create([definition, "plugins"])):
                                 enabled_plugins = self.label.get(
                                     self.label.create([definition, "plugins"]),

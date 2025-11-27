@@ -20,6 +20,7 @@ defaults
     timeout client    10s
     timeout server    10m
 
+
 frontend stats
     bind *:1936
     mode http

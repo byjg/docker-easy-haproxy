@@ -21,6 +21,7 @@ defaults
     timeout server    10m
 
 
+
 frontend http_in_80
     bind *:80
     mode http

@@ -124,7 +124,8 @@ def test_parser_finds_services_raw():
                         "my-stack_agent:9001"
                     ],
                     "certbot": False,
-                    "redirect_ssl": False
+                    "redirect_ssl": False,
+                    "plugin_configs": []
                 }
             },
             "redirect": {
@@ -142,7 +143,8 @@ def test_parser_finds_services_raw():
                         "my-stack_cadvisor:8080"
                     ],
                     "certbot": False,
-                    "redirect_ssl": False
+                    "redirect_ssl": False,
+                    "plugin_configs": []
                 },
                 "node-exporter.quantum.example.org":{
                     "balance": "roundrobin",
@@ -150,7 +152,8 @@ def test_parser_finds_services_raw():
                         "my-stack_node-exporter:9100"
                     ],
                     "certbot": True,
-                    "redirect_ssl": False
+                    "redirect_ssl": False,
+                    "plugin_configs": []
                 }
             },
             "redirect": {
@@ -168,7 +171,8 @@ def test_parser_finds_services_raw():
                         "my-stack_node-exporter:9100"
                     ],
                     "certbot": False,
-                    "redirect_ssl": False
+                    "redirect_ssl": False,
+                    "plugin_configs": []
                 },
                 "www.somehost.com.br":{
                     "balance": "roundrobin",
@@ -176,7 +180,8 @@ def test_parser_finds_services_raw():
                         "some-service:80"
                     ],
                     "certbot": False,
-                    "redirect_ssl": False
+                    "redirect_ssl": False,
+                    "plugin_configs": []
                 }
             },
             "redirect": {
@@ -199,7 +204,8 @@ def test_parser_finds_services_raw():
                         "some-service:80"
                     ],
                     "certbot": False,
-                    "redirect_ssl": False
+                    "redirect_ssl": False,
+                    "plugin_configs": []
                 }
             },
             "redirect": {
@@ -465,7 +471,8 @@ def test_parser_finds_services_clone_to_ssl_raw():
                     "10.152.183.215:8080"
                     ],
                     "certbot": False,
-                    "redirect_ssl": False
+                    "redirect_ssl": False,
+                    "plugin_configs": []
                 },
                 "valida.me":{
                     "balance":"roundrobin",
@@ -473,7 +480,8 @@ def test_parser_finds_services_clone_to_ssl_raw():
                     "10.152.183.62:8080"
                     ],
                     "certbot": False,
-                    "redirect_ssl": False
+                    "redirect_ssl": False,
+                    "plugin_configs": []
                 },
                 "www.valida.me":{
                     "balance":"roundrobin",
@@ -481,7 +489,8 @@ def test_parser_finds_services_clone_to_ssl_raw():
                     "10.152.183.62:8080"
                     ],
                     "certbot": False,
-                    "redirect_ssl": False
+                    "redirect_ssl": False,
+                    "plugin_configs": []
                 }
             },
             "mode": "http",
@@ -499,7 +508,8 @@ def test_parser_finds_services_clone_to_ssl_raw():
                     "10.152.183.215:8080"
                     ],
                     "certbot": False,
-                    "redirect_ssl": False
+                    "redirect_ssl": False,
+                    "plugin_configs": []
                 }
             },
             "mode": "http",
