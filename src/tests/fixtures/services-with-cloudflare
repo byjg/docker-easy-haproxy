@@ -1,0 +1,8 @@
+{
+    "192.168.1.10": {
+        "easyhaproxy.http.host": "example.com",
+        "easyhaproxy.http.port": "80",
+        "easyhaproxy.http.localport": "8080",
+        "easyhaproxy.http.plugins": "cloudflare"
+    }
+}

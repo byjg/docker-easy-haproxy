@@ -218,6 +218,24 @@ class HaproxyConfigGenerator:
                                 ).split(",")
                                 enabled_plugins = [p.strip() for p in enabled_plugins if p.strip()]
 
+                            # Extract plugin configurations from labels
+                            # Format: easyhaproxy.http.plugin.PLUGIN_NAME.CONFIG_KEY
+                            plugin_configs = {}
+                            for plugin_name in enabled_plugins:
+                                plugin_configs[plugin_name] = {}
+                                # Look for all labels matching easyhaproxy.{definition}.plugin.{plugin_name}.*
+                                plugin_label_prefix = self.label.create([definition, "plugin", plugin_name])
+                                for label_key in d.keys():
+                                    if label_key.startswith(plugin_label_prefix + "."):
+                                        # Extract config key (everything after plugin_label_prefix + ".")
+                                        config_key = label_key[len(plugin_label_prefix) + 1:]
+                                        plugin_configs[plugin_name][config_key] = d[label_key]
+
+                            # Configure plugins with label-specific configs before execution
+                            for plugin_name, config in plugin_configs.items():
+                                if plugin_name in self.plugin_manager.plugins:
+                                    self.plugin_manager.plugins[plugin_name].configure(config)
+
                             domain_results = self.plugin_manager.execute_domain_plugins(
                                 domain_context,
                                 enabled_list=enabled_plugins
