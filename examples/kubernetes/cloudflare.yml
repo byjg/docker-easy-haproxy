@@ -1,0 +1,103 @@
+# Cloudflare IP Restoration Plugin Example for Kubernetes
+#
+# This example demonstrates restoring original visitor IPs when using Cloudflare CDN
+#
+# Prerequisites:
+# 1. EasyHAProxy installed in your cluster
+#
+# 2. Download Cloudflare IP ranges and create ConfigMap:
+#    curl https://www.cloudflare.com/ips-v4 > cloudflare_ips.lst
+#    curl https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
+#    kubectl create configmap cloudflare-ips \
+#      --from-file=cloudflare_ips.lst=cloudflare_ips.lst \
+#      -n easyhaproxy
+#
+# 3. Mount the ConfigMap in EasyHAProxy deployment (add to volumeMounts and volumes):
+#    volumeMounts:
+#      - name: cloudflare-ips
+#        mountPath: /etc/haproxy/cloudflare_ips.lst
+#        subPath: cloudflare_ips.lst
+#    volumes:
+#      - name: cloudflare-ips
+#        configMap:
+#          name: cloudflare-ips
+#
+# 4. Apply this manifest:
+#    kubectl apply -f cloudflare.yml
+#
+# 5. Test:
+#    curl http://myapp.example.local/
+#
+# Note: This plugin is most useful when your site is actually behind Cloudflare.
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp-service
+  namespace: default
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+    app: webapp
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp
+  namespace: default
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: webapp
+  template:
+    metadata:
+      labels:
+        app: webapp
+    spec:
+      containers:
+      - name: webapp
+        image: byjg/static-httpserver
+        ports:
+        - containerPort: 8080
+        env:
+        - name: TITLE
+          value: "App Behind Cloudflare"
+        resources:
+          limits:
+            cpu: '0.1'
+            memory: '64Mi'
+          requests:
+            cpu: '0.05'
+            memory: '32Mi'
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: easyhaproxy-ingress
+
+    # Enable Cloudflare plugin
+    easyhaproxy.plugins: "cloudflare"
+
+    # Optional: Specify custom IP list path
+    # easyhaproxy.plugin.cloudflare.ip_list_path: "/etc/haproxy/cloudflare_ips.lst"
+  name: webapp-ingress-cloudflare
+  namespace: default
+spec:
+  rules:
+  - host: myapp.example.local
+    http:
+      paths:
+      - backend:
+          service:
+            name: webapp-service
+            port:
+              number: 8080
+        pathType: ImplementationSpecific

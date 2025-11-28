@@ -1,0 +1,66 @@
+# JWT Validator Plugin Example
+#
+# This example demonstrates JWT token validation for API protection
+#
+# Prerequisites:
+# 1. Generate RSA key pair:
+#    openssl genrsa -out jwt_private.pem 2048
+#    openssl rsa -in jwt_private.pem -pubout -out jwt_pubkey.pem
+#
+# 2. Add to /etc/hosts:
+#    127.0.0.1 api.local
+#
+# 3. Start the stack:
+#    docker compose -f docker-compose-jwt-validator.yml up -d
+#
+# 4. Test without token (should fail):
+#    curl http://api.local/
+#    # Response: Missing Authorization HTTP header
+#
+# 5. Generate test JWT at https://jwt.io with:
+#    - Algorithm: RS256
+#    - Payload: {"iss":"https://auth.example.com/","aud":"https://api.example.com","exp":9999999999}
+#    - Use your jwt_private.pem for signing
+#
+# 6. Test with token:
+#    TOKEN="eyJhbGc..."
+#    curl -H "Authorization: Bearer $TOKEN" http://api.local/
+#    # Response: Success
+
+version: "3"
+
+services:
+  haproxy:
+    image: byjg/easy-haproxy:4.6.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Mount the public key for JWT verification
+      - ./jwt_pubkey.pem:/etc/haproxy/jwt_keys/api_pubkey.pem:ro
+    environment:
+      EASYHAPROXY_DISCOVER: docker
+      HAPROXY_CUSTOMERRORS: "true"
+      HAPROXY_USERNAME: admin
+      HAPROXY_PASSWORD: password
+      HAPROXY_STATS_PORT: 1936
+    ports:
+      - "80:80/tcp"
+      - "1936:1936/tcp"
+
+  # API service protected by JWT
+  api:
+    image: byjg/static-httpserver
+    environment:
+      TITLE: "Protected API - JWT Required"
+    labels:
+      easyhaproxy.http.host: api.local
+      easyhaproxy.http.port: 80
+      easyhaproxy.http.localport: 8080
+
+      # Enable JWT validator plugin
+      easyhaproxy.http.plugins: jwt_validator
+
+      # JWT validator configuration
+      easyhaproxy.http.plugin.jwt_validator.algorithm: RS256
+      easyhaproxy.http.plugin.jwt_validator.issuer: https://auth.example.com/
+      easyhaproxy.http.plugin.jwt_validator.audience: https://api.example.com/
+      easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem

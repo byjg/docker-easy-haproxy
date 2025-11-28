@@ -149,6 +149,217 @@ labels:
 
 ---
 
+## Plugin Examples
+
+### JWT Validator Plugin
+
+Protect your API with JWT token validation:
+
+```yaml
+version: "3"
+
+services:
+  haproxy:
+    image: byjg/easy-haproxy:4.6.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./jwt_pubkey.pem:/etc/haproxy/jwt_keys/api_pubkey.pem:ro
+    environment:
+      EASYHAPROXY_DISCOVER: docker
+      HAPROXY_USERNAME: admin
+      HAPROXY_PASSWORD: password
+      HAPROXY_STATS_PORT: 1936
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+      - "1936:1936/tcp"
+
+  api:
+    image: my-api:latest
+    labels:
+      easyhaproxy.http.host: api.example.com
+      easyhaproxy.http.port: 80
+      easyhaproxy.http.localport: 8080
+      # Enable JWT validation
+      easyhaproxy.http.plugins: jwt_validator
+      easyhaproxy.http.plugin.jwt_validator.algorithm: RS256
+      easyhaproxy.http.plugin.jwt_validator.issuer: https://auth.example.com/
+      easyhaproxy.http.plugin.jwt_validator.audience: https://api.example.com
+      easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+```
+
+**What it validates:**
+- Authorization header presence
+- JWT signing algorithm
+- JWT issuer and audience
+- JWT signature using public key
+- JWT expiration time
+
+**Test:**
+```bash
+# Without token - should fail
+curl http://api.example.com/endpoint
+# Response: Missing Authorization HTTP header
+
+# With valid JWT token
+curl -H "Authorization: Bearer eyJhbGc..." http://api.example.com/endpoint
+# Response: Success
+```
+
+**Generate test public key:**
+```bash
+# Generate private key
+openssl genrsa -out jwt_private.pem 2048
+
+# Extract public key
+openssl rsa -in jwt_private.pem -pubout -out jwt_pubkey.pem
+```
+
+---
+
+### Cloudflare IP Restoration Plugin
+
+Restore original visitor IPs when using Cloudflare CDN:
+
+```yaml
+version: "3"
+
+services:
+  haproxy:
+    image: byjg/easy-haproxy:4.6.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./cloudflare_ips.lst:/etc/haproxy/cloudflare_ips.lst:ro
+    environment:
+      EASYHAPROXY_DISCOVER: docker
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+
+  webapp:
+    image: my-webapp:latest
+    labels:
+      easyhaproxy.http.host: myapp.com
+      easyhaproxy.http.port: 80
+      easyhaproxy.http.localport: 3000
+      # Enable Cloudflare plugin
+      easyhaproxy.http.plugins: cloudflare
+```
+
+**Setup Cloudflare IP list:**
+```bash
+# Download Cloudflare IP ranges
+curl https://www.cloudflare.com/ips-v4 > cloudflare_ips.lst
+curl https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
+```
+
+**What it does:**
+- Detects requests from Cloudflare IPs
+- Restores original visitor IP from `CF-Connecting-IP` header
+- Your application logs show real visitor IPs, not Cloudflare IPs
+
+---
+
+### IP Whitelist Plugin
+
+Restrict access to specific IP addresses:
+
+```yaml
+version: "3"
+
+services:
+  haproxy:
+    image: byjg/easy-haproxy:4.6.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      EASYHAPROXY_DISCOVER: docker
+    ports:
+      - "80:80/tcp"
+
+  admin_panel:
+    image: admin-panel:latest
+    labels:
+      easyhaproxy.http.host: admin.example.com
+      easyhaproxy.http.port: 80
+      easyhaproxy.http.localport: 8080
+      # Enable IP whitelist
+      easyhaproxy.http.plugins: ip_whitelist
+      easyhaproxy.http.plugin.ip_whitelist.allowed_ips: 192.168.1.0/24,10.0.0.5
+      easyhaproxy.http.plugin.ip_whitelist.status_code: 403
+```
+
+**Allowed IP formats:**
+- Single IP: `10.0.0.5`
+- CIDR range: `192.168.1.0/24`
+- Multiple (comma-separated): `192.168.1.0/24,10.0.0.5,172.16.0.100`
+
+**Test:**
+```bash
+# From allowed IP
+curl http://admin.example.com
+# Response: Success
+
+# From blocked IP
+curl http://admin.example.com
+# Response: HTTP 403 Forbidden
+```
+
+---
+
+### Multiple Plugins Combined
+
+Combine multiple plugins for enhanced security:
+
+```yaml
+version: "3"
+
+services:
+  haproxy:
+    image: byjg/easy-haproxy:4.6.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./cloudflare_ips.lst:/etc/haproxy/cloudflare_ips.lst:ro
+    environment:
+      EASYHAPROXY_DISCOVER: docker
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+
+  webapp:
+    image: webapp:latest
+    labels:
+      easyhaproxy.http.host: myapp.example.com
+      easyhaproxy.http.port: 80
+      easyhaproxy.http.localport: 8080
+      # Enable multiple plugins
+      easyhaproxy.http.plugins: cloudflare,deny_pages
+      # Block specific paths
+      easyhaproxy.http.plugin.deny_pages.paths: /admin,/wp-admin,/wp-login.php,/.env
+      easyhaproxy.http.plugin.deny_pages.status_code: 404
+
+  api:
+    image: api:latest
+    labels:
+      easyhaproxy.http.host: api.example.com
+      easyhaproxy.http.port: 80
+      easyhaproxy.http.localport: 3000
+      # Combine JWT + IP whitelist + path blocking
+      easyhaproxy.http.plugins: jwt_validator,ip_whitelist,deny_pages
+      easyhaproxy.http.plugin.jwt_validator.algorithm: RS256
+      easyhaproxy.http.plugin.jwt_validator.issuer: https://auth.example.com/
+      easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api.pem
+      easyhaproxy.http.plugin.ip_whitelist.allowed_ips: 192.168.0.0/16,10.0.0.0/8
+      easyhaproxy.http.plugin.deny_pages.paths: /internal,/debug
+```
+
+**Plugin execution order:**
+1. IP Whitelist (blocks non-whitelisted IPs)
+2. Deny Pages (blocks specific paths)
+3. JWT Validator (validates authentication)
+
+---
+
 ## Common Configuration Options
 
 ### Environment Variables (HAProxy Container)

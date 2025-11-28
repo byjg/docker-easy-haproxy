@@ -1,0 +1,60 @@
+# Cloudflare IP Restoration Plugin Example
+#
+# This example demonstrates restoring original visitor IPs when using Cloudflare CDN
+#
+# Prerequisites:
+# 1. Download Cloudflare IP ranges:
+#    curl https://www.cloudflare.com/ips-v4 > cloudflare_ips.lst
+#    curl https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
+#
+# 2. Add to /etc/hosts:
+#    127.0.0.1 myapp.local
+#
+# 3. Start the stack:
+#    docker compose -f docker-compose-cloudflare.yml up -d
+#
+# 4. Test (simulating Cloudflare request):
+#    # Without CF-Connecting-IP header:
+#    curl -H "Host: myapp.local" http://127.0.0.1/
+#
+#    # With CF-Connecting-IP header (simulating Cloudflare):
+#    curl -H "Host: myapp.local" -H "CF-Connecting-IP: 203.0.113.50" http://127.0.0.1/
+#
+# Note: This plugin is most useful when your site is actually behind Cloudflare.
+# Without Cloudflare, the request won't come from Cloudflare IPs, so the plugin
+# won't activate. This example is for demonstration and testing purposes.
+
+version: "3"
+
+services:
+  haproxy:
+    image: byjg/easy-haproxy:4.6.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Mount Cloudflare IP list
+      - ./cloudflare_ips.lst:/etc/haproxy/cloudflare_ips.lst:ro
+    environment:
+      EASYHAPROXY_DISCOVER: docker
+      HAPROXY_CUSTOMERRORS: "true"
+      HAPROXY_USERNAME: admin
+      HAPROXY_PASSWORD: password
+      HAPROXY_STATS_PORT: 1936
+    ports:
+      - "80:80/tcp"
+      - "1936:1936/tcp"
+
+  # Web application behind Cloudflare
+  webapp:
+    image: byjg/static-httpserver
+    environment:
+      TITLE: "App Behind Cloudflare"
+    labels:
+      easyhaproxy.http.host: myapp.local
+      easyhaproxy.http.port: 80
+      easyhaproxy.http.localport: 8080
+
+      # Enable Cloudflare plugin
+      easyhaproxy.http.plugins: cloudflare
+
+      # Optional: Specify custom IP list path
+      # easyhaproxy.http.plugin.cloudflare.ip_list_path: /etc/haproxy/cloudflare_ips.lst

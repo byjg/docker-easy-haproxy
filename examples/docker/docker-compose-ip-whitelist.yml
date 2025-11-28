@@ -1,0 +1,57 @@
+# IP Whitelist Plugin Example
+#
+# This example demonstrates restricting access to specific IP addresses
+#
+# Prerequisites:
+# 1. Add to /etc/hosts:
+#    127.0.0.1 admin.local
+#
+# 2. Start the stack:
+#    docker compose -f docker-compose-ip-whitelist.yml up -d
+#
+# 3. Test from localhost (127.0.0.1 is whitelisted):
+#    curl http://admin.local/
+#    # Response: Success (200 OK)
+#
+# 4. Test from non-whitelisted IP:
+#    # You'll need to test from another machine or configure the example
+#    # with your actual IP address in the allowed_ips label
+#
+# Note: Update the allowed_ips label with your actual IP addresses/networks
+
+version: "3"
+
+services:
+  haproxy:
+    image: byjg/easy-haproxy:4.6.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      EASYHAPROXY_DISCOVER: docker
+      HAPROXY_CUSTOMERRORS: "true"
+      HAPROXY_USERNAME: admin
+      HAPROXY_PASSWORD: password
+      HAPROXY_STATS_PORT: 1936
+    ports:
+      - "80:80/tcp"
+      - "1936:1936/tcp"
+
+  # Admin panel with IP whitelist
+  admin:
+    image: byjg/static-httpserver
+    environment:
+      TITLE: "Admin Panel - IP Restricted"
+    labels:
+      easyhaproxy.http.host: admin.local
+      easyhaproxy.http.port: 80
+      easyhaproxy.http.localport: 8080
+
+      # Enable IP whitelist plugin
+      easyhaproxy.http.plugins: ip_whitelist
+
+      # Allow localhost and private networks
+      # UPDATE THIS with your actual IPs/networks!
+      easyhaproxy.http.plugin.ip_whitelist.allowed_ips: 127.0.0.1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12
+
+      # Status code to return for blocked IPs
+      easyhaproxy.http.plugin.ip_whitelist.status_code: 403

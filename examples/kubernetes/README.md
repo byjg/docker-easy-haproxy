@@ -288,6 +288,275 @@ See [Using Plugins with Kubernetes](../../docs/kubernetes.md#using-plugins-with-
 
 ---
 
+## Plugin Examples
+
+### JWT Validator Plugin
+
+Complete example with JWT validation for API protection:
+
+```yaml
+---
+# Create ConfigMap with public key
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jwt-keys
+  namespace: default
+data:
+  api_pubkey.pem: |
+    -----BEGIN PUBLIC KEY-----
+    MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
+    -----END PUBLIC KEY-----
+
+---
+# Mount public key into EasyHAProxy pod
+# Add this to your EasyHAProxy deployment:
+# volumeMounts:
+#   - name: jwt-keys
+#     mountPath: /etc/haproxy/jwt_keys
+# volumes:
+#   - name: jwt-keys
+#     configMap:
+#       name: jwt-keys
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+  namespace: default
+spec:
+  ports:
+  - port: 8080
+  selector:
+    app: api
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: default
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+      - name: api
+        image: my-api:latest
+        ports:
+        - containerPort: 8080
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: easyhaproxy-ingress
+    # Enable JWT validator
+    easyhaproxy.plugins: "jwt_validator"
+    easyhaproxy.plugin.jwt_validator.algorithm: "RS256"
+    easyhaproxy.plugin.jwt_validator.issuer: "https://auth.example.com/"
+    easyhaproxy.plugin.jwt_validator.audience: "https://api.example.com"
+    easyhaproxy.plugin.jwt_validator.pubkey_path: "/etc/haproxy/jwt_keys/api_pubkey.pem"
+  name: api-ingress
+  namespace: default
+spec:
+  rules:
+  - host: api.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: api-service
+            port:
+              number: 8080
+        pathType: ImplementationSpecific
+```
+
+**Test:**
+```bash
+# Without JWT token - should fail
+curl http://api.example.com/users
+# Response: Missing Authorization HTTP header
+
+# With valid JWT token
+TOKEN="eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+curl -H "Authorization: Bearer $TOKEN" http://api.example.com/users
+# Response: Success
+```
+
+---
+
+### Cloudflare IP Restoration Plugin
+
+Restore original visitor IPs when behind Cloudflare:
+
+```yaml
+---
+# Create ConfigMap with Cloudflare IP ranges
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflare-ips
+  namespace: easyhaproxy
+data:
+  cloudflare_ips.lst: |
+    173.245.48.0/20
+    103.21.244.0/22
+    103.22.200.0/22
+    103.31.4.0/22
+    141.101.64.0/18
+    108.162.192.0/18
+    190.93.240.0/20
+    188.114.96.0/20
+    197.234.240.0/22
+    198.41.128.0/17
+    162.158.0.0/15
+    104.16.0.0/13
+    104.24.0.0/14
+    172.64.0.0/13
+    131.0.72.0/22
+
+---
+# Mount ConfigMap into EasyHAProxy pod
+# Add this to your EasyHAProxy deployment:
+# volumeMounts:
+#   - name: cloudflare-ips
+#     mountPath: /etc/haproxy/cloudflare_ips.lst
+#     subPath: cloudflare_ips.lst
+# volumes:
+#   - name: cloudflare-ips
+#     configMap:
+#       name: cloudflare-ips
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: easyhaproxy-ingress
+    # Enable Cloudflare plugin
+    easyhaproxy.plugins: "cloudflare"
+  name: webapp-ingress
+  namespace: default
+spec:
+  rules:
+  - host: myapp.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: webapp-service
+            port:
+              number: 8080
+        pathType: ImplementationSpecific
+```
+
+**Download latest Cloudflare IPs:**
+```bash
+curl https://www.cloudflare.com/ips-v4
+curl https://www.cloudflare.com/ips-v6
+```
+
+---
+
+### IP Whitelist Plugin
+
+Restrict admin panel to office IPs only:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: easyhaproxy-ingress
+    # Enable IP whitelist
+    easyhaproxy.plugins: "ip_whitelist"
+    easyhaproxy.plugin.ip_whitelist.allowed_ips: "203.0.113.0/24,198.51.100.42"
+    easyhaproxy.plugin.ip_whitelist.status_code: "403"
+  name: admin-ingress
+  namespace: default
+spec:
+  rules:
+  - host: admin.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: admin-service
+            port:
+              number: 8080
+        pathType: ImplementationSpecific
+```
+
+**Test:**
+```bash
+# From allowed IP (203.0.113.50)
+curl http://admin.example.com
+# Response: Success
+
+# From blocked IP
+curl http://admin.example.com
+# Response: HTTP 403 Forbidden
+```
+
+---
+
+### Multiple Plugins Combined
+
+Combine Cloudflare + JWT + Path Blocking for maximum security:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: easyhaproxy-ingress
+    # Enable multiple plugins
+    easyhaproxy.plugins: "cloudflare,jwt_validator,deny_pages"
+
+    # Cloudflare - restore real IPs
+    # (no config needed if using default path)
+
+    # JWT Validator - validate tokens
+    easyhaproxy.plugin.jwt_validator.algorithm: "RS256"
+    easyhaproxy.plugin.jwt_validator.issuer: "https://auth.example.com/"
+    easyhaproxy.plugin.jwt_validator.audience: "https://api.example.com"
+    easyhaproxy.plugin.jwt_validator.pubkey_path: "/etc/haproxy/jwt_keys/api_pubkey.pem"
+
+    # Deny Pages - block sensitive paths
+    easyhaproxy.plugin.deny_pages.paths: "/internal,/debug,/admin"
+    easyhaproxy.plugin.deny_pages.status_code: "404"
+  name: secure-api-ingress
+  namespace: production
+spec:
+  rules:
+  - host: api.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: api-service
+            port:
+              number: 8080
+        pathType: ImplementationSpecific
+```
+
+**Plugin execution order:**
+1. Cloudflare IP restoration (sets correct visitor IP)
+2. Deny Pages (blocks blacklisted paths)
+3. JWT Validator (validates authentication)
+
+---
+
 ## Creating SSL Secrets
 
 ### From Certificate Files

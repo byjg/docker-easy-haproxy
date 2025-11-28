@@ -1,0 +1,78 @@
+# Cloudflare IP Restoration Plugin Example for Docker Swarm
+#
+# This example demonstrates restoring original visitor IPs when using Cloudflare CDN
+#
+# Prerequisites:
+# 1. Docker Swarm initialized:
+#    docker swarm init
+#
+# 2. Create overlay network:
+#    docker network create --driver overlay --attachable easyhaproxy
+#
+# 3. Download Cloudflare IPs and create Docker config:
+#    curl https://www.cloudflare.com/ips-v4 > cloudflare_ips.lst
+#    curl https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
+#    docker config create cloudflare_ips cloudflare_ips.lst
+#
+# 4. Deploy the stack:
+#    docker stack deploy -c cloudflare.yml webapp
+#
+# 5. Test:
+#    curl http://<swarm-ip>/
+#
+# Note: This plugin is most useful when your site is actually behind Cloudflare.
+
+version: "3.7"
+
+services:
+  haproxy:
+    image: byjg/easy-haproxy:4.6.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    configs:
+      - source: cloudflare_ips
+        target: /etc/haproxy/cloudflare_ips.lst
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+    environment:
+      EASYHAPROXY_DISCOVER: swarm
+      HAPROXY_USERNAME: admin
+      HAPROXY_PASSWORD: password
+      HAPROXY_STATS_PORT: 1936
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+      - "1936:1936/tcp"
+    networks:
+      - easyhaproxy
+
+  # Web application behind Cloudflare
+  webapp:
+    image: byjg/static-httpserver
+    environment:
+      TITLE: "App Behind Cloudflare"
+    deploy:
+      replicas: 4
+      labels:
+        easyhaproxy.http.host: "myapp.example.com"
+        easyhaproxy.http.port: "80"
+        easyhaproxy.http.localport: "8080"
+
+        # Enable Cloudflare plugin
+        easyhaproxy.http.plugins: "cloudflare"
+
+        # Optional: Specify custom IP list path
+        # easyhaproxy.http.plugin.cloudflare.ip_list_path: "/etc/haproxy/cloudflare_ips.lst"
+    networks:
+      - easyhaproxy
+
+networks:
+  easyhaproxy:
+    external: true
+
+configs:
+  cloudflare_ips:
+    external: true

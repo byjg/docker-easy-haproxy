@@ -324,6 +324,292 @@ networks:
 
 ---
 
+## Plugin Examples
+
+### JWT Validator Plugin
+
+Secure your API with JWT token validation in Swarm:
+
+```yaml
+version: "3"
+
+services:
+  haproxy:
+    image: byjg/easy-haproxy:4.6.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - jwt_keys:/etc/haproxy/jwt_keys
+    deploy:
+      replicas: 1
+    environment:
+      EASYHAPROXY_DISCOVER: swarm
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+    networks:
+      - easyhaproxy
+
+  api:
+    image: my-api:latest
+    deploy:
+      replicas: 5
+      labels:
+        easyhaproxy.http.host: "api.example.com"
+        easyhaproxy.http.port: "80"
+        easyhaproxy.http.localport: "8080"
+        # Enable JWT validation
+        easyhaproxy.http.plugins: "jwt_validator"
+        easyhaproxy.http.plugin.jwt_validator.algorithm: "RS256"
+        easyhaproxy.http.plugin.jwt_validator.issuer: "https://auth.example.com/"
+        easyhaproxy.http.plugin.jwt_validator.audience: "https://api.example.com"
+        easyhaproxy.http.plugin.jwt_validator.pubkey_path: "/etc/haproxy/jwt_keys/api_pubkey.pem"
+    networks:
+      - easyhaproxy
+
+networks:
+  easyhaproxy:
+    external: true
+
+volumes:
+  jwt_keys:
+```
+
+**Deploy public key using Docker config:**
+```bash
+# Create Docker config with public key
+docker config create jwt_api_pubkey ./api_pubkey.pem
+
+# Update EasyHAProxy service to use config
+docker service update \
+  --config-add source=jwt_api_pubkey,target=/etc/haproxy/jwt_keys/api_pubkey.pem \
+  easyhaproxy_haproxy
+```
+
+**Test:**
+```bash
+# Without token
+curl http://api.example.com/users
+# Response: Missing Authorization HTTP header
+
+# With valid token
+curl -H "Authorization: Bearer eyJhbGc..." http://api.example.com/users
+# Response: Success
+```
+
+---
+
+### Cloudflare IP Restoration Plugin
+
+Restore original visitor IPs in Swarm environment:
+
+```yaml
+version: "3"
+
+services:
+  haproxy:
+    image: byjg/easy-haproxy:4.6.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    configs:
+      - source: cloudflare_ips
+        target: /etc/haproxy/cloudflare_ips.lst
+    deploy:
+      replicas: 1
+    environment:
+      EASYHAPROXY_DISCOVER: swarm
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+    networks:
+      - easyhaproxy
+
+  webapp:
+    image: webapp:latest
+    deploy:
+      replicas: 3
+      labels:
+        easyhaproxy.http.host: "myapp.example.com"
+        easyhaproxy.http.port: "80"
+        easyhaproxy.http.localport: "8080"
+        # Enable Cloudflare plugin
+        easyhaproxy.http.plugins: "cloudflare"
+    networks:
+      - easyhaproxy
+
+networks:
+  easyhaproxy:
+    external: true
+
+configs:
+  cloudflare_ips:
+    file: ./cloudflare_ips.lst
+```
+
+**Create Cloudflare IP list:**
+```bash
+# Download Cloudflare IPs
+curl https://www.cloudflare.com/ips-v4 > cloudflare_ips.lst
+curl https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
+
+# Deploy stack
+docker stack deploy -c cloudflare-stack.yml myapp
+```
+
+---
+
+### IP Whitelist Plugin
+
+Restrict admin panel to specific IPs in Swarm:
+
+```yaml
+version: "3"
+
+services:
+  admin:
+    image: admin-panel:latest
+    deploy:
+      replicas: 2
+      labels:
+        easyhaproxy.http.host: "admin.example.com"
+        easyhaproxy.http.port: "80"
+        easyhaproxy.http.localport: "4000"
+        # Enable IP whitelist
+        easyhaproxy.http.plugins: "ip_whitelist"
+        # Allow office network and VPN
+        easyhaproxy.http.plugin.ip_whitelist.allowed_ips: "203.0.113.0/24,198.51.100.0/24,10.8.0.0/16"
+        easyhaproxy.http.plugin.ip_whitelist.status_code: "403"
+    networks:
+      - easyhaproxy
+
+networks:
+  easyhaproxy:
+    external: true
+```
+
+**Test:**
+```bash
+# From office IP (203.0.113.50)
+curl http://admin.example.com
+# Response: Success
+
+# From home/blocked IP
+curl http://admin.example.com
+# Response: HTTP 403 Forbidden
+```
+
+---
+
+### Multiple Plugins Combined
+
+Production-ready setup with multiple security layers:
+
+```yaml
+version: "3"
+
+services:
+  haproxy:
+    image: byjg/easy-haproxy:4.6.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    configs:
+      - source: cloudflare_ips
+        target: /etc/haproxy/cloudflare_ips.lst
+      - source: jwt_pubkey
+        target: /etc/haproxy/jwt_keys/api_pubkey.pem
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+    environment:
+      EASYHAPROXY_DISCOVER: swarm
+      EASYHAPROXY_SSL_MODE: "loose"
+      EASYHAPROXY_CERTBOT_EMAIL: admin@example.com
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+      - "1936:1936/tcp"
+    networks:
+      - easyhaproxy
+
+  # Public website with Cloudflare
+  website:
+    image: website:latest
+    deploy:
+      replicas: 4
+      labels:
+        easyhaproxy.http.host: "example.com"
+        easyhaproxy.http.port: "80"
+        easyhaproxy.http.localport: "3000"
+        easyhaproxy.http.certbot: "true"
+        easyhaproxy.http.redirect_ssl: "true"
+        # Cloudflare + block sensitive paths
+        easyhaproxy.http.plugins: "cloudflare,deny_pages"
+        easyhaproxy.http.plugin.deny_pages.paths: "/admin,/.env,/config"
+        easyhaproxy.http.plugin.deny_pages.status_code: "404"
+    networks:
+      - easyhaproxy
+
+  # Authenticated API with JWT
+  api:
+    image: api:latest
+    deploy:
+      replicas: 6
+      labels:
+        easyhaproxy.http.host: "api.example.com"
+        easyhaproxy.http.port: "80"
+        easyhaproxy.http.localport: "8080"
+        easyhaproxy.http.certbot: "true"
+        # Cloudflare + JWT + block internal endpoints
+        easyhaproxy.http.plugins: "cloudflare,jwt_validator,deny_pages"
+        easyhaproxy.http.plugin.jwt_validator.algorithm: "RS256"
+        easyhaproxy.http.plugin.jwt_validator.issuer: "https://auth.example.com/"
+        easyhaproxy.http.plugin.jwt_validator.audience: "https://api.example.com"
+        easyhaproxy.http.plugin.jwt_validator.pubkey_path: "/etc/haproxy/jwt_keys/api_pubkey.pem"
+        easyhaproxy.http.plugin.deny_pages.paths: "/internal,/metrics"
+    networks:
+      - easyhaproxy
+
+  # Admin panel with strict IP restrictions
+  admin:
+    image: admin:latest
+    deploy:
+      replicas: 2
+      labels:
+        easyhaproxy.http.host: "admin.example.com"
+        easyhaproxy.http.port: "80"
+        easyhaproxy.http.localport: "4000"
+        easyhaproxy.http.certbot: "true"
+        # IP whitelist only (no public access)
+        easyhaproxy.http.plugins: "ip_whitelist"
+        easyhaproxy.http.plugin.ip_whitelist.allowed_ips: "203.0.113.0/24"
+        easyhaproxy.http.plugin.ip_whitelist.status_code: "403"
+    networks:
+      - easyhaproxy
+
+networks:
+  easyhaproxy:
+    external: true
+
+configs:
+  cloudflare_ips:
+    file: ./cloudflare_ips.lst
+  jwt_pubkey:
+    file: ./api_pubkey.pem
+```
+
+**Deploy:**
+```bash
+docker stack deploy -c production-stack.yml production
+```
+
+**Security layers:**
+- **Website**: Cloudflare IP restoration + path blocking
+- **API**: Cloudflare + JWT validation + internal path blocking
+- **Admin**: Strict IP whitelist (office network only)
+
+---
+
 ## Scaling Services
 
 Scale services dynamically:

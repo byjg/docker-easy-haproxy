@@ -1,0 +1,89 @@
+# JWT Validator Plugin Example for Docker Swarm
+#
+# This example demonstrates JWT token validation for API protection in Swarm
+#
+# Prerequisites:
+# 1. Docker Swarm initialized:
+#    docker swarm init
+#
+# 2. Create overlay network:
+#    docker network create --driver overlay --attachable easyhaproxy
+#
+# 3. Generate JWT keys and create Docker config:
+#    openssl genrsa -out jwt_private.pem 2048
+#    openssl rsa -in jwt_private.pem -pubout -out jwt_pubkey.pem
+#    docker config create jwt_api_pubkey jwt_pubkey.pem
+#
+# 4. Deploy the stack:
+#    docker stack deploy -c jwt-validator.yml api
+#
+# 5. Test without token (should fail):
+#    curl http://<swarm-ip>/
+#    # Response: Missing Authorization HTTP header
+#
+# 6. Generate test JWT at https://jwt.io with:
+#    - Algorithm: RS256
+#    - Payload: {"iss":"https://auth.example.com/","aud":"https://api.example.com","exp":9999999999}
+#    - Use your jwt_private.pem for signing
+#
+# 7. Test with token:
+#    TOKEN="eyJhbGc..."
+#    curl -H "Authorization: Bearer $TOKEN" http://<swarm-ip>/
+#    # Response: Success
+
+version: "3.7"
+
+services:
+  haproxy:
+    image: byjg/easy-haproxy:4.6.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    configs:
+      - source: jwt_api_pubkey
+        target: /etc/haproxy/jwt_keys/api_pubkey.pem
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+    environment:
+      EASYHAPROXY_DISCOVER: swarm
+      HAPROXY_USERNAME: admin
+      HAPROXY_PASSWORD: password
+      HAPROXY_STATS_PORT: 1936
+    ports:
+      - "80:80/tcp"
+      - "1936:1936/tcp"
+    networks:
+      - easyhaproxy
+
+  # Protected API service
+  api:
+    image: byjg/static-httpserver
+    environment:
+      TITLE: "Protected API - JWT Required"
+    deploy:
+      replicas: 5
+      labels:
+        easyhaproxy.http.host: "api.example.com"
+        easyhaproxy.http.port: "80"
+        easyhaproxy.http.localport: "8080"
+
+        # Enable JWT validator plugin
+        easyhaproxy.http.plugins: "jwt_validator"
+
+        # JWT validator configuration
+        easyhaproxy.http.plugin.jwt_validator.algorithm: "RS256"
+        easyhaproxy.http.plugin.jwt_validator.issuer: "https://auth.example.com/"
+        easyhaproxy.http.plugin.jwt_validator.audience: "https://api.example.com"
+        easyhaproxy.http.plugin.jwt_validator.pubkey_path: "/etc/haproxy/jwt_keys/api_pubkey.pem"
+    networks:
+      - easyhaproxy
+
+networks:
+  easyhaproxy:
+    external: true
+
+configs:
+  jwt_api_pubkey:
+    external: true
