@@ -518,11 +518,13 @@ class TestJwtValidatorPlugin:
         assert result.metadata["validates_audience"] is True
 
     def test_jwt_validator_plugin_generates_config_with_pubkey_content(self):
-        """Test plugin generates correct HAProxy config using pubkey content"""
+        """Test plugin generates correct HAProxy config using pubkey content (base64-encoded)"""
         plugin = JwtValidatorPlugin()
+        # Base64-encoded version of "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqh...\n-----END PUBLIC KEY-----"
+        pubkey_base64 = "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2txaC4uLgotLS0tLUVORCBQVUJMSUMgS0VZLS0tLS0="
         plugin.configure({
             "algorithm": "RS256",
-            "pubkey": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqh...\n-----END PUBLIC KEY-----"
+            "pubkey": pubkey_base64
         })
 
         context = PluginContext(
@@ -539,6 +541,7 @@ class TestJwtValidatorPlugin:
         assert result.haproxy_config is not None
         assert "JWT Validator" in result.haproxy_config
         assert "/etc/haproxy/jwt_keys/api_example_com_pubkey.pem" in result.haproxy_config
+        # Verify the decoded content is stored in metadata
         assert result.metadata["pubkey_content"] == "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqh...\n-----END PUBLIC KEY-----"
 
     def test_jwt_validator_plugin_no_issuer_audience_validation(self):
@@ -616,6 +619,121 @@ class TestJwtValidatorPlugin:
         assert "Missing Authorization HTTP header" in haproxy_config
         assert "http-request set-var(txn.alg) http_auth_bearer,jwt_header_query('$.alg')" in haproxy_config
         assert "jwt_verify" in haproxy_config
+
+    def test_jwt_validator_plugin_with_paths_only_paths_false(self):
+        """Test plugin with paths configured and only_paths=false"""
+        plugin = JwtValidatorPlugin()
+        plugin.configure({
+            "pubkey_path": "/etc/haproxy/jwt_keys/api_pubkey.pem",
+            "paths": ["/api/admin", "/api/sensitive"],
+            "only_paths": "false"
+        })
+
+        context = PluginContext(
+            parsed_object={},
+            easymapping=[],
+            container_env={},
+            domain="api.example.com",
+            port="80",
+            host_config={}
+        )
+
+        result = plugin.process(context)
+
+        assert result.haproxy_config is not None
+        # Check that ACLs are defined for paths
+        assert "acl jwt_protected_path path_beg /api/admin" in result.haproxy_config
+        assert "acl jwt_protected_path path_beg /api/sensitive" in result.haproxy_config
+        # Check that validation rules have "if jwt_protected_path" condition
+        assert "unless { req.hdr(authorization) -m found } if jwt_protected_path" in result.haproxy_config
+        assert "http-request set-var(txn.alg) http_auth_bearer,jwt_header_query('$.alg') if jwt_protected_path" in result.haproxy_config
+        # Check that "Access denied" for non-protected paths is NOT present (only_paths=false)
+        assert "Access denied" not in result.haproxy_config
+        # Check metadata
+        assert result.metadata["path_validation"] is True
+        assert result.metadata["only_paths"] is False
+        assert result.metadata["paths"] == ["/api/admin", "/api/sensitive"]
+
+    def test_jwt_validator_plugin_with_paths_only_paths_true(self):
+        """Test plugin with paths configured and only_paths=true"""
+        plugin = JwtValidatorPlugin()
+        plugin.configure({
+            "pubkey_path": "/etc/haproxy/jwt_keys/api_pubkey.pem",
+            "paths": ["/api/public"],
+            "only_paths": "true"
+        })
+
+        context = PluginContext(
+            parsed_object={},
+            easymapping=[],
+            container_env={},
+            domain="api.example.com",
+            port="80",
+            host_config={}
+        )
+
+        result = plugin.process(context)
+
+        assert result.haproxy_config is not None
+        # Check that ACL is defined for path
+        assert "acl jwt_protected_path path_beg /api/public" in result.haproxy_config
+        # Check that "Access denied" for non-protected paths IS present (only_paths=true)
+        assert "http-request deny content-type 'text/html' string 'Access denied' unless jwt_protected_path" in result.haproxy_config
+        # Check that validation rules do NOT have "if jwt_protected_path" (since all non-protected paths are denied)
+        assert "unless { req.hdr(authorization) -m found } if jwt_protected_path" not in result.haproxy_config
+        # The rules should not have any condition suffix when only_paths=true
+        assert "http-request deny content-type 'text/html' string 'Missing Authorization HTTP header' unless { req.hdr(authorization) -m found }" in result.haproxy_config
+        # Check metadata
+        assert result.metadata["path_validation"] is True
+        assert result.metadata["only_paths"] is True
+        assert result.metadata["paths"] == ["/api/public"]
+
+    def test_jwt_validator_plugin_paths_from_comma_separated_string(self):
+        """Test plugin parses comma-separated paths from container labels"""
+        plugin = JwtValidatorPlugin()
+        plugin.configure({
+            "pubkey_path": "/etc/haproxy/jwt_keys/api_pubkey.pem",
+            "paths": "/api/admin,/api/sensitive,/api/protected"
+        })
+
+        assert plugin.paths == ["/api/admin", "/api/sensitive", "/api/protected"]
+
+    def test_jwt_validator_plugin_paths_from_list(self):
+        """Test plugin parses paths from list (YAML config)"""
+        plugin = JwtValidatorPlugin()
+        plugin.configure({
+            "pubkey_path": "/etc/haproxy/jwt_keys/api_pubkey.pem",
+            "paths": ["/api/admin", "/api/sensitive"]
+        })
+
+        assert plugin.paths == ["/api/admin", "/api/sensitive"]
+
+    def test_jwt_validator_plugin_no_paths_protects_all(self):
+        """Test plugin protects all paths when paths is not configured"""
+        plugin = JwtValidatorPlugin()
+        plugin.configure({
+            "pubkey_path": "/etc/haproxy/jwt_keys/api_pubkey.pem"
+        })
+
+        context = PluginContext(
+            parsed_object={},
+            easymapping=[],
+            container_env={},
+            domain="api.example.com",
+            port="80",
+            host_config={}
+        )
+
+        result = plugin.process(context)
+
+        assert result.haproxy_config is not None
+        # Check that no ACL is defined
+        assert "acl jwt_protected_path" not in result.haproxy_config
+        # Check that validation rules do NOT have any condition suffix (all paths protected)
+        assert "unless { req.hdr(authorization) -m found } if jwt_protected_path" not in result.haproxy_config
+        assert "http-request deny content-type 'text/html' string 'Missing Authorization HTTP header' unless { req.hdr(authorization) -m found }" in result.haproxy_config
+        # Check metadata
+        assert result.metadata["path_validation"] is False
 
 
 class TestPluginManager:

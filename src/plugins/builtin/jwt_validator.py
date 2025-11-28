@@ -10,7 +10,14 @@ Configuration:
     - issuer: Expected JWT issuer (optional, set to "none"/"null" to skip validation)
     - audience: Expected JWT audience (optional, set to "none"/"null" to skip validation)
     - pubkey_path: Path to public key file (required if pubkey not provided)
-    - pubkey: Public key content as string (required if pubkey_path not provided)
+    - pubkey: Public key content as base64-encoded string (required if pubkey_path not provided)
+    - paths: List of paths that require JWT validation (optional, if not set ALL domain is protected)
+    - only_paths: If true, only specified paths are accessible; if false (default), only specified paths require JWT validation
+
+Path Validation Logic:
+    - No paths configured: ALL requests to the domain require JWT validation (default behavior)
+    - Paths configured + only_paths=false: Only specified paths require JWT validation, others pass through
+    - Paths configured + only_paths=true: Only specified paths are accessible (with JWT), all others are denied
 
 Example YAML config:
     plugins:
@@ -20,6 +27,10 @@ Example YAML config:
         issuer: https://myaccount.auth0.com/
         audience: https://api.mywebsite.com
         pubkey_path: /etc/haproxy/jwt_keys/pubkey.pem
+        paths:
+          - /api/admin
+          - /api/sensitive
+        only_paths: false
 
 Example Container Label:
     easyhaproxy.http.plugins: "jwt_validator"
@@ -27,6 +38,8 @@ Example Container Label:
     easyhaproxy.http.plugin.jwt_validator.issuer: https://auth.example.com/
     easyhaproxy.http.plugin.jwt_validator.audience: https://api.example.com
     easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+    easyhaproxy.http.plugin.jwt_validator.paths: /api/admin,/api/sensitive
+    easyhaproxy.http.plugin.jwt_validator.only_paths: true
 
 HAProxy Config Generated:
     # JWT Validator - Validate JWT tokens
@@ -49,6 +62,7 @@ HAProxy Config Generated:
     http-request deny content-type 'text/html' string 'JWT has expired' if { var(txn.exp),sub(txn.now) -m int lt 0 }
 """
 
+import base64
 import os
 import sys
 
@@ -69,6 +83,8 @@ class JwtValidatorPlugin(PluginInterface):
         self.audience = None  # Optional
         self.pubkey_path = None  # Path to public key file
         self.pubkey = None  # Public key content (alternative to pubkey_path)
+        self.paths = []  # List of paths that require JWT validation
+        self.only_paths = False  # If true, only specified paths are accessible
 
     @property
     def name(self) -> str:
@@ -89,7 +105,9 @@ class JwtValidatorPlugin(PluginInterface):
                 - issuer: Expected JWT issuer (optional)
                 - audience: Expected JWT audience (optional)
                 - pubkey_path: Path to public key file
-                - pubkey: Public key content as string
+                - pubkey: Public key content as base64-encoded string
+                - paths: List of paths that require JWT validation (optional)
+                - only_paths: If true, only specified paths are accessible (default: false)
         """
         if "enabled" in config:
             self.enabled = str(config["enabled"]).lower() in ["true", "1", "yes"]
@@ -114,7 +132,22 @@ class JwtValidatorPlugin(PluginInterface):
             self.pubkey_path = config["pubkey_path"]
 
         if "pubkey" in config:
-            self.pubkey = config["pubkey"]
+            # Decode from base64 (consistent with sslcert parameter)
+            self.pubkey = base64.b64decode(config["pubkey"]).decode('ascii')
+
+        # Path configuration
+        if "paths" in config:
+            paths_config = config["paths"]
+            if isinstance(paths_config, list):
+                self.paths = [str(p).strip() for p in paths_config if str(p).strip()]
+            elif isinstance(paths_config, str):
+                # Support comma-separated paths for container labels
+                self.paths = [p.strip() for p in paths_config.split(",") if p.strip()]
+            else:
+                self.paths = []
+
+        if "only_paths" in config:
+            self.only_paths = str(config["only_paths"]).lower() in ["true", "1", "yes"]
 
     def process(self, context: PluginContext) -> PluginResult:
         """
@@ -143,38 +176,59 @@ class JwtValidatorPlugin(PluginInterface):
         # Build HAProxy configuration
         lines = ["# JWT Validator - Validate JWT tokens"]
 
+        # Determine path condition suffix
+        path_condition = ""
+        if self.paths:
+            # Define ACL for protected paths
+            lines.append("")
+            lines.append("# Define paths that require JWT validation")
+            for path in self.paths:
+                lines.append(f"acl jwt_protected_path path_beg {path}")
+            lines.append("")
+
+            if self.only_paths:
+                # Deny all paths that are not in the protected list
+                lines.append("# Deny access to paths not in the protected list")
+                lines.append("http-request deny content-type 'text/html' string 'Access denied' unless jwt_protected_path")
+                lines.append("")
+                # All remaining requests are on protected paths, no condition needed
+                path_condition = ""
+            else:
+                # Only validate JWT on protected paths
+                path_condition = " if jwt_protected_path"
+
         # Check for Authorization header
-        lines.append("http-request deny content-type 'text/html' string 'Missing Authorization HTTP header' unless { req.hdr(authorization) -m found }")
+        lines.append(f"http-request deny content-type 'text/html' string 'Missing Authorization HTTP header' unless {{ req.hdr(authorization) -m found }}{path_condition}")
 
         # Extract JWT parts
         lines.append("")
         lines.append("# Extract JWT header and payload")
-        lines.append("http-request set-var(txn.alg) http_auth_bearer,jwt_header_query('$.alg')")
-        lines.append("http-request set-var(txn.iss) http_auth_bearer,jwt_payload_query('$.iss')")
-        lines.append("http-request set-var(txn.aud) http_auth_bearer,jwt_payload_query('$.aud')")
-        lines.append("http-request set-var(txn.exp) http_auth_bearer,jwt_payload_query('$.exp','int')")
+        lines.append(f"http-request set-var(txn.alg) http_auth_bearer,jwt_header_query('$.alg'){path_condition}")
+        lines.append(f"http-request set-var(txn.iss) http_auth_bearer,jwt_payload_query('$.iss'){path_condition}")
+        lines.append(f"http-request set-var(txn.aud) http_auth_bearer,jwt_payload_query('$.aud'){path_condition}")
+        lines.append(f"http-request set-var(txn.exp) http_auth_bearer,jwt_payload_query('$.exp','int'){path_condition}")
 
         # Validate JWT
         lines.append("")
         lines.append("# Validate JWT")
-        lines.append(f"http-request deny content-type 'text/html' string 'Unsupported JWT signing algorithm' unless {{ var(txn.alg) -m str {self.algorithm} }}")
+        lines.append(f"http-request deny content-type 'text/html' string 'Unsupported JWT signing algorithm' unless {{ var(txn.alg) -m str {self.algorithm} }}{path_condition}")
 
         # Validate issuer (if configured)
         if self.issuer:
-            lines.append(f"http-request deny content-type 'text/html' string 'Invalid JWT issuer' unless {{ var(txn.iss) -m str {self.issuer} }}")
+            lines.append(f"http-request deny content-type 'text/html' string 'Invalid JWT issuer' unless {{ var(txn.iss) -m str {self.issuer} }}{path_condition}")
 
         # Validate audience (if configured)
         if self.audience:
-            lines.append(f"http-request deny content-type 'text/html' string 'Invalid JWT audience' unless {{ var(txn.aud) -m str {self.audience} }}")
+            lines.append(f"http-request deny content-type 'text/html' string 'Invalid JWT audience' unless {{ var(txn.aud) -m str {self.audience} }}{path_condition}")
 
         # Validate signature
-        lines.append(f"http-request deny content-type 'text/html' string 'Invalid JWT signature' unless {{ http_auth_bearer,jwt_verify(txn.alg,\"{pubkey_file}\") -m int 1 }}")
+        lines.append(f"http-request deny content-type 'text/html' string 'Invalid JWT signature' unless {{ http_auth_bearer,jwt_verify(txn.alg,\"{pubkey_file}\") -m int 1 }}{path_condition}")
 
         # Validate expiration
         lines.append("")
         lines.append("# Validate expiration")
-        lines.append("http-request set-var(txn.now) date()")
-        lines.append("http-request deny content-type 'text/html' string 'JWT has expired' if { var(txn.exp),sub(txn.now) -m int lt 0 }")
+        lines.append(f"http-request set-var(txn.now) date(){path_condition}")
+        lines.append(f"http-request deny content-type 'text/html' string 'JWT has expired' if {{ var(txn.exp),sub(txn.now) -m int lt 0 }}{path_condition}")
 
         haproxy_config = "\n".join(lines)
 
@@ -184,7 +238,9 @@ class JwtValidatorPlugin(PluginInterface):
             "algorithm": self.algorithm,
             "pubkey_file": pubkey_file,
             "validates_issuer": self.issuer is not None,
-            "validates_audience": self.audience is not None
+            "validates_audience": self.audience is not None,
+            "path_validation": len(self.paths) > 0,
+            "only_paths": self.only_paths
         }
 
         if self.issuer:
@@ -193,6 +249,8 @@ class JwtValidatorPlugin(PluginInterface):
             metadata["audience"] = self.audience
         if self.pubkey:
             metadata["pubkey_content"] = self.pubkey
+        if self.paths:
+            metadata["paths"] = self.paths
 
         return PluginResult(
             haproxy_config=haproxy_config,
