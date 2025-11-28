@@ -76,8 +76,8 @@ class CloudflarePlugin(PluginInterface):
 
         # Generate HAProxy config snippet
         haproxy_config = f"""# Cloudflare - Restore original visitor IP
-    acl from_cloudflare src -f {self.ip_list_path}
-    http-request set-header X-Forwarded-For %[req.hdr(CF-Connecting-IP)] if from_cloudflare"""
+acl from_cloudflare src -f {self.ip_list_path}
+http-request set-header X-Forwarded-For %[req.hdr(CF-Connecting-IP)] if from_cloudflare"""
 
         return PluginResult(
             haproxy_config=haproxy_config,

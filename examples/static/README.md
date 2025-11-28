@@ -321,13 +321,13 @@ See [Using Plugins](../../docs/plugins.md) for more details.
 
 ## Comparison: Static vs. Dynamic Discovery
 
-| Feature | Static Mode | Docker/Swarm/K8s Mode |
-|---------|-------------|----------------------|
-| Configuration | YAML file | Container labels / Ingress annotations |
-| Backend types | Any (containers, VMs, IPs) | Containers only |
-| Updates | Manual config edit + reload | Automatic discovery |
-| Use case | Fixed infrastructure | Dynamic container environments |
-| Plugin config | Global via YAML/env | Per-container/ingress via labels/annotations |
+| Feature       | Static Mode                 | Docker/Swarm/K8s Mode                        |
+|---------------|-----------------------------|----------------------------------------------|
+| Configuration | YAML file                   | Container labels / Ingress annotations       |
+| Backend types | Any (containers, VMs, IPs)  | Containers only                              |
+| Updates       | Manual config edit + reload | Automatic discovery                          |
+| Use case      | Fixed infrastructure        | Dynamic container environments               |
+| Plugin config | Global via YAML/env         | Per-container/ingress via labels/annotations |
 
 ---
 

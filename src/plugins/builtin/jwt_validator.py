@@ -144,37 +144,37 @@ class JwtValidatorPlugin(PluginInterface):
         lines = ["# JWT Validator - Validate JWT tokens"]
 
         # Check for Authorization header
-        lines.append("    http-request deny content-type 'text/html' string 'Missing Authorization HTTP header' unless { req.hdr(authorization) -m found }")
+        lines.append("http-request deny content-type 'text/html' string 'Missing Authorization HTTP header' unless { req.hdr(authorization) -m found }")
 
         # Extract JWT parts
         lines.append("")
-        lines.append("    # Extract JWT header and payload")
-        lines.append("    http-request set-var(txn.alg) http_auth_bearer,jwt_header_query('$.alg')")
-        lines.append("    http-request set-var(txn.iss) http_auth_bearer,jwt_payload_query('$.iss')")
-        lines.append("    http-request set-var(txn.aud) http_auth_bearer,jwt_payload_query('$.aud')")
-        lines.append("    http-request set-var(txn.exp) http_auth_bearer,jwt_payload_query('$.exp','int')")
+        lines.append("# Extract JWT header and payload")
+        lines.append("http-request set-var(txn.alg) http_auth_bearer,jwt_header_query('$.alg')")
+        lines.append("http-request set-var(txn.iss) http_auth_bearer,jwt_payload_query('$.iss')")
+        lines.append("http-request set-var(txn.aud) http_auth_bearer,jwt_payload_query('$.aud')")
+        lines.append("http-request set-var(txn.exp) http_auth_bearer,jwt_payload_query('$.exp','int')")
 
         # Validate JWT
         lines.append("")
-        lines.append("    # Validate JWT")
-        lines.append(f"    http-request deny content-type 'text/html' string 'Unsupported JWT signing algorithm' unless {{ var(txn.alg) -m str {self.algorithm} }}")
+        lines.append("# Validate JWT")
+        lines.append(f"http-request deny content-type 'text/html' string 'Unsupported JWT signing algorithm' unless {{ var(txn.alg) -m str {self.algorithm} }}")
 
         # Validate issuer (if configured)
         if self.issuer:
-            lines.append(f"    http-request deny content-type 'text/html' string 'Invalid JWT issuer' unless {{ var(txn.iss) -m str {self.issuer} }}")
+            lines.append(f"http-request deny content-type 'text/html' string 'Invalid JWT issuer' unless {{ var(txn.iss) -m str {self.issuer} }}")
 
         # Validate audience (if configured)
         if self.audience:
-            lines.append(f"    http-request deny content-type 'text/html' string 'Invalid JWT audience' unless {{ var(txn.aud) -m str {self.audience} }}")
+            lines.append(f"http-request deny content-type 'text/html' string 'Invalid JWT audience' unless {{ var(txn.aud) -m str {self.audience} }}")
 
         # Validate signature
-        lines.append(f"    http-request deny content-type 'text/html' string 'Invalid JWT signature' unless {{ http_auth_bearer,jwt_verify(txn.alg,\"{pubkey_file}\") -m int 1 }}")
+        lines.append(f"http-request deny content-type 'text/html' string 'Invalid JWT signature' unless {{ http_auth_bearer,jwt_verify(txn.alg,\"{pubkey_file}\") -m int 1 }}")
 
         # Validate expiration
         lines.append("")
-        lines.append("    # Validate expiration")
-        lines.append("    http-request set-var(txn.now) date()")
-        lines.append("    http-request deny content-type 'text/html' string 'JWT has expired' if { var(txn.exp),sub(txn.now) -m int lt 0 }")
+        lines.append("# Validate expiration")
+        lines.append("http-request set-var(txn.now) date()")
+        lines.append("http-request deny content-type 'text/html' string 'JWT has expired' if { var(txn.exp),sub(txn.now) -m int lt 0 }")
 
         haproxy_config = "\n".join(lines)
 

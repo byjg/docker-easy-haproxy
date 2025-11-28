@@ -62,5 +62,5 @@ services:
       # JWT validator configuration
       easyhaproxy.http.plugin.jwt_validator.algorithm: RS256
       easyhaproxy.http.plugin.jwt_validator.issuer: https://auth.example.com/
-      easyhaproxy.http.plugin.jwt_validator.audience: https://api.example.com/
+      easyhaproxy.http.plugin.jwt_validator.audience: https://api.example.com
       easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem

@@ -93,8 +93,8 @@ class IpWhitelistPlugin(PluginInterface):
 
         # Generate HAProxy config snippet
         haproxy_config = f"""# IP Whitelist - Only allow specific IPs
-    acl whitelisted_ip src {ips_str}
-    http-request deny deny_status {self.status_code} if !whitelisted_ip"""
+acl whitelisted_ip src {ips_str}
+http-request deny deny_status {self.status_code} if !whitelisted_ip"""
 
         return PluginResult(
             haproxy_config=haproxy_config,

@@ -1,0 +1,31 @@
+# Basic Static Configuration Example
+#
+# This is a minimal configuration without plugins
+# Demonstrates basic HTTP to HTTPS redirect and SSL setup
+#
+# To use:
+# 1. Update the container name and ports to match your setup
+# 2. Place SSL certificate at /certs/haproxy/host1.local.pem
+# 3. Mount this config: -v ./conf/config-basic.yml:/etc/haproxy/static/config.yml
+
+stats:
+  username: admin
+  password: password
+  port: 1936         # Optional (default 1936)
+
+customerrors: true   # Optional (default false)
+
+easymapping:
+  # HTTP - Redirect to HTTPS
+  - port: 80
+    redirect:
+      host1.local: https://host1.local
+      www.host1.local: https://host1.local
+
+  # HTTPS - Serve application
+  - port: 443
+    ssl: true
+    hosts:
+      host1.local:
+        containers:
+          - container:8080

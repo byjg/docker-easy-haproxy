@@ -92,8 +92,8 @@ class DenyPagesPlugin(PluginInterface):
 
         # Generate HAProxy config snippet
         haproxy_config = f"""# Deny Pages - Block specific paths
-    acl denied_path path_beg {paths_str}
-    http-request deny deny_status {self.status_code} if denied_path"""
+acl denied_path path_beg {paths_str}
+http-request deny deny_status {self.status_code} if denied_path"""
 
         return PluginResult(
             haproxy_config=haproxy_config,
