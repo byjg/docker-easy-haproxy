@@ -175,13 +175,33 @@ class HaproxyConfigGenerator:
                     ""
                 )
 
+                # Protocol for backend server communication (e.g., fcgi, h2)
+                proto = self.label.get(
+                    self.label.create([definition, "proto"]),
+                    ""
+                )
+
+                # Unix socket path (alternative to host:port)
+                socket_path = self.label.get(
+                    self.label.create([definition, "socket"]),
+                    ""
+                )
+
                 for hostname in sorted(d[host_label].split(",")):
                     hostname = hostname.strip()
                     self.serving_hosts.append("%s:%s" % (hostname, port))
                     easymapping[port]["hosts"].setdefault(hostname, {})
                     easymapping[port]["hosts"][hostname].setdefault("containers", [])
                     easymapping[port]["hosts"][hostname].setdefault("certbot", False)
-                    easymapping[port]["hosts"][hostname]["containers"] += ["{}:{}".format(container, ct_port)]
+                    easymapping[port]["hosts"][hostname].setdefault("proto", proto)
+
+                    # Determine server address: Unix socket or TCP host:port
+                    if socket_path:
+                        server_address = socket_path
+                    else:
+                        server_address = "{}:{}".format(container, ct_port)
+
+                    easymapping[port]["hosts"][hostname]["containers"] += [server_address]
                     easymapping[port]["hosts"][hostname]["certbot"] = certbot
                     easymapping[port]["hosts"][hostname]["redirect_ssl"] = self.label.get_bool(
                         self.label.create([definition, "redirect_ssl"])

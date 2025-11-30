@@ -97,7 +97,7 @@ backend srv_{{ host }}
     tcp-check connect{{ " ssl" if o["ssl-check"] == "ssl" }}
         {% endif %}
         {% for c in o["hosts"][k]["containers"] %}
-    server srv-{{ loop.index0 }} {{ c }} check weight 1{{ " verify none" if o["ssl-check"] == "ssl" }}
+    server srv-{{ loop.index0 }} {{ c }} check weight 1{{ " verify none" if o["ssl-check"] == "ssl" }}{{ " proto " + o["hosts"][k]["proto"] if o["hosts"][k].get("proto") }}
         {% endfor %}
     {% endfor %}
 {% endfor %}
