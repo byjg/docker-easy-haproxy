@@ -1,3 +1,7 @@
+---
+sidebar_position: 2
+---
+
 # JWT Validator Plugin
 
 **Type:** Domain Plugin

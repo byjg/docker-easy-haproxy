@@ -42,7 +42,9 @@ class TestCloudflarePlugin:
         plugin = CloudflarePlugin()
         assert plugin.name == "cloudflare"
         assert plugin.enabled is True
+        assert plugin.use_builtin_ips is True
         assert plugin.ip_list_path == "/etc/haproxy/cloudflare_ips.lst"
+        assert len(plugin.CLOUDFLARE_IPS) == 22  # 15 IPv4 + 7 IPv6
 
     def test_cloudflare_plugin_configuration(self):
         """Test plugin configuration"""
@@ -122,6 +124,75 @@ class TestCloudflarePlugin:
         assert "Cloudflare - Restore original visitor IP" in haproxy_config
         assert "acl from_cloudflare src -f /etc/haproxy/cloudflare_ips.lst" in haproxy_config
         assert "http-request set-header X-Forwarded-For %[req.hdr(CF-Connecting-IP)]" in haproxy_config
+
+    def test_cloudflare_plugin_builtin_ips_enabled(self):
+        """Test plugin uses built-in Cloudflare IPs and writes to file"""
+        # Use temp directory for testing
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ip_list_path = os.path.join(tmpdir, "cloudflare_ips.lst")
+
+            plugin = CloudflarePlugin()
+            plugin.configure({
+                "use_builtin_ips": "true",
+                "ip_list_path": ip_list_path
+            })
+
+            context = PluginContext(
+                parsed_object={},
+                easymapping=[],
+                container_env={},
+                domain="example.com",
+                port="80",
+                host_config={}
+            )
+
+            result = plugin.process(context)
+
+            # Verify config is generated
+            assert result.haproxy_config is not None
+            assert f"acl from_cloudflare src -f {ip_list_path}" in result.haproxy_config
+
+            # Verify metadata
+            assert result.metadata["use_builtin_ips"] is True
+            assert result.metadata["ip_count"] == 22
+
+            # Verify file was written
+            assert os.path.exists(ip_list_path)
+
+            # Verify file contains correct number of IPs
+            with open(ip_list_path, 'r') as f:
+                lines = [line.strip() for line in f if line.strip()]
+                assert len(lines) == 22
+                # Verify some known Cloudflare IPs are in the file
+                assert "173.245.48.0/20" in lines
+                assert "2606:4700::/32" in lines
+
+    def test_cloudflare_plugin_builtin_ips_disabled(self):
+        """Test plugin doesn't write to file when use_builtin_ips is disabled"""
+        plugin = CloudflarePlugin()
+        plugin.configure({
+            "use_builtin_ips": "false",
+            "ip_list_path": "/custom/cloudflare_ips.lst"
+        })
+
+        context = PluginContext(
+            parsed_object={},
+            easymapping=[],
+            container_env={},
+            domain="example.com",
+            port="80",
+            host_config={}
+        )
+
+        result = plugin.process(context)
+
+        # Verify config is generated with custom path
+        assert result.haproxy_config is not None
+        assert "acl from_cloudflare src -f /custom/cloudflare_ips.lst" in result.haproxy_config
+
+        # Verify metadata
+        assert result.metadata["use_builtin_ips"] is False
+        assert result.metadata["ip_count"] is None
 
 
 class TestCleanupPlugin:
