@@ -13,22 +13,34 @@ Protect APIs and services with JWT authentication without needing application-le
 
 ## Configuration Options
 
-| Option        | Description                                                                                  | Default     |
-|---------------|----------------------------------------------------------------------------------------------|-------------|
-| `enabled`     | Enable/disable plugin                                                                        | `true`      |
-| `algorithm`   | JWT signing algorithm                                                                        | `RS256`     |
-| `issuer`      | Expected JWT issuer (optional, set to `none`/`null` to skip validation)                      | (optional)  |
-| `audience`    | Expected JWT audience (optional, set to `none`/`null` to skip validation)                    | (optional)  |
-| `pubkey_path` | Path to public key file (required if `pubkey` not provided)                                  | (required)  |
-| `pubkey`      | Public key content as base64-encoded string (required if `pubkey_path` not provided)         | (optional)  |
-| `paths`       | List of paths that require JWT validation (optional)                                         | (all paths) |
-| `only_paths`  | If `true`, only specified paths are accessible; if `false`, only specified paths require JWT | `false`     |
+| Option            | Description                                                                                  | Default     |
+|-------------------|----------------------------------------------------------------------------------------------|-------------|
+| `enabled`         | Enable/disable plugin                                                                        | `true`      |
+| `algorithm`       | JWT signing algorithm                                                                        | `RS256`     |
+| `issuer`          | Expected JWT issuer (optional, set to `none`/`null` to skip validation)                      | (optional)  |
+| `audience`        | Expected JWT audience (optional, set to `none`/`null` to skip validation)                    | (optional)  |
+| `pubkey_path`     | Path to public key file (required if `pubkey` not provided)                                  | (required)  |
+| `pubkey`          | Public key content as base64-encoded string (required if `pubkey_path` not provided)         | (optional)  |
+| `paths`           | List of paths that require JWT validation (optional)                                         | (all paths) |
+| `only_paths`      | If `true`, only specified paths are accessible; if `false`, only specified paths require JWT | `false`     |
+| `allow_anonymous` | If `true`, allows requests without Authorization header (validates JWT if present)           | `false`     |
 
 ## Path Validation Logic
 
 - **No paths configured:** ALL requests to the domain require JWT validation (default behavior)
 - **Paths configured + `only_paths=false`:** Only specified paths require JWT validation, other paths pass through without validation
 - **Paths configured + `only_paths=true`:** Only specified paths are accessible (with JWT validation), all other paths are denied
+
+## Anonymous Access Logic
+
+- **`allow_anonymous=false` (default):** Requests without `Authorization` header are denied with "Missing Authorization HTTP header"
+- **`allow_anonymous=true`:** Requests without `Authorization` header are allowed to pass through, but JWTs are validated if the header is present
+
+**Use Cases for `allow_anonymous=true`:**
+- Optional authentication (show different content for authenticated vs anonymous users)
+- Mixed public/private content where some users have enhanced access with JWT
+- Gradual JWT authentication rollout
+- Public APIs that provide additional features to authenticated users
 
 ## Configuration Examples
 
@@ -77,6 +89,23 @@ labels:
   easyhaproxy.http.plugin.jwt_validator.issuer: none
   easyhaproxy.http.plugin.jwt_validator.audience: none
   easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+```
+
+### Allow Anonymous Access (Optional JWT)
+
+```yaml
+services:
+  api:
+    labels:
+      easyhaproxy.http.host: api.example.com
+      easyhaproxy.http.plugins: jwt_validator
+      easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+      easyhaproxy.http.plugin.jwt_validator.allow_anonymous: true
+    volumes:
+      - ./pubkey.pem:/etc/haproxy/jwt_keys/api_pubkey.pem:ro
+# Requests without Authorization header are allowed
+# Requests with Authorization header are validated
+# Invalid JWTs are rejected
 ```
 
 ### Kubernetes Annotations
@@ -202,6 +231,30 @@ http-request deny content-type 'text/html' string 'Invalid JWT signature' unless
 # Validate expiration
 http-request set-var(txn.now) date()
 http-request deny content-type 'text/html' string 'JWT has expired' if { var(txn.exp),sub(txn.now) -m int lt 0 }
+```
+
+### Allow Anonymous Access (allow_anonymous=true)
+
+```haproxy
+# JWT Validator - Validate JWT tokens
+
+# Allow anonymous access - validate JWT only if Authorization header is present
+
+# Extract JWT header and payload
+http-request set-var(txn.alg) http_auth_bearer,jwt_header_query('$.alg') if { req.hdr(authorization) -m found }
+http-request set-var(txn.iss) http_auth_bearer,jwt_payload_query('$.iss') if { req.hdr(authorization) -m found }
+http-request set-var(txn.aud) http_auth_bearer,jwt_payload_query('$.aud') if { req.hdr(authorization) -m found }
+http-request set-var(txn.exp) http_auth_bearer,jwt_payload_query('$.exp','int') if { req.hdr(authorization) -m found }
+
+# Validate JWT (only if Authorization header is present)
+http-request deny content-type 'text/html' string 'Unsupported JWT signing algorithm' unless { var(txn.alg) -m str RS256 } if { req.hdr(authorization) -m found }
+http-request deny content-type 'text/html' string 'Invalid JWT issuer' unless { var(txn.iss) -m str https://auth.example.com/ } if { req.hdr(authorization) -m found }
+http-request deny content-type 'text/html' string 'Invalid JWT audience' unless { var(txn.aud) -m str https://api.example.com } if { req.hdr(authorization) -m found }
+http-request deny content-type 'text/html' string 'Invalid JWT signature' unless { http_auth_bearer,jwt_verify(txn.alg,"/etc/haproxy/jwt_keys/api_pubkey.pem") -m int 1 } if { req.hdr(authorization) -m found }
+
+# Validate expiration (only if Authorization header is present)
+http-request set-var(txn.now) date() if { req.hdr(authorization) -m found }
+http-request deny content-type 'text/html' string 'JWT has expired' if { var(txn.exp),sub(txn.now) -m int lt 0 } if { req.hdr(authorization) -m found }
 ```
 
 ## What It Validates

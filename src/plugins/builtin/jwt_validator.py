@@ -13,11 +13,16 @@ Configuration:
     - pubkey: Public key content as base64-encoded string (required if pubkey_path not provided)
     - paths: List of paths that require JWT validation (optional, if not set ALL domain is protected)
     - only_paths: If true, only specified paths are accessible; if false (default), only specified paths require JWT validation
+    - allow_anonymous: If true, allows requests without Authorization header (validates JWT if present); if false (default), requires Authorization header
 
 Path Validation Logic:
     - No paths configured: ALL requests to the domain require JWT validation (default behavior)
     - Paths configured + only_paths=false: Only specified paths require JWT validation, others pass through
     - Paths configured + only_paths=true: Only specified paths are accessible (with JWT), all others are denied
+
+Anonymous Access Logic:
+    - allow_anonymous=false (default): Requests without Authorization header are denied
+    - allow_anonymous=true: Requests without Authorization header are allowed, but JWTs are validated if present
 
 Example YAML config:
     plugins:
@@ -85,6 +90,7 @@ class JwtValidatorPlugin(PluginInterface):
         self.pubkey = None  # Public key content (alternative to pubkey_path)
         self.paths = []  # List of paths that require JWT validation
         self.only_paths = False  # If true, only specified paths are accessible
+        self.allow_anonymous = False  # If true, allow requests without Authorization header
 
     @property
     def name(self) -> str:
@@ -108,6 +114,7 @@ class JwtValidatorPlugin(PluginInterface):
                 - pubkey: Public key content as base64-encoded string
                 - paths: List of paths that require JWT validation (optional)
                 - only_paths: If true, only specified paths are accessible (default: false)
+                - allow_anonymous: If true, allow requests without Authorization header (default: false)
         """
         if "enabled" in config:
             self.enabled = str(config["enabled"]).lower() in ["true", "1", "yes"]
@@ -148,6 +155,9 @@ class JwtValidatorPlugin(PluginInterface):
 
         if "only_paths" in config:
             self.only_paths = str(config["only_paths"]).lower() in ["true", "1", "yes"]
+
+        if "allow_anonymous" in config:
+            self.allow_anonymous = str(config["allow_anonymous"]).lower() in ["true", "1", "yes"]
 
     def process(self, context: PluginContext) -> PluginResult:
         """
@@ -198,37 +208,49 @@ class JwtValidatorPlugin(PluginInterface):
                 path_condition = " if jwt_protected_path"
 
         # Check for Authorization header
-        lines.append(f"http-request deny content-type 'text/html' string 'Missing Authorization HTTP header' unless {{ req.hdr(authorization) -m found }}{path_condition}")
+        if not self.allow_anonymous:
+            # Require Authorization header (default behavior)
+            lines.append(f"http-request deny content-type 'text/html' string 'Missing Authorization HTTP header' unless {{ req.hdr(authorization) -m found }}{path_condition}")
+            jwt_condition = path_condition
+        else:
+            # Allow anonymous access - only validate JWT if Authorization header is present
+            lines.append("")
+            lines.append("# Allow anonymous access - validate JWT only if Authorization header is present")
+            if path_condition:
+                # Combine path condition with Authorization header check
+                jwt_condition = f"{path_condition} if {{ req.hdr(authorization) -m found }}"
+            else:
+                jwt_condition = " if { req.hdr(authorization) -m found }"
 
         # Extract JWT parts
         lines.append("")
         lines.append("# Extract JWT header and payload")
-        lines.append(f"http-request set-var(txn.alg) http_auth_bearer,jwt_header_query('$.alg'){path_condition}")
-        lines.append(f"http-request set-var(txn.iss) http_auth_bearer,jwt_payload_query('$.iss'){path_condition}")
-        lines.append(f"http-request set-var(txn.aud) http_auth_bearer,jwt_payload_query('$.aud'){path_condition}")
-        lines.append(f"http-request set-var(txn.exp) http_auth_bearer,jwt_payload_query('$.exp','int'){path_condition}")
+        lines.append(f"http-request set-var(txn.alg) http_auth_bearer,jwt_header_query('$.alg'){jwt_condition}")
+        lines.append(f"http-request set-var(txn.iss) http_auth_bearer,jwt_payload_query('$.iss'){jwt_condition}")
+        lines.append(f"http-request set-var(txn.aud) http_auth_bearer,jwt_payload_query('$.aud'){jwt_condition}")
+        lines.append(f"http-request set-var(txn.exp) http_auth_bearer,jwt_payload_query('$.exp','int'){jwt_condition}")
 
         # Validate JWT
         lines.append("")
         lines.append("# Validate JWT")
-        lines.append(f"http-request deny content-type 'text/html' string 'Unsupported JWT signing algorithm' unless {{ var(txn.alg) -m str {self.algorithm} }}{path_condition}")
+        lines.append(f"http-request deny content-type 'text/html' string 'Unsupported JWT signing algorithm' unless {{ var(txn.alg) -m str {self.algorithm} }}{jwt_condition}")
 
         # Validate issuer (if configured)
         if self.issuer:
-            lines.append(f"http-request deny content-type 'text/html' string 'Invalid JWT issuer' unless {{ var(txn.iss) -m str {self.issuer} }}{path_condition}")
+            lines.append(f"http-request deny content-type 'text/html' string 'Invalid JWT issuer' unless {{ var(txn.iss) -m str {self.issuer} }}{jwt_condition}")
 
         # Validate audience (if configured)
         if self.audience:
-            lines.append(f"http-request deny content-type 'text/html' string 'Invalid JWT audience' unless {{ var(txn.aud) -m str {self.audience} }}{path_condition}")
+            lines.append(f"http-request deny content-type 'text/html' string 'Invalid JWT audience' unless {{ var(txn.aud) -m str {self.audience} }}{jwt_condition}")
 
         # Validate signature
-        lines.append(f"http-request deny content-type 'text/html' string 'Invalid JWT signature' unless {{ http_auth_bearer,jwt_verify(txn.alg,\"{pubkey_file}\") -m int 1 }}{path_condition}")
+        lines.append(f"http-request deny content-type 'text/html' string 'Invalid JWT signature' unless {{ http_auth_bearer,jwt_verify(txn.alg,\"{pubkey_file}\") -m int 1 }}{jwt_condition}")
 
         # Validate expiration
         lines.append("")
         lines.append("# Validate expiration")
-        lines.append(f"http-request set-var(txn.now) date(){path_condition}")
-        lines.append(f"http-request deny content-type 'text/html' string 'JWT has expired' if {{ var(txn.exp),sub(txn.now) -m int lt 0 }}{path_condition}")
+        lines.append(f"http-request set-var(txn.now) date(){jwt_condition}")
+        lines.append(f"http-request deny content-type 'text/html' string 'JWT has expired' if {{ var(txn.exp),sub(txn.now) -m int lt 0 }}{jwt_condition}")
 
         haproxy_config = "\n".join(lines)
 
@@ -240,7 +262,8 @@ class JwtValidatorPlugin(PluginInterface):
             "validates_issuer": self.issuer is not None,
             "validates_audience": self.audience is not None,
             "path_validation": len(self.paths) > 0,
-            "only_paths": self.only_paths
+            "only_paths": self.only_paths,
+            "allow_anonymous": self.allow_anonymous
         }
 
         if self.issuer:
