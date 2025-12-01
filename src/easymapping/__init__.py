@@ -98,7 +98,9 @@ class HaproxyConfigGenerator:
                     enabled_list = []
 
                 global_results = self.plugin_manager.execute_global_plugins(global_context, enabled_list)
-                self.global_plugin_configs = [r.haproxy_config for r in global_results if r.haproxy_config]
+                # Extend instead of replace to preserve fcgi-app definitions from domain plugins
+                global_configs = [r.haproxy_config for r in global_results if r.haproxy_config]
+                self.global_plugin_configs.extend(global_configs)
             except Exception as e:
                 import logging
                 logging.warning(f"Failed to execute global plugins: {e}")
@@ -265,6 +267,12 @@ class HaproxyConfigGenerator:
                             easymapping[port]["hosts"][hostname]["plugin_configs"] = [
                                 r.haproxy_config for r in domain_results if r.haproxy_config
                             ]
+
+                            # Extract fcgi-app definitions from metadata and add to global configs
+                            for result in domain_results:
+                                if result.metadata and "fcgi_app_definition" in result.metadata:
+                                    if result.metadata["fcgi_app_definition"] not in self.global_plugin_configs:
+                                        self.global_plugin_configs.append(result.metadata["fcgi_app_definition"])
                         except Exception as e:
                             import logging
                             logging.warning(f"Failed to execute domain plugins for {hostname}: {e}")

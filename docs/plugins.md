@@ -312,6 +312,99 @@ http-request deny content-type 'text/html' string 'JWT has expired' if { var(txn
 
 **Important:** Requires HAProxy 2.5+ with JWT support. Mount public key file as read-only volume.
 
+### FastCGI Plugin (Domain)
+
+Configures FastCGI parameters for PHP-FPM and other FastCGI applications.
+
+**Why use it:** Automatically generates HAProxy `fcgi-app` configuration that defines required CGI parameters for PHP-FPM communication without manual HAProxy configuration.
+
+**Configuration options:**
+- `enabled` - Enable/disable plugin (default: `true`)
+- `document_root` - Document root path (default: `/var/www/html`)
+- `script_filename` - Custom pattern for SCRIPT_FILENAME (default: `%[path]`, uses HAProxy's default)
+- `index_file` - Default index file (default: `index.php`)
+- `path_info` - Enable PATH_INFO support (default: `true`)
+- `custom_params` - Dictionary of custom FastCGI parameters (optional)
+
+**Enable via container label (TCP connection):**
+```yaml
+services:
+  php-fpm:
+    image: php:8.2-fpm
+    labels:
+      easyhaproxy.http.host: phpapp.local
+      easyhaproxy.http.port: 80
+      easyhaproxy.http.localport: 9000
+      easyhaproxy.http.proto: fcgi
+      easyhaproxy.http.plugins: fastcgi
+      easyhaproxy.http.plugin.fastcgi.document_root: /var/www/html
+      easyhaproxy.http.plugin.fastcgi.index_file: index.php
+    volumes:
+      - ./app:/var/www/html
+```
+
+**Or with Unix socket:**
+```yaml
+services:
+  php-fpm:
+    image: php:8.2-fpm
+    labels:
+      easyhaproxy.http.host: phpapp.local
+      easyhaproxy.http.socket: /run/php/php-fpm.sock
+      easyhaproxy.http.proto: fcgi
+      easyhaproxy.http.plugins: fastcgi
+      easyhaproxy.http.plugin.fastcgi.document_root: /var/www/html
+      easyhaproxy.http.plugin.fastcgi.index_file: index.php
+    volumes:
+      - ./app:/var/www/html
+      - /run/php:/run/php
+```
+
+**Custom document root and index file:**
+```yaml
+labels:
+  easyhaproxy.http.plugins: fastcgi
+  easyhaproxy.http.plugin.fastcgi.document_root: /var/www/myapp/public
+  easyhaproxy.http.plugin.fastcgi.index_file: app.php
+  easyhaproxy.http.plugin.fastcgi.path_info: true
+```
+
+**HAProxy config generated:**
+
+The plugin generates a top-level `fcgi-app` section and a `use-fcgi-app` directive in the backend:
+
+```haproxy
+# Top-level fcgi-app definition (added after defaults, before frontends/backends)
+fcgi-app fcgi_phpapp_local
+    docroot /var/www/html
+    index index.php
+    path-info ^(/.+\.php)(/.*)?$
+
+# Backend configuration (added to the backend section)
+backend srv_phpapp_local_80
+    use-fcgi-app fcgi_phpapp_local
+    # TCP connection:
+    server srv-0 172.19.0.3:9000 proto fcgi
+    # OR Unix socket:
+    # server srv-0 /run/php/php-fpm.sock proto fcgi
+```
+
+**Note:** HAProxy automatically sets standard CGI parameters (SCRIPT_FILENAME, DOCUMENT_ROOT, REQUEST_URI, QUERY_STRING, REQUEST_METHOD, CONTENT_TYPE, CONTENT_LENGTH, SERVER_NAME, SERVER_PORT, etc.) based on the `fcgi-app` configuration when communicating with PHP-FPM via the FastCGI protocol.
+
+**What it configures:**
+- ✅ SCRIPT_FILENAME - Path to PHP script
+- ✅ DOCUMENT_ROOT - Document root directory
+- ✅ SCRIPT_NAME - Script name from URL
+- ✅ REQUEST_URI - Full request URI with query string
+- ✅ QUERY_STRING - URL query parameters
+- ✅ REQUEST_METHOD - HTTP method (GET, POST, etc.)
+- ✅ CONTENT_TYPE & CONTENT_LENGTH - Request body info
+- ✅ SERVER_NAME & SERVER_PORT - Server details
+- ✅ HTTPS - SSL/TLS status
+- ✅ PATH_INFO - Path information (optional)
+
+**Important:** Use this plugin together with `proto: fcgi` parameter for complete PHP-FPM support.
+
 ## Configuration Methods
 
 Plugins can be configured using different methods depending on your deployment environment:

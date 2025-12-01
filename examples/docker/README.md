@@ -151,6 +151,117 @@ labels:
 
 ## Plugin Examples
 
+### FastCGI Plugin with PHP-FPM
+
+Run PHP applications with FastCGI protocol support:
+
+**File:** `docker-compose-php-fpm.yml`
+
+**What it demonstrates:**
+- PHP-FPM 8.5 with TCP connection on port 9000
+- FastCGI protocol support (`proto: fcgi`)
+- FastCGI plugin for PHP environment configuration
+- Custom document root and index file
+- PATH_INFO support for RESTful routing
+
+**Features:**
+- HAProxy forwards requests to PHP-FPM via TCP (port 9000)
+- FastCGI plugin generates `fcgi-app` configuration that defines CGI parameters:
+  - `SCRIPT_FILENAME`, `DOCUMENT_ROOT`, `REQUEST_URI`
+  - `QUERY_STRING`, `REQUEST_METHOD`, `CONTENT_TYPE`
+  - `SERVER_NAME`, `SERVER_PORT`, `HTTPS`
+  - `PATH_INFO` (for routing support)
+- Sample PHP application included in `php-app/` directory
+
+**Configuration:**
+```yaml
+version: "3"
+
+services:
+  haproxy:
+    image: byjg/easy-haproxy:4.6.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      EASYHAPROXY_DISCOVER: docker
+    ports:
+      - "80:80/tcp"
+
+  php-fpm:
+    image: byjg/php:8.5-fpm
+    volumes:
+      - ./php-app:/var/www/html:ro
+    labels:
+      easyhaproxy.http.host: phpapp.local
+      easyhaproxy.http.port: 80
+      # PHP-FPM listens on port 9000
+      easyhaproxy.http.localport: 9000
+      easyhaproxy.http.proto: fcgi
+      # Enable FastCGI plugin
+      easyhaproxy.http.plugins: fastcgi
+      easyhaproxy.http.plugin.fastcgi.document_root: /var/www/html
+      easyhaproxy.http.plugin.fastcgi.index_file: index.php
+      easyhaproxy.http.plugin.fastcgi.path_info: "true"
+```
+
+**Usage:**
+```bash
+# Add to /etc/hosts
+echo "127.0.0.1 phpapp.local" | sudo tee -a /etc/hosts
+
+# Start the stack
+docker compose -f docker-compose-php-fpm.yml up -d
+
+# Test PHP application
+curl http://phpapp.local/
+curl http://phpapp.local/info.php
+curl http://phpapp.local/test-path-info.php/users/123
+```
+
+**Alternative: Unix Socket Connection**
+
+For PHP-FPM images that support Unix sockets, you can use socket connection:
+
+```yaml
+services:
+  haproxy:
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - php-fpm-socket:/run/php
+
+  php-fpm:
+    image: php:8.2-fpm  # Official PHP image supports sockets
+    volumes:
+      - php-fpm-socket:/run/php
+      - ./php-app:/var/www/html:ro
+    labels:
+      easyhaproxy.http.host: phpapp.local
+      easyhaproxy.http.port: 80
+      easyhaproxy.http.socket: /run/php/php-fpm.sock
+      easyhaproxy.http.proto: fcgi
+      easyhaproxy.http.plugins: fastcgi
+      # ... plugin configuration
+
+volumes:
+  php-fpm-socket:
+```
+
+**Sample Application:**
+
+The `php-app/` directory contains:
+- `index.php` - Main page showing FastCGI environment
+- `info.php` - PHP configuration info (phpinfo)
+- `test-path-info.php` - PATH_INFO routing demonstration
+
+**What the FastCGI plugin does:**
+1. Sets `SCRIPT_FILENAME` with proper document root path
+2. Handles directory requests (appends `index.php`)
+3. Sets all standard CGI environment variables
+4. Enables `PATH_INFO` for RESTful URL routing
+5. Supports custom FastCGI parameters
+
+---
+
 ### JWT Validator Plugin
 
 Protect your API with JWT token validation:

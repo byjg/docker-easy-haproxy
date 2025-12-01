@@ -1,0 +1,60 @@
+# FastCGI Plugin Example with PHP-FPM
+#
+# This example demonstrates PHP-FPM configuration with FastCGI protocol support
+# using HAProxy as a reverse proxy and the FastCGI plugin for PHP environment setup.
+#
+# Prerequisites:
+# 1. Add to /etc/hosts:
+#    127.0.0.1 phpapp.local
+#
+# 2. Start the stack:
+#    docker compose -f docker-compose-php-fpm.yml up -d
+#
+# 3. Test PHP application:
+#    curl http://phpapp.local/
+#    curl http://phpapp.local/info.php
+#
+# Features:
+# - PHP-FPM 8.5 with TCP connection on port 9000
+# - FastCGI protocol support
+# - Custom document root
+# - PATH_INFO support for routing
+# - Custom FastCGI parameters
+
+version: "3"
+
+services:
+  haproxy:
+    image: byjg/easy-haproxy:4.6.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      EASYHAPROXY_DISCOVER: docker
+      HAPROXY_CUSTOMERRORS: "true"
+      HAPROXY_USERNAME: admin
+      HAPROXY_PASSWORD: password
+      HAPROXY_STATS_PORT: 1936
+    ports:
+      - "80:80/tcp"
+      - "1936:1936/tcp"
+
+  # PHP-FPM service using byjg/php image
+  php-fpm:
+    image: byjg/php:8.5-fpm
+    volumes:
+      # Mount PHP application files
+      - ./php-app:/var/www/html:ro
+    labels:
+      easyhaproxy.http.host: phpapp.local
+      easyhaproxy.http.port: 80
+      # PHP-FPM listens on port 9000
+      easyhaproxy.http.localport: 9000
+      easyhaproxy.http.proto: fcgi
+
+      # Enable FastCGI plugin for PHP environment configuration
+      easyhaproxy.http.plugins: fastcgi
+
+      # FastCGI plugin configuration
+      easyhaproxy.http.plugin.fastcgi.document_root: /var/www/html
+      easyhaproxy.http.plugin.fastcgi.index_file: index.php
+      easyhaproxy.http.plugin.fastcgi.path_info: "true"

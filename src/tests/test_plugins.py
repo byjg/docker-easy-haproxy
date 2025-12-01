@@ -22,6 +22,7 @@ from plugins.builtin.cleanup import CleanupPlugin
 from plugins.builtin.deny_pages import DenyPagesPlugin
 from plugins.builtin.ip_whitelist import IpWhitelistPlugin
 from plugins.builtin.jwt_validator import JwtValidatorPlugin
+from plugins.builtin.fastcgi import FastcgiPlugin
 import easymapping
 
 
@@ -736,6 +737,114 @@ class TestJwtValidatorPlugin:
         assert result.metadata["path_validation"] is False
 
 
+class TestFastcgiPlugin:
+    """Test cases for FastcgiPlugin"""
+
+    def test_fastcgi_plugin_initialization(self):
+        """Test plugin initializes with correct defaults"""
+        plugin = FastcgiPlugin()
+
+        assert plugin.name == "fastcgi"
+        assert plugin.enabled is True
+        assert plugin.document_root == "/var/www/html"
+        assert plugin.index_file == "index.php"
+        assert plugin.path_info is True
+        assert plugin.custom_params == {}
+
+    def test_fastcgi_plugin_configuration(self):
+        """Test plugin configuration"""
+        plugin = FastcgiPlugin()
+        plugin.configure({
+            "document_root": "/var/www/myapp",
+            "index_file": "app.php",
+            "path_info": "false"
+        })
+
+        assert plugin.document_root == "/var/www/myapp"
+        assert plugin.index_file == "app.php"
+        assert plugin.path_info is False
+
+    def test_fastcgi_plugin_generates_config(self):
+        """Test plugin generates correct HAProxy config"""
+        plugin = FastcgiPlugin()
+        plugin.configure({
+            "document_root": "/var/www/html",
+            "index_file": "index.php"
+        })
+
+        context = PluginContext(
+            parsed_object={},
+            easymapping=[],
+            container_env={},
+            domain="phpapp.local",
+            port="80",
+            host_config={}
+        )
+
+        result = plugin.process(context)
+
+        assert result.haproxy_config is not None
+        assert "use-fcgi-app fcgi_phpapp_local" in result.haproxy_config
+
+        # Check fcgi-app definition in metadata
+        assert "fcgi_app_definition" in result.metadata
+        fcgi_app_def = result.metadata["fcgi_app_definition"]
+        assert "fcgi-app fcgi_phpapp_local" in fcgi_app_def
+        assert "docroot /var/www/html" in fcgi_app_def
+        assert "index index.php" in fcgi_app_def
+        assert result.metadata["document_root"] == "/var/www/html"
+        assert result.metadata["index_file"] == "index.php"
+
+    def test_fastcgi_plugin_custom_params(self):
+        """Test plugin with custom FastCGI parameters"""
+        plugin = FastcgiPlugin()
+        plugin.configure({
+            "custom_params": {
+                "CUSTOM_VAR": "custom_value",
+                "APP_ENV": "production"
+            }
+        })
+
+        context = PluginContext(
+            parsed_object={},
+            easymapping=[],
+            container_env={},
+            domain="phpapp.local",
+            port="80",
+            host_config={}
+        )
+
+        result = plugin.process(context)
+
+        assert result.haproxy_config is not None
+        assert "use-fcgi-app fcgi_phpapp_local" in result.haproxy_config
+
+        # Check custom params in fcgi-app definition in metadata
+        assert "fcgi_app_definition" in result.metadata
+        fcgi_app_def = result.metadata["fcgi_app_definition"]
+        assert "set-param CUSTOM_VAR custom_value" in fcgi_app_def
+        assert "set-param APP_ENV production" in fcgi_app_def
+        assert result.metadata["custom_params_count"] == 2
+
+    def test_fastcgi_plugin_disabled(self):
+        """Test plugin returns empty config when disabled"""
+        plugin = FastcgiPlugin()
+        plugin.configure({"enabled": "false"})
+
+        context = PluginContext(
+            parsed_object={},
+            easymapping=[],
+            container_env={},
+            domain="phpapp.local",
+            port="80",
+            host_config={}
+        )
+
+        result = plugin.process(context)
+
+        assert result.haproxy_config is None or result.haproxy_config == ""
+
+
 class TestPluginManager:
     """Test cases for PluginManager"""
 
@@ -750,10 +859,11 @@ class TestPluginManager:
         assert "deny_pages" in manager.plugins
         assert "ip_whitelist" in manager.plugins
         assert "jwt_validator" in manager.plugins
+        assert "fastcgi" in manager.plugins
 
         # Verify plugin types
         assert len(manager.global_plugins) == 1  # cleanup
-        assert len(manager.domain_plugins) == 4  # cloudflare, deny_pages, ip_whitelist, jwt_validator
+        assert len(manager.domain_plugins) == 5  # cloudflare, deny_pages, ip_whitelist, jwt_validator, fastcgi
 
         # Verify plugin instances
         assert manager.plugins["cloudflare"].name == "cloudflare"

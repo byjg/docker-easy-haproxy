@@ -1,0 +1,16 @@
+{
+  "172.17.0.2": {
+    "easyhaproxy.definitions": "fcgi",
+    "easyhaproxy.fcgi.host": "phpapp.local",
+    "easyhaproxy.fcgi.port": "80",
+    "easyhaproxy.fcgi.socket": "/run/php/php-fpm.sock",
+    "easyhaproxy.fcgi.proto": "fcgi"
+  },
+  "172.17.0.3": {
+    "easyhaproxy.definitions": "fcgi-tcp",
+    "easyhaproxy.fcgi-tcp.host": "phpapp-tcp.local",
+    "easyhaproxy.fcgi-tcp.port": "80",
+    "easyhaproxy.fcgi-tcp.localport": "9000",
+    "easyhaproxy.fcgi-tcp.proto": "fcgi"
+  }
+}
