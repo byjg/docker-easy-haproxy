@@ -90,16 +90,16 @@ You don't need to expose any port in your container.
 
 ## Kubernetes annotations
 
-| annotation                       | Description                                                                         | Default      | Example                    |
-|----------------------------------|-------------------------------------------------------------------------------------|--------------|----------------------------|
-| kubernetes.io/ingress.class      | (required) Activate EasyHAProxy.                                                    | **required** | easyhaproxy-ingress        |
-| easyhaproxy.redirect_ssl         | (optional) Boolean. Force redirect all endpoints to HTTPS.                          | false        | true or false              |
-| easyhaproxy.certbot              | (optional) Boolean. It will request certbot certificates for the ingresses domains. | false        | true or false              |
-| easyhaproxy.redirect             | (optional) JSON. Key pair with a domain and its destination.                        | *empty*      | \{"domain":"redirect_url"} |
-| easyhaproxy.mode                 | (optional) Set the HTTP mode for that connection.                                   | http         | http or tcp                |
-| easyhaproxy.listen_port          | (optional) Override the HTTP listen port created for that ingress                   | 80           | 8081                       |
-| easyhaproxy.plugins              | (optional) Comma-separated list of plugins to enable for this ingress               | *empty*      | cloudflare,deny_pages      |
-| easyhaproxy.plugin.{name}.{key}  | (optional) Plugin-specific configuration (see [Using Plugins](plugins.md))          | *varies*     | See examples below         |
+| annotation                          | Description                                                                         | Default      | Example                    |
+|-------------------------------------|-------------------------------------------------------------------------------------|--------------|----------------------------|
+| kubernetes.io/ingress.class         | (required) Activate EasyHAProxy.                                                    | **required** | easyhaproxy-ingress        |
+| easyhaproxy.redirect_ssl            | (optional) Boolean. Force redirect all endpoints to HTTPS.                          | false        | true or false              |
+| easyhaproxy.certbot                 | (optional) Boolean. It will request certbot certificates for the ingresses domains. | false        | true or false              |
+| easyhaproxy.redirect                | (optional) JSON. Key pair with a domain and its destination.                        | *empty*      | \{"domain":"redirect_url"} |
+| easyhaproxy.mode                    | (optional) Set the HTTP mode for that connection.                                   | http         | http or tcp                |
+| easyhaproxy.listen_port             | (optional) Override the HTTP listen port created for that ingress                   | 80           | 8081                       |
+| easyhaproxy.plugins                 | (optional) Comma-separated list of plugins to enable for this ingress               | *empty*      | cloudflare,deny_pages      |
+| easyhaproxy.plugin.`{name}`.`{key}` | (optional) Plugin-specific configuration (see [Using Plugins](plugins.md))          | *varies*     | See examples below         |
 
 **Important**: The annotations are per ingress and applied to all hosts in that ingress configuration.
 
@@ -176,7 +176,7 @@ metadata:
     easyhaproxy.plugin.jwt_validator.pubkey_path: "/etc/haproxy/jwt_keys/api_pubkey.pem"
 ```
 
-**Note:** For JWT validation, you'll need to mount the public key file into the EasyHAProxy pod. See [Using Plugins](plugins.md#jwt-validator-plugin-domain) for details.
+**Note:** For JWT validation, you'll need to mount the public key file into the EasyHAProxy pod. See [Using Plugins](plugins.md#protect-api-with-jwt-authentication) for details.
 
 **Restrict access to specific IPs:**
 

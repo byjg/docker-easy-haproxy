@@ -2,637 +2,161 @@
 sidebar_position: 17
 ---
 
-# Plugin Developer Guide
+# Plugin Development Guide
 
-This guide explains how to create custom plugins for EasyHAProxy. For information on using existing plugins, see [Using Plugins](plugins.md).
+This comprehensive guide covers everything you need to know about developing plugins for EasyHAProxy. Plugins extend HAProxy configuration with custom functionality and can be integrated seamlessly with Docker, Kubernetes, and Swarm environments.
 
-## Architecture Overview
+## Table of Contents
+
+1. [Overview](#overview)
+2. [Plugin Architecture](#plugin-architecture)
+3. [Quick Start Guide](#quick-start-guide)
+4. [API Reference](#api-reference)
+5. [Advanced Examples](#advanced-examples)
+6. [Best Practices](#best-practices)
+7. [Testing Guidelines](#testing-guidelines)
+8. [Troubleshooting](#troubleshooting)
+9. [Distribution](#distribution)
+
+---
+
+## Overview
+
+### What is a Plugin?
+
+A plugin is a Python class that implements the `PluginInterface` and extends HAProxy's configuration during the discovery cycle. Plugins can:
+
+- **Inject HAProxy configuration** - Add custom HAProxy directives (ACLs, http-request rules, etc.)
+- **Modify discovery data** - Transform the easymapping structure before HAProxy config generation
+- **Perform maintenance tasks** - Execute cleanup, monitoring, or integration tasks
+- **Integrate with external services** - Connect to APIs, databases, or third-party systems
+
+### Why Build a Plugin?
+
+Build a plugin when you need to:
+
+- Add domain-specific HAProxy configuration based on labels/annotations
+- Integrate with CDNs, load balancers, or security services
+- Implement custom authentication or authorization logic
+- Perform scheduled maintenance or monitoring tasks
+- Extend EasyHAProxy without modifying core code
+
+### Plugin System Benefits
+
+- **Zero code changes** - Plugins don't modify EasyHAProxy core
+- **Hot reload support** - Plugins reload on each discovery cycle
+- **Configuration flexibility** - Configure via YAML, environment variables, or container labels
+- **Error isolation** - Plugin errors don't crash the main application (configurable)
+- **Easy distribution** - Share plugins as single Python files
+
+---
+
+## Plugin Architecture
+
+### Plugin Types
+
+EasyHAProxy supports two plugin execution models:
+
+#### 1. GLOBAL Plugins
+
+Execute **once per discovery cycle**, regardless of discovered domains.
+
+**Execution timing:** After discovery, before domain processing
+
+**Use cases:**
+- Cleanup tasks (removing old temp files)
+- Global monitoring (health checks, metrics)
+- DNS updates (updating external DNS records)
+- Log rotation or archiving
+- Integration with global services
+
+**Example:** CleanupPlugin - removes old temporary files once per cycle
+
+#### 2. DOMAIN Plugins
+
+Execute **once per discovered domain/host**.
+
+**Execution timing:** During domain processing, before backend config generation
+
+**Use cases:**
+- Domain-specific HAProxy rules (IP whitelisting, rate limiting)
+- CDN integration (Cloudflare IP restoration)
+- Path-based controls (blocking specific URLs)
+- Custom headers or redirects per domain
+- JWT validation or authentication
+
+**Example:** CloudflarePlugin - restores visitor IP for each Cloudflare-enabled domain
 
 ### Plugin Lifecycle
 
 ```
-1. Discovery Cycle Starts
+1. LOAD PHASE
+   ├─ PluginManager scans plugins directory
+   ├─ Imports plugin modules
+   ├─ Instantiates plugin classes
+   └─ Categorizes by type (GLOBAL/DOMAIN)
+
+2. CONFIGURE PHASE
+   ├─ Loads configuration from YAML/env
+   ├─ Calls plugin.configure(config) for each plugin
+   └─ Validates configuration (plugin responsibility)
+
+3. EXECUTION PHASE (per discovery cycle)
+   ├─ GLOBAL PLUGINS
+   │  └─ Executes all global plugins once
    │
-2. PluginManager loads plugins
-   ├─ Load builtin plugins from src/plugins/builtin/
-   └─ Load external plugins from /etc/haproxy/plugins/
-   │
-3. PluginManager configures plugins
-   ├─ Read global config (YAML/env vars)
-   └─ Call plugin.configure(config)
-   │
-4. Parse container metadata → easymapping
-   │
-5. Execute GLOBAL plugins (once)
-   ├─ Create PluginContext (no domain info)
-   ├─ Call plugin.process(context)
-   └─ Collect PluginResult
-   │
-6. For each discovered domain:
-   ├─ Extract plugin list from labels
-   ├─ Extract plugin configs from labels
-   ├─ Call plugin.configure(label_config)
-   ├─ Execute DOMAIN plugins
-   │   ├─ Create PluginContext (with domain info)
-   │   ├─ Call plugin.process(context)
-   │   └─ Collect PluginResult
-   └─ Store plugin HAProxy configs
-   │
-7. Render Jinja2 template
-   ├─ Inject global plugin configs
-   └─ Inject domain plugin configs per backend
-   │
-8. Generate final HAProxy config
+   └─ DOMAIN PLUGINS
+      └─ For each discovered domain:
+         └─ Executes all domain plugins
+
+4. RESULT PROCESSING
+   ├─ Collects PluginResult from each plugin
+   ├─ Injects haproxy_config into generated config
+   ├─ Applies modified_easymapping if provided
+   └─ Logs metadata for debugging
 ```
 
-## Built-in Plugins Reference
+### Plugin Loading Order
 
-EasyHAProxy includes five built-in plugins that serve as both functional tools and reference implementations for plugin development.
+1. **Builtin plugins** - Loaded from `/src/plugins/builtin/`
+2. **External plugins** - Loaded from `/etc/haproxy/plugins/`
 
-### CloudflarePlugin (DOMAIN)
+Plugins are discovered automatically by filename (`*.py` excluding `__*.py`).
 
-**Purpose:** Restore original visitor IP addresses when using Cloudflare CDN
-
-**Type:** DOMAIN - Executes once per domain
-
-**Source:** `src/plugins/builtin/cloudflare.py`
-
-**Configuration Options:**
-- `enabled` (bool) - Enable/disable plugin (default: `true`)
-- `ip_list_path` (str) - Path to Cloudflare IP list file (default: `/etc/haproxy/cloudflare_ips.lst`)
-
-**What it does:**
-- Reads Cloudflare IP ranges from a file
-- Checks if request comes from Cloudflare IP
-- Restores original visitor IP from `CF-Connecting-IP` header
-
-**HAProxy config generated:**
-```
-# Cloudflare - Restore original visitor IP
-acl from_cloudflare src -f /etc/haproxy/cloudflare_ips.lst
-http-request set-header X-Forwarded-For %[req.hdr(CF-Connecting-IP)] if from_cloudflare
-```
-
-**Usage:** See [Cloudflare Plugin documentation](plugins.md#cloudflare-plugin-domain)
-
-### CleanupPlugin (GLOBAL)
-
-**Purpose:** Perform cleanup tasks during discovery cycle
-
-**Type:** GLOBAL - Executes once per discovery cycle
-
-**Source:** `src/plugins/builtin/cleanup.py`
-
-**Configuration Options:**
-- `enabled` (bool) - Enable/disable plugin (default: `true`)
-- `max_idle_time` (int) - Max file age in seconds before deletion (default: `300`)
-- `cleanup_temp_files` (bool) - Enable temp file cleanup (default: `true`)
-
-**What it does:**
-- Scans `/tmp` for files prefixed with `easyhaproxy_`
-- Removes files older than `max_idle_time` seconds
-- Logs cleanup actions to metadata
-
-**HAProxy config generated:** None (performs cleanup only)
-
-**Usage:** See [Cleanup Plugin documentation](plugins.md#cleanup-plugin-global)
-
-### DenyPagesPlugin (DOMAIN)
-
-**Purpose:** Block access to specific paths for a domain
-
-**Type:** DOMAIN - Executes once per domain
-
-**Source:** `src/plugins/builtin/deny_pages.py`
-
-**Configuration Options:**
-- `enabled` (bool) - Enable/disable plugin (default: `true`)
-- `paths` (str) - Comma-separated list of paths to block (e.g., `/admin,/private`)
-- `status_code` (int) - HTTP status code to return (default: `403`)
-
-**What it does:**
-- Parses comma-separated list of paths
-- Creates HAProxy ACL matching those paths
-- Returns specified HTTP status code for matching requests
-
-**HAProxy config generated:**
-```
-# Deny Pages - Block specific paths
-acl denied_path path_beg /admin /private
-http-request deny deny_status 403 if denied_path
-```
-
-**Usage:** See [Deny Pages Plugin documentation](plugins.md#deny-pages-plugin-domain)
-
-### IpWhitelistPlugin (DOMAIN)
-
-**Purpose:** Restrict domain access to specific IP addresses or CIDR ranges
-
-**Type:** DOMAIN - Executes once per domain
-
-**Source:** `src/plugins/builtin/ip_whitelist.py`
-
-**Configuration Options:**
-- `enabled` (bool) - Enable/disable plugin (default: `true`)
-- `allowed_ips` (str) - Comma-separated list of IPs/CIDR ranges to allow (e.g., `192.168.1.0/24,10.0.0.1`)
-- `status_code` (int) - HTTP status code to return for blocked IPs (default: `403`)
-
-**What it does:**
-- Parses comma-separated list of IPs and CIDR ranges
-- Creates HAProxy ACL matching whitelisted IPs
-- Denies all requests NOT from whitelisted IPs
-
-**HAProxy config generated:**
-```
-# IP Whitelist - Only allow specific IPs
-acl whitelisted_ip src 192.168.1.0/24 10.0.0.5
-http-request deny deny_status 403 if !whitelisted_ip
-```
-
-**Usage:** See [IP Whitelist Plugin documentation](plugins.md#ip-whitelist-plugin-domain)
-
-### JwtValidatorPlugin (DOMAIN)
-
-**Purpose:** Validate JWT authentication tokens
-
-**Type:** DOMAIN - Executes once per domain
-
-**Source:** `src/plugins/builtin/jwt_validator.py`
-
-**Configuration Options:**
-- `enabled` (bool) - Enable/disable plugin (default: `true`)
-- `algorithm` (str) - JWT signing algorithm (default: `RS256`)
-- `issuer` (str) - Expected JWT issuer (optional, `none`/`null` skips validation)
-- `audience` (str) - Expected JWT audience (optional, `none`/`null` skips validation)
-- `pubkey_path` (str) - Path to public key file (required if `pubkey` not provided)
-- `pubkey` (str) - Public key content as string (required if `pubkey_path` not provided)
-
-**What it does:**
-- Validates JWT tokens using HAProxy's JWT functionality
-- Checks Authorization header presence
-- Validates algorithm, issuer, audience, signature, and expiration
-- Optionally skips issuer/audience validation if set to "none"
-
-**HAProxy config generated:**
-```
-# JWT Validator - Validate JWT tokens
-http-request deny content-type 'text/html' string 'Missing Authorization HTTP header' unless { req.hdr(authorization) -m found }
-
-# Extract JWT header and payload
-http-request set-var(txn.alg) http_auth_bearer,jwt_header_query('$.alg')
-http-request set-var(txn.iss) http_auth_bearer,jwt_payload_query('$.iss')
-http-request set-var(txn.aud) http_auth_bearer,jwt_payload_query('$.aud')
-http-request set-var(txn.exp) http_auth_bearer,jwt_payload_query('$.exp','int')
-
-# Validate JWT
-http-request deny content-type 'text/html' string 'Unsupported JWT signing algorithm' unless { var(txn.alg) -m str RS256 }
-http-request deny content-type 'text/html' string 'Invalid JWT signature' unless { http_auth_bearer,jwt_verify(txn.alg,"/etc/haproxy/jwt_keys/api_pubkey.pem") -m int 1 }
-
-# Validate expiration
-http-request set-var(txn.now) date()
-http-request deny content-type 'text/html' string 'JWT has expired' if { var(txn.exp),sub(txn.now) -m int lt 0 }
-```
-
-**Usage:** See [JWT Validator Plugin documentation](plugins.md#jwt-validator-plugin-domain)
-
-### Summary Table
-
-| Plugin          | Type   | Purpose                      | Config Generated |
-|-----------------|--------|------------------------------|------------------|
-| `cloudflare`    | DOMAIN | Restore original visitor IPs | ✅ Yes            |
-| `cleanup`       | GLOBAL | Clean up temp files          | ❌ No             |
-| `deny_pages`    | DOMAIN | Block specific paths         | ✅ Yes            |
-| `ip_whitelist`  | DOMAIN | Restrict to specific IPs     | ✅ Yes            |
-| `jwt_validator` | DOMAIN | Validate JWT tokens          | ✅ Yes            |
-
-### Learning from Built-in Plugins
-
-**Best practices demonstrated:**
-
-1. **CloudflarePlugin** shows:
-   - Reading external files (IP list)
-   - Conditional HAProxy ACLs
-   - Header manipulation
-
-2. **CleanupPlugin** shows:
-   - GLOBAL plugin pattern
-   - File system operations
-   - Metadata-only results (no HAProxy config)
-
-3. **DenyPagesPlugin** shows:
-   - Parsing comma-separated config values
-   - Configurable status codes
-   - Path-based ACLs
-
-4. **IpWhitelistPlugin** shows:
-   - IP-based access control
-   - Negated ACLs (`if !whitelisted_ip`)
-   - CIDR range support
-
-5. **JwtValidatorPlugin** shows:
-   - Complex HAProxy JWT validation
-   - Optional validation (skip with "none"/"null")
-   - Dynamic file path generation based on domain
-   - Multiple configuration options
-
-**View the source code:**
-- [cloudflare.py](https://github.com/byjg/docker-easy-haproxy/blob/master/src/plugins/builtin/cloudflare.py)
-- [cleanup.py](https://github.com/byjg/docker-easy-haproxy/blob/master/src/plugins/builtin/cleanup.py)
-- [deny_pages.py](https://github.com/byjg/docker-easy-haproxy/blob/master/src/plugins/builtin/deny_pages.py)
-- [ip_whitelist.py](https://github.com/byjg/docker-easy-haproxy/blob/master/src/plugins/builtin/ip_whitelist.py)
-- [jwt_validator.py](https://github.com/byjg/docker-easy-haproxy/blob/master/src/plugins/builtin/jwt_validator.py)
-
-## Plugin API Reference
-
-### PluginInterface (Abstract Base Class)
-
-All plugins must inherit from `PluginInterface` and implement these abstract methods:
-
-```python
-from plugins import PluginInterface, PluginType, PluginContext, PluginResult
-
-class MyPlugin(PluginInterface):
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """
-        Return unique plugin identifier.
-
-        Used for:
-        - Configuration lookups
-        - Enable/disable via labels
-        - Logging
-
-        Must be:
-        - Unique across all plugins
-        - Lowercase with underscores
-        - Match filename (e.g., my_plugin.py → "my_plugin")
-        """
-        pass
-
-    @property
-    @abstractmethod
-    def plugin_type(self) -> PluginType:
-        """
-        Return plugin execution type.
-
-        Returns:
-            PluginType.GLOBAL - Execute once per discovery cycle
-            PluginType.DOMAIN - Execute once per domain/host
-        """
-        pass
-
-    @abstractmethod
-    def configure(self, config: dict) -> None:
-        """
-        Configure plugin with settings from YAML/env/labels.
-
-        Called:
-        - Once at startup with global config
-        - Before each execution with label-specific config (domain plugins)
-
-        Args:
-            config: Dictionary with plugin configuration
-                   Keys are configuration option names
-                   Values are strings from YAML/env/labels
-
-        Common pattern:
-            if "enabled" in config:
-                self.enabled = str(config["enabled"]).lower() in ["true", "1", "yes"]
-            if "my_option" in config:
-                self.my_option = config["my_option"]
-        """
-        pass
-
-    @abstractmethod
-    def process(self, context: PluginContext) -> PluginResult:
-        """
-        Execute plugin logic.
-
-        Args:
-            context: PluginContext with all execution data
-
-        Returns:
-            PluginResult with HAProxy config snippets and/or metadata
-
-        Common pattern:
-            if not self.enabled:
-                return PluginResult()  # Empty result when disabled
-
-            # Generate config
-            haproxy_config = "..."
-
-            return PluginResult(
-                haproxy_config=haproxy_config,
-                metadata={"info": "value"}
-            )
-        """
-        pass
-```
-
-### PluginType (Enum)
-
-Defines when plugins execute:
-
-```python
-class PluginType(Enum):
-    GLOBAL = "global"  # Execute once per discovery cycle
-    DOMAIN = "domain"  # Execute once per domain/host
-```
-
-**GLOBAL plugins:**
-- Execute once regardless of how many domains exist
-- Receive empty domain/port/host_config in context
-- Use cases: cleanup, monitoring, DNS updates
-
-**DOMAIN plugins:**
-- Execute for each discovered domain
-- Receive domain-specific data in context
-- Use cases: per-domain config, headers, path blocking
-
-### PluginContext (Data Class)
-
-Contains all data available to plugins during execution:
-
-```python
-@dataclass
-class PluginContext:
-    parsed_object: dict              # Discovery data: {IP: labels}
-    easymapping: list               # HAProxy mapping structure
-    container_env: dict             # Global environment config
-    domain: Optional[str] = None    # Domain name (DOMAIN plugins only)
-    port: Optional[str] = None      # Port (DOMAIN plugins only)
-    host_config: Optional[dict] = None  # Host config (DOMAIN plugins only)
-```
-
-**Fields explained:**
-
-#### `parsed_object: dict`
-
-Container discovery data mapping IP addresses to labels.
-
-**Example:**
-```python
-{
-    "192.168.1.10": {
-        "easyhaproxy.http.host": "example.com",
-        "easyhaproxy.http.port": "80",
-        "easyhaproxy.http.localport": "8080",
-        "easyhaproxy.http.plugins": "cloudflare,deny_pages",
-        "easyhaproxy.http.plugin.deny_pages.paths": "/admin"
-    },
-    "192.168.1.20": {
-        "easyhaproxy.http.host": "other.com",
-        "easyhaproxy.http.port": "80"
-    }
-}
-```
-
-**Use cases:**
-- Iterate over all discovered containers
-- Access container labels directly
-- Global plugins analyzing all containers
-
-#### `easymapping: list`
-
-Parsed HAProxy configuration structure before template rendering.
-
-**Example:**
-```python
-[
-    {
-        "port": "80",
-        "mode": "http",
-        "ssl-check": "",
-        "hosts": {
-            "example.com": {
-                "containers": ["192.168.1.10:8080"],
-                "balance": "roundrobin",
-                "certbot": False,
-                "redirect_ssl": False,
-                "plugin_configs": []
-            }
-        },
-        "redirect": {}
-    }
-]
-```
-
-**Use cases:**
-- Analyze discovered hosts
-- Modify discovery structure (advanced)
-
-#### `container_env: dict`
-
-Global configuration from YAML and environment variables.
-
-**Example:**
-```python
-{
-    "customerrors": False,
-    "ssl_mode": "default",
-    "certbot": {
-        "email": "admin@example.com"
-    },
-    "stats": {
-        "port": 1936,
-        "username": "admin"
-    },
-    "plugins": {
-        "enabled": ["cleanup"],
-        "abort_on_error": False,
-        "config": {
-            "cleanup": {
-                "max_idle_time": "300"
-            }
-        }
-    }
-}
-```
-
-**Use cases:**
-- Access global settings
-- Check certbot configuration
-- Read global plugin config
-
-#### `domain: Optional[str]`
-
-Domain name for DOMAIN plugins. `None` for GLOBAL plugins.
-
-**Example:** `"example.com"`
-
-#### `port: Optional[str]`
-
-Port for DOMAIN plugins. `None` for GLOBAL plugins.
-
-**Example:** `"80"`, `"443"`
-
-#### `host_config: Optional[dict]`
-
-Host-specific configuration for DOMAIN plugins. `None` for GLOBAL plugins.
-
-**Example:**
-```python
-{
-    "containers": ["192.168.1.10:8080"],
-    "balance": "roundrobin",
-    "certbot": False,
-    "redirect_ssl": False,
-    "plugin_configs": []
-}
-```
-
-### PluginResult (Data Class)
+### Data Flow
 
 ```
-Plugin.process(context) → PluginResult
-                           ├─ haproxy_config (what to add to HAProxy config)
-                           ├─ modified_easymapping (optional: modify discovery data)
-                           └─ metadata (optional: debug/logging info)
+Container Labels/Annotations
+         ↓
+Discovery (Docker/K8s/Swarm)
+         ↓
+parsed_object: {IP: labels}
+         ↓
+[GLOBAL PLUGINS] ← PluginContext (parsed_object, easymapping, env)
+         ↓
+easymapping: [list of domain configs]
+         ↓
+For each domain:
+    [DOMAIN PLUGINS] ← PluginContext (domain, port, host_config, ...)
+         ↓
+    PluginResult → haproxy_config snippets
+         ↓
+HAProxy Configuration File
+         ↓
+HAProxy Reload
 ```
 
-**What is PluginResult?**
+---
 
-`PluginResult` is a container object that your plugin returns from its `process()` method. It holds everything the plugin produced during execution.
-
-**Why does it exist?**
-
-Plugins need to return multiple pieces of information:
-- HAProxy configuration snippets to inject
-- Optional modifications to the discovery data
-- Metadata for logging and debugging
-
-Instead of returning multiple values, plugins return one `PluginResult` object containing all this information.
-
-**How do you use it?**
-
-Every `process()` method must return a `PluginResult`:
-
-```python
-def process(self, context: PluginContext) -> PluginResult:
-    # Plugin is disabled - return empty result
-    if not self.enabled:
-        return PluginResult()
-
-    # Plugin is enabled - return config
-    return PluginResult(
-        haproxy_config="http-request set-header X-Custom-Header 'value'",
-        metadata={"info": "some debug info"}
-    )
-```
-
-**PluginResult structure:**
-
-```python
-@dataclass
-class PluginResult:
-    haproxy_config: str = ""                     # HAProxy config to inject
-    modified_easymapping: Optional[list] = None  # Modified discovery data (advanced)
-    metadata: Dict[str, Any] = field(default_factory=dict)  # Debug/logging info
-```
-
-**Common usage patterns:**
-
-```python
-# Empty result (plugin disabled or nothing to do)
-return PluginResult()
-
-# Config only (most common)
-return PluginResult(
-    haproxy_config="# My config\n    directive value"
-)
-
-# Config + metadata (recommended)
-return PluginResult(
-    haproxy_config="# My config\n    directive value",
-    metadata={"domain": context.domain, "option": self.my_option}
-)
-
-# All fields (advanced)
-return PluginResult(
-    haproxy_config="# My config\n    directive value",
-    modified_easymapping=modified_data,
-    metadata={"info": "value"}
-)
-```
-
-**Fields explained:**
-
-#### `haproxy_config: str`
-
-HAProxy configuration snippet to inject into the generated config.
-
-**For DOMAIN plugins:** Injected into the backend section for that domain.
-
-**Example:**
-```python
-haproxy_config = """# Cloudflare IP Restoration
-    acl from_cloudflare src -f /etc/haproxy/cloudflare_ips.lst
-    http-request set-header X-Forwarded-For %[req.hdr(CF-Connecting-IP)] if from_cloudflare"""
-```
-
-**Important:**
-- Include leading spaces/tabs for proper indentation
-- Add comment describing what the config does
-- Use HAProxy directives that make sense for backend context (domain plugins)
-- Return empty string `""` when plugin is disabled or has nothing to add
-
-#### `modified_easymapping: Optional[list]`
-
-Modified easymapping structure. **Advanced feature, rarely used.**
-
-**When to use:**
-- Modify discovery data before template rendering
-- Add/remove hosts dynamically
-- Change port mappings
-
-**Default:** `None` (don't modify easymapping)
-
-**Example:**
-```python
-# Add a new host to port 80
-modified = context.easymapping.copy()
-modified[0]["hosts"]["new-host.com"] = {
-    "containers": ["192.168.1.30:8080"],
-    "balance": "roundrobin",
-    "certbot": False,
-    "redirect_ssl": False,
-    "plugin_configs": []
-}
-return PluginResult(modified_easymapping=modified)
-```
-
-#### `metadata: Dict[str, Any]`
-
-Metadata for logging and debugging. Not used in HAProxy config.
-
-**Example:**
-```python
-metadata = {
-    "domain": context.domain,
-    "blocked_paths": ["/admin", "/private"],
-    "status_code": 403,
-    "files_cleaned": 5
-}
-```
-
-**Use cases:**
-- Debug information
-- Statistics
-- Audit trail
-
-**Logged at DEBUG level:**
-```
-DEBUG: Plugin deny_pages metadata: {'domain': 'example.com', 'blocked_paths': ['/admin'], 'status_code': 403}
-```
-
-## Creating a Plugin: Step-by-Step
+## Quick Start Guide
 
 ### Step 1: Create Plugin File
 
-Create `/etc/haproxy/plugins/my_plugin.py`:
+Create a new Python file in `/etc/haproxy/plugins/` (or builtin location for core plugins):
 
 ```python
+# /etc/haproxy/plugins/my_plugin.py
+
 import os
 import sys
 
@@ -640,528 +164,1692 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from plugins import PluginInterface, PluginType, PluginContext, PluginResult
-from functions import loggerEasyHaproxy  # Optional: for logging
-```
+from functions import loggerEasyHaproxy
 
-### Step 2: Define Plugin Class
 
-```python
 class MyPlugin(PluginInterface):
-    """
-    Brief description of what your plugin does.
-
-    Configuration:
-        - enabled: Enable/disable plugin (default: true)
-        - my_option: Description of option
-
-    Example:
-        easyhaproxy.http.plugins: my_plugin
-        easyhaproxy.http.plugin.my_plugin.my_option: value
-    """
+    """My custom plugin description"""
 
     def __init__(self):
-        """Initialize plugin with default values"""
+        # Initialize default configuration
         self.enabled = True
-        self.my_option = "default_value"
-```
+        self.my_setting = "default_value"
 
-### Step 3: Implement Required Methods
-
-```python
     @property
     def name(self) -> str:
-        return "my_plugin"  # Must match filename
+        """Return unique plugin name"""
+        return "my_plugin"
 
     @property
     def plugin_type(self) -> PluginType:
-        return PluginType.DOMAIN  # or PluginType.GLOBAL
+        """Return plugin type (GLOBAL or DOMAIN)"""
+        return PluginType.DOMAIN
 
     def configure(self, config: dict) -> None:
-        """Parse configuration from YAML/env/labels"""
+        """
+        Configure plugin from YAML/env/labels
+
+        Args:
+            config: Dictionary with plugin configuration
+        """
         if "enabled" in config:
             self.enabled = str(config["enabled"]).lower() in ["true", "1", "yes"]
 
-        if "my_option" in config:
-            self.my_option = config["my_option"]
-
-        loggerEasyHaproxy.debug(f"Configured {self.name}: enabled={self.enabled}, my_option={self.my_option}")
+        if "my_setting" in config:
+            self.my_setting = config["my_setting"]
 
     def process(self, context: PluginContext) -> PluginResult:
-        """Execute plugin logic"""
-        # Return empty result if disabled
+        """
+        Process plugin logic and return result
+
+        Args:
+            context: PluginContext with execution data
+
+        Returns:
+            PluginResult with HAProxy config and metadata
+        """
         if not self.enabled:
             return PluginResult()
 
-        # Generate HAProxy config snippet
-        haproxy_config = f"""# My Plugin - Description
-    http-request set-header X-My-Header "{self.my_option}\""""
+        # Generate HAProxy configuration
+        haproxy_config = f"""# My Plugin - Custom functionality
+http-request set-header X-My-Header {self.my_setting}"""
 
-        # Return result
         return PluginResult(
             haproxy_config=haproxy_config,
             metadata={
                 "domain": context.domain,
-                "my_option": self.my_option
+                "setting_value": self.my_setting
             }
         )
 ```
 
-### Step 4: Test Your Plugin
+### Step 2: Enable Plugin
 
-Enable debug logging:
-```bash
-EASYHAPROXY_LOG_LEVEL=DEBUG
-```
+**Via container label (Docker):**
 
-Enable plugin via label:
 ```yaml
 services:
-  test:
+  myapp:
     labels:
-      easyhaproxy.http.host: test.example.com
+      easyhaproxy.http.host: example.com
       easyhaproxy.http.plugins: my_plugin
-      easyhaproxy.http.plugin.my_plugin.my_option: custom_value
+      easyhaproxy.http.plugin.my_plugin.my_setting: custom_value
 ```
 
-Check logs for:
-```
-INFO: Loaded external plugin: my_plugin (domain)
-DEBUG: Configured my_plugin: enabled=True, my_option=custom_value
-DEBUG: Executing domain plugin: my_plugin for domain: test.example.com
-DEBUG: Plugin my_plugin metadata: {'domain': 'test.example.com', 'my_option': 'custom_value'}
-```
+**Via YAML configuration:**
 
-## Complete Examples
-
-### Example 1: Custom Header Plugin (DOMAIN)
-
-Add custom headers to specific domains:
-
-```python
-import os
-import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from plugins import PluginInterface, PluginType, PluginContext, PluginResult
-
-
-class CustomHeaderPlugin(PluginInterface):
-    """Add custom HTTP headers to requests"""
-
-    def __init__(self):
-        self.enabled = True
-        self.headers = {}  # {header_name: header_value}
-
-    @property
-    def name(self) -> str:
-        return "custom_header"
-
-    @property
-    def plugin_type(self) -> PluginType:
-        return PluginType.DOMAIN
-
-    def configure(self, config: dict) -> None:
-        if "enabled" in config:
-            self.enabled = str(config["enabled"]).lower() in ["true", "1", "yes"]
-
-        # Parse headers from config
-        # Format: header1:value1,header2:value2
-        if "headers" in config:
-            for header_pair in config["headers"].split(","):
-                if ":" in header_pair:
-                    name, value = header_pair.split(":", 1)
-                    self.headers[name.strip()] = value.strip()
-
-    def process(self, context: PluginContext) -> PluginResult:
-        if not self.enabled or not self.headers:
-            return PluginResult()
-
-        # Generate HAProxy directives for each header
-        lines = ["# Custom Headers"]
-        for name, value in self.headers.items():
-            lines.append(f'    http-request set-header {name} "{value}"')
-
-        return PluginResult(
-            haproxy_config="\n".join(lines),
-            metadata={"domain": context.domain, "headers": self.headers}
-        )
-```
-
-**Usage:**
 ```yaml
-labels:
-  easyhaproxy.http.plugins: custom_header
-  easyhaproxy.http.plugin.custom_header.headers: X-App-Name:MyApp,X-Environment:Production
+# /etc/haproxy/static/config.yaml
+plugins:
+  enabled: [my_plugin]
+  config:
+    my_plugin:
+      enabled: true
+      my_setting: custom_value
 ```
 
-### Example 2: Rate Limiting Plugin (DOMAIN)
+**Via environment variable:**
 
-Add HAProxy rate limiting per domain:
+```bash
+EASYHAPROXY_PLUGINS_ENABLED=my_plugin
+EASYHAPROXY_PLUGIN_MY_PLUGIN_MY_SETTING=custom_value
+```
+
+### Step 3: Test Plugin
+
+Restart EasyHAProxy and check logs:
+
+```bash
+docker-compose restart haproxy
+docker-compose logs -f haproxy | grep my_plugin
+```
+
+Expected output:
+```
+[INFO] Loaded external plugin: my_plugin (domain)
+[DEBUG] Configured plugin: my_plugin with config: {'my_setting': 'custom_value'}
+[DEBUG] Executing domain plugin: my_plugin for domain: example.com
+```
+
+---
+
+## API Reference
+
+### PluginInterface
+
+Base class all plugins must inherit from.
 
 ```python
+class PluginInterface(ABC):
+    """Base class all plugins must inherit"""
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Return the unique plugin name"""
+        pass
+
+    @property
+    @abstractmethod
+    def plugin_type(self) -> PluginType:
+        """Return the plugin type (GLOBAL or DOMAIN)"""
+        pass
+
+    @abstractmethod
+    def configure(self, config: dict) -> None:
+        """
+        Configure the plugin with settings from YAML/env/labels
+
+        Args:
+            config: Dictionary with plugin-specific configuration
+        """
+        pass
+
+    @abstractmethod
+    def process(self, context: PluginContext) -> PluginResult:
+        """
+        Process the plugin logic and return result
+
+        Args:
+            context: PluginContext with all necessary data
+
+        Returns:
+            PluginResult with HAProxy config snippets and/or modified data
+        """
+        pass
+```
+
+**Properties:**
+
+- `name` - Unique identifier (used in configuration and logs)
+- `plugin_type` - Execution model (`PluginType.GLOBAL` or `PluginType.DOMAIN`)
+
+**Methods:**
+
+- `configure(config)` - Receives plugin configuration during initialization
+- `process(context)` - Main execution logic, returns `PluginResult`
+
+### PluginType
+
+Enum defining plugin execution types.
+
+```python
+class PluginType(Enum):
+    """Plugin execution types"""
+    GLOBAL = "global"    # Execute once per discovery cycle
+    DOMAIN = "domain"    # Execute per domain/host
+```
+
+### PluginContext
+
+Container for all plugin execution data.
+
+```python
+@dataclass
+class PluginContext:
+    """Container for all plugin execution data"""
+    parsed_object: dict              # {IP: labels} from discovery
+    easymapping: list               # Current HAProxy mapping structure
+    container_env: dict             # Environment configuration
+    domain: Optional[str] = None    # Domain name (for DOMAIN plugins)
+    port: Optional[str] = None      # Port (for DOMAIN plugins)
+    host_config: Optional[dict] = None  # Domain-specific config
+```
+
+**Fields:**
+
+- `parsed_object` - Raw discovery data: `{IP: {label: value, ...}, ...}`
+- `easymapping` - Current mapping structure (list of domain configurations)
+- `container_env` - Environment variables and global configuration
+- `domain` - Domain name (only for DOMAIN plugins)
+- `port` - Port number (only for DOMAIN plugins)
+- `host_config` - Domain-specific labels/annotations (only for DOMAIN plugins)
+
+**Usage in GLOBAL plugins:**
+
+```python
+def process(self, context: PluginContext) -> PluginResult:
+    # Access all discovered services
+    for ip, labels in context.parsed_object.items():
+        print(f"Found service at {ip}: {labels}")
+
+    # Access global environment
+    debug_mode = context.container_env.get("DEBUG", "false")
+```
+
+**Usage in DOMAIN plugins:**
+
+```python
+def process(self, context: PluginContext) -> PluginResult:
+    # Access domain-specific data
+    domain = context.domain  # e.g., "example.com"
+    port = context.port      # e.g., "80"
+
+    # Check domain-specific labels
+    custom_label = context.host_config.get("custom_label", "default")
+```
+
+### PluginResult
+
+Plugin execution result containing configuration and metadata.
+
+```python
+@dataclass
+class PluginResult:
+    """Plugin execution result"""
+    haproxy_config: str = ""                     # HAProxy config snippet to inject
+    modified_easymapping: Optional[list] = None  # Modified easymapping structure
+    metadata: Dict[str, Any] = field(default_factory=dict)  # Plugin metadata for logging
+```
+
+**Fields:**
+
+- `haproxy_config` - HAProxy configuration snippet (injected into backend/frontend)
+- `modified_easymapping` - Modified easymapping structure (optional, advanced use)
+- `metadata` - Dictionary with debugging/logging information
+
+**Examples:**
+
+```python
+# Simple config injection
+return PluginResult(
+    haproxy_config="http-request deny deny_status 403"
+)
+
+# With metadata
+return PluginResult(
+    haproxy_config="acl whitelisted src 10.0.0.0/8",
+    metadata={
+        "domain": context.domain,
+        "allowed_networks": ["10.0.0.0/8"],
+        "rules_added": 1
+    }
+)
+
+# No operation (plugin disabled or no action needed)
+return PluginResult()
+```
+
+### PluginManager
+
+Manages plugin loading, configuration, and execution.
+
+```python
+class PluginManager:
+    """Manages plugin loading, configuration, and execution"""
+
+    def __init__(self, plugins_dir: str = "/etc/haproxy/plugins", abort_on_error: bool = False):
+        """
+        Initialize the plugin manager
+
+        Args:
+            plugins_dir: Directory containing plugin files
+            abort_on_error: If True, abort on plugin errors; if False, log and continue
+        """
+
+    def load_plugins(self) -> None:
+        """Discover and load plugins from the plugins directory"""
+
+    def configure_plugins(self, plugins_config: dict) -> None:
+        """Configure all loaded plugins with their settings"""
+
+    def execute_global_plugins(self, context: PluginContext, enabled_list: Optional[List[str]] = None) -> List[PluginResult]:
+        """Execute all global plugins"""
+
+    def execute_domain_plugins(self, context: PluginContext, enabled_list: Optional[List[str]] = None) -> List[PluginResult]:
+        """Execute all domain plugins for a specific domain"""
+```
+
+**Note:** You typically don't interact with PluginManager directly when writing plugins. It's used by EasyHAProxy core.
+
+---
+
+## Advanced Examples
+
+### Example 1: IP Whitelist Plugin (DOMAIN)
+
+Restrict access to specific IP addresses per domain.
+
+```python
+"""
+IP Whitelist Plugin for EasyHAProxy
+
+This plugin restricts access to a domain to only specific IP addresses or CIDR ranges.
+It runs as a DOMAIN plugin (once per domain).
+
+Configuration:
+    - enabled: Enable/disable the plugin (default: true)
+    - allowed_ips: Comma-separated list of IPs/CIDR ranges to allow
+    - status_code: HTTP status code to return for blocked IPs (default: 403)
+
+Example YAML config:
+    plugins:
+      ip_whitelist:
+        enabled: true
+        allowed_ips: "192.168.1.0/24,10.0.0.1,172.16.0.0/16"
+        status_code: 403
+
+Example Container Label:
+    easyhaproxy.http.plugins: "ip_whitelist"
+    easyhaproxy.http.plugin.ip_whitelist.allowed_ips: "192.168.1.0/24,10.0.0.1"
+    easyhaproxy.http.plugin.ip_whitelist.status_code: 403
+
+HAProxy Config Generated:
+    # IP Whitelist - Only allow specific IPs
+    acl whitelisted_ip src 192.168.1.0/24 10.0.0.1
+    http-request deny deny_status 403 if !whitelisted_ip
+"""
+
 import os
 import sys
+
+# Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from plugins import PluginInterface, PluginType, PluginContext, PluginResult
 
 
-class RateLimitPlugin(PluginInterface):
-    """Rate limit requests per domain"""
+class IpWhitelistPlugin(PluginInterface):
+    """Plugin to restrict access to specific IP addresses"""
 
     def __init__(self):
         self.enabled = True
-        self.requests_per_second = 100
-        self.burst = 200
+        self.allowed_ips = []
+        self.status_code = 403
 
     @property
     def name(self) -> str:
-        return "rate_limit"
+        return "ip_whitelist"
 
     @property
     def plugin_type(self) -> PluginType:
         return PluginType.DOMAIN
 
     def configure(self, config: dict) -> None:
+        """
+        Configure the plugin
+
+        Args:
+            config: Dictionary with configuration options
+                - enabled: Whether plugin is enabled
+                - allowed_ips: Comma-separated list of IPs/CIDR ranges
+                - status_code: HTTP status code to return for denied requests
+        """
         if "enabled" in config:
             self.enabled = str(config["enabled"]).lower() in ["true", "1", "yes"]
 
-        if "requests_per_second" in config:
-            try:
-                self.requests_per_second = int(config["requests_per_second"])
-            except ValueError:
-                pass
+        if "allowed_ips" in config:
+            ips_str = str(config["allowed_ips"])
+            self.allowed_ips = [ip.strip() for ip in ips_str.split(",") if ip.strip()]
 
-        if "burst" in config:
+        if "status_code" in config:
             try:
-                self.burst = int(config["burst"])
+                self.status_code = int(config["status_code"])
             except ValueError:
-                pass
+                self.status_code = 403
 
     def process(self, context: PluginContext) -> PluginResult:
-        if not self.enabled:
+        """
+        Generate HAProxy config to whitelist specific IPs
+
+        Args:
+            context: Plugin execution context with domain information
+
+        Returns:
+            PluginResult with HAProxy configuration snippet
+        """
+        if not self.enabled or not self.allowed_ips:
             return PluginResult()
 
-        # Use HAProxy stick tables for rate limiting
-        domain_safe = context.domain.replace(".", "_")
+        # Create space-separated list of IPs for ACL
+        ips_str = " ".join(self.allowed_ips)
 
-        haproxy_config = f"""# Rate Limiting - {self.requests_per_second} req/s
-    stick-table type ip size 100k expire 30s store http_req_rate({self.requests_per_second}s)
-    http-request track-sc0 src
-    http-request deny deny_status 429 if {{ sc_http_req_rate(0) gt {self.burst} }}"""
+        # Generate HAProxy config snippet
+        haproxy_config = f"""# IP Whitelist - Only allow specific IPs
+acl whitelisted_ip src {ips_str}
+http-request deny deny_status {self.status_code} if !whitelisted_ip"""
 
         return PluginResult(
             haproxy_config=haproxy_config,
+            modified_easymapping=None,
             metadata={
                 "domain": context.domain,
-                "rate_limit": self.requests_per_second,
-                "burst": self.burst
+                "allowed_ips": self.allowed_ips,
+                "status_code": self.status_code
             }
         )
 ```
 
-**Usage:**
-```yaml
-labels:
-  easyhaproxy.http.plugins: rate_limit
-  easyhaproxy.http.plugin.rate_limit.requests_per_second: 50
-  easyhaproxy.http.plugin.rate_limit.burst: 100
-```
+### Example 2: FastCGI Plugin (DOMAIN)
 
-### Example 3: Maintenance Mode Plugin (GLOBAL)
-
-Put all sites in maintenance mode:
+Configure FastCGI parameters for PHP-FPM and other FastCGI applications.
 
 ```python
+"""
+FastCGI Plugin for EasyHAProxy
+
+This plugin generates HAProxy fcgi-app configuration for PHP-FPM and other FastCGI applications.
+It runs as a DOMAIN plugin (once per domain).
+
+The plugin creates:
+    1. A top-level fcgi-app section with CGI parameter definitions
+    2. A use-fcgi-app directive in the backend
+
+Configuration:
+    - enabled: Enable/disable the plugin (default: true)
+    - document_root: Document root path (default: /var/www/html)
+    - script_filename: Pattern for SCRIPT_FILENAME (default: %[path])
+    - index_file: Default index file (default: index.php)
+    - path_info: Enable PATH_INFO support (default: true)
+    - custom_params: Dictionary of custom FastCGI parameters (optional)
+
+Example YAML config:
+    plugins:
+      fastcgi:
+        enabled: true
+        document_root: /var/www/html
+        index_file: index.php
+        path_info: true
+
+Example Container Label:
+    easyhaproxy.http.plugins: "fastcgi"
+    easyhaproxy.http.plugin.fastcgi.document_root: /var/www/myapp
+    easyhaproxy.http.plugin.fastcgi.index_file: index.php
+    easyhaproxy.http.plugin.fastcgi.path_info: true
+"""
+
 import os
 import sys
+
+# Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from plugins import PluginInterface, PluginType, PluginContext, PluginResult
+from functions import loggerEasyHaproxy
 
 
-class MaintenanceModePlugin(PluginInterface):
-    """Enable/disable maintenance mode globally"""
+class FastcgiPlugin(PluginInterface):
+    """Plugin to configure FastCGI parameters for PHP-FPM"""
 
     def __init__(self):
-        self.enabled = False  # Disabled by default
-        self.message = "Site is under maintenance"
+        self.enabled = True
+        self.document_root = "/var/www/html"
+        self.script_filename = "%[path]"
+        self.index_file = "index.php"
+        self.path_info = True
+        self.custom_params = {}
 
     @property
     def name(self) -> str:
-        return "maintenance_mode"
+        return "fastcgi"
+
+    @property
+    def plugin_type(self) -> PluginType:
+        return PluginType.DOMAIN
+
+    def configure(self, config: dict) -> None:
+        """
+        Configure the plugin
+
+        Args:
+            config: Dictionary with configuration options
+                - enabled: Whether plugin is enabled
+                - document_root: Document root path
+                - script_filename: Pattern for SCRIPT_FILENAME
+                - index_file: Default index file
+                - path_info: Enable PATH_INFO support
+                - custom_params: Dictionary of custom FastCGI parameters
+        """
+        if "enabled" in config:
+            self.enabled = str(config["enabled"]).lower() in ["true", "1", "yes"]
+
+        if "document_root" in config:
+            self.document_root = config["document_root"]
+
+        if "script_filename" in config:
+            self.script_filename = config["script_filename"]
+
+        if "index_file" in config:
+            self.index_file = config["index_file"]
+
+        if "path_info" in config:
+            self.path_info = str(config["path_info"]).lower() in ["true", "1", "yes"]
+
+        if "custom_params" in config:
+            self.custom_params = config["custom_params"]
+
+    def process(self, context: PluginContext) -> PluginResult:
+        """
+        Process the plugin and generate FastCGI configuration
+
+        Args:
+            context: Plugin execution context
+
+        Returns:
+            PluginResult with HAProxy FastCGI configuration
+        """
+        if not self.enabled:
+            return PluginResult()
+
+        # Generate a unique fcgi-app name based on the domain
+        # Replace dots and colons with underscores for valid HAProxy identifier
+        domain_safe = context.domain.replace(".", "_").replace(":", "_")
+        fcgi_app_name = f"fcgi_{domain_safe}"
+
+        # Generate the use-fcgi-app directive for the backend
+        backend_config = f"use-fcgi-app {fcgi_app_name}"
+
+        # Generate the fcgi-app section (to be inserted at top level)
+        fcgi_app_lines = [f"fcgi-app {fcgi_app_name}"]
+        fcgi_app_lines.append(f"    docroot {self.document_root}")
+        fcgi_app_lines.append(f"    index {self.index_file}")
+
+        # PATH_INFO support
+        if self.path_info:
+            fcgi_app_lines.append(f"    path-info ^(/.+\\.php)(/.*)?$")
+
+        # Set SCRIPT_FILENAME if customized
+        if self.script_filename and self.script_filename != "%[path]":
+            fcgi_app_lines.append(f"    set-param SCRIPT_FILENAME {self.script_filename}")
+
+        # Custom parameters
+        if self.custom_params:
+            for param_name, param_value in self.custom_params.items():
+                fcgi_app_lines.append(f"    set-param {param_name.upper()} {param_value}")
+
+        fcgi_app_definition = "\n".join(fcgi_app_lines)
+
+        # Build metadata - store fcgi_app_definition to be extracted and added to global configs
+        metadata = {
+            "domain": context.domain,
+            "fcgi_app_name": fcgi_app_name,
+            "fcgi_app_definition": fcgi_app_definition,  # For top-level injection
+            "document_root": self.document_root,
+            "index_file": self.index_file,
+            "path_info": self.path_info,
+            "custom_params_count": len(self.custom_params)
+        }
+
+        return PluginResult(
+            haproxy_config=backend_config,  # use-fcgi-app directive for the backend
+            modified_easymapping=None,
+            metadata=metadata
+        )
+```
+
+### Example 3: JWT Validator Plugin (DOMAIN)
+
+Validate JWT tokens using HAProxy's built-in JWT functionality with path-based validation.
+
+```python
+"""
+JWT Validator Plugin for EasyHAProxy
+
+This plugin validates JWT tokens using HAProxy's built-in JWT functionality.
+It runs as a DOMAIN plugin (once per domain).
+
+Configuration:
+    - enabled: Enable/disable the plugin (default: true)
+    - algorithm: JWT signing algorithm (default: RS256)
+    - issuer: Expected JWT issuer (optional, set to "none"/"null" to skip validation)
+    - audience: Expected JWT audience (optional, set to "none"/"null" to skip validation)
+    - pubkey_path: Path to public key file (required if pubkey not provided)
+    - pubkey: Public key content as base64-encoded string (required if pubkey_path not provided)
+    - paths: List of paths that require JWT validation (optional, if not set ALL domain is protected)
+    - only_paths: If true, only specified paths are accessible; if false (default), only specified paths require JWT validation
+
+Path Validation Logic:
+    - No paths configured: ALL requests to the domain require JWT validation (default behavior)
+    - Paths configured + only_paths=false: Only specified paths require JWT validation, others pass through
+    - Paths configured + only_paths=true: Only specified paths are accessible (with JWT), all others are denied
+
+Example YAML config:
+    plugins:
+      jwt_validator:
+        enabled: true
+        algorithm: RS256
+        issuer: https://myaccount.auth0.com/
+        audience: https://api.mywebsite.com
+        pubkey_path: /etc/haproxy/jwt_keys/pubkey.pem
+        paths:
+          - /api/admin
+          - /api/sensitive
+        only_paths: false
+
+Example Container Label:
+    easyhaproxy.http.plugins: "jwt_validator"
+    easyhaproxy.http.plugin.jwt_validator.algorithm: RS256
+    easyhaproxy.http.plugin.jwt_validator.issuer: https://auth.example.com/
+    easyhaproxy.http.plugin.jwt_validator.audience: https://api.example.com
+    easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+    easyhaproxy.http.plugin.jwt_validator.paths: /api/admin,/api/sensitive
+    easyhaproxy.http.plugin.jwt_validator.only_paths: true
+"""
+
+import base64
+import os
+import sys
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from plugins import PluginInterface, PluginType, PluginContext, PluginResult
+from functions import loggerEasyHaproxy
+
+
+class JwtValidatorPlugin(PluginInterface):
+    """Plugin to validate JWT tokens"""
+
+    def __init__(self):
+        self.enabled = True
+        self.algorithm = "RS256"
+        self.issuer = None  # Optional
+        self.audience = None  # Optional
+        self.pubkey_path = None  # Path to public key file
+        self.pubkey = None  # Public key content (alternative to pubkey_path)
+        self.paths = []  # List of paths that require JWT validation
+        self.only_paths = False  # If true, only specified paths are accessible
+
+    @property
+    def name(self) -> str:
+        return "jwt_validator"
+
+    @property
+    def plugin_type(self) -> PluginType:
+        return PluginType.DOMAIN
+
+    def configure(self, config: dict) -> None:
+        """
+        Configure the plugin
+
+        Args:
+            config: Dictionary with configuration options
+                - enabled: Whether plugin is enabled
+                - algorithm: JWT signing algorithm (default: RS256)
+                - issuer: Expected JWT issuer (optional)
+                - audience: Expected JWT audience (optional)
+                - pubkey_path: Path to public key file
+                - pubkey: Public key content as base64-encoded string
+                - paths: List of paths that require JWT validation (optional)
+                - only_paths: If true, only specified paths are accessible (default: false)
+        """
+        if "enabled" in config:
+            self.enabled = str(config["enabled"]).lower() in ["true", "1", "yes"]
+
+        if "algorithm" in config:
+            self.algorithm = config["algorithm"]
+
+        # Parse issuer (optional - if not set, issuer validation is skipped)
+        if "issuer" in config:
+            issuer = str(config["issuer"]).strip()
+            if issuer:  # Only set if not empty
+                self.issuer = issuer
+
+        # Parse audience (optional - if not set, audience validation is skipped)
+        if "audience" in config:
+            audience = str(config["audience"]).strip()
+            if audience:  # Only set if not empty
+                self.audience = audience
+
+        # Public key configuration
+        if "pubkey_path" in config:
+            self.pubkey_path = config["pubkey_path"]
+
+        if "pubkey" in config:
+            # Decode from base64 (consistent with sslcert parameter)
+            self.pubkey = base64.b64decode(config["pubkey"]).decode('ascii')
+
+        # Path configuration
+        if "paths" in config:
+            paths_config = config["paths"]
+            if isinstance(paths_config, list):
+                self.paths = [str(p).strip() for p in paths_config if str(p).strip()]
+            elif isinstance(paths_config, str):
+                # Support comma-separated paths for container labels
+                self.paths = [p.strip() for p in paths_config.split(",") if p.strip()]
+            else:
+                self.paths = []
+
+        if "only_paths" in config:
+            self.only_paths = str(config["only_paths"]).lower() in ["true", "1", "yes"]
+
+    def process(self, context: PluginContext) -> PluginResult:
+        """
+        Generate HAProxy config to validate JWT tokens
+
+        Args:
+            context: Plugin execution context with domain information
+
+        Returns:
+            PluginResult with HAProxy configuration snippet
+        """
+        if not self.enabled:
+            return PluginResult()
+
+        # Determine public key file path
+        if self.pubkey_path:
+            pubkey_file = self.pubkey_path
+        elif self.pubkey:
+            # Generate path for pubkey based on domain
+            domain_safe = context.domain.replace(".", "_").replace(":", "_")
+            pubkey_file = f"/etc/haproxy/jwt_keys/{domain_safe}_pubkey.pem"
+        else:
+            loggerEasyHaproxy.warning(f"JWT validator plugin for {context.domain}: No pubkey or pubkey_path configured")
+            return PluginResult()
+
+        # Build HAProxy configuration
+        lines = ["# JWT Validator - Validate JWT tokens"]
+
+        # Determine path condition suffix
+        path_condition = ""
+        if self.paths:
+            # Define ACL for protected paths
+            lines.append("")
+            lines.append("# Define paths that require JWT validation")
+            for path in self.paths:
+                lines.append(f"acl jwt_protected_path path_beg {path}")
+            lines.append("")
+
+            if self.only_paths:
+                # Deny all paths that are not in the protected list
+                lines.append("# Deny access to paths not in the protected list")
+                lines.append("http-request deny content-type 'text/html' string 'Access denied' unless jwt_protected_path")
+                lines.append("")
+                # All remaining requests are on protected paths, no condition needed
+                path_condition = ""
+            else:
+                # Only validate JWT on protected paths
+                path_condition = " if jwt_protected_path"
+
+        # Check for Authorization header
+        lines.append(f"http-request deny content-type 'text/html' string 'Missing Authorization HTTP header' unless {{ req.hdr(authorization) -m found }}{path_condition}")
+
+        # Extract JWT parts
+        lines.append("")
+        lines.append("# Extract JWT header and payload")
+        lines.append(f"http-request set-var(txn.alg) http_auth_bearer,jwt_header_query('$.alg'){path_condition}")
+        lines.append(f"http-request set-var(txn.iss) http_auth_bearer,jwt_payload_query('$.iss'){path_condition}")
+        lines.append(f"http-request set-var(txn.aud) http_auth_bearer,jwt_payload_query('$.aud'){path_condition}")
+        lines.append(f"http-request set-var(txn.exp) http_auth_bearer,jwt_payload_query('$.exp','int'){path_condition}")
+
+        # Validate JWT
+        lines.append("")
+        lines.append("# Validate JWT")
+        lines.append(f"http-request deny content-type 'text/html' string 'Unsupported JWT signing algorithm' unless {{ var(txn.alg) -m str {self.algorithm} }}{path_condition}")
+
+        # Validate issuer (if configured)
+        if self.issuer:
+            lines.append(f"http-request deny content-type 'text/html' string 'Invalid JWT issuer' unless {{ var(txn.iss) -m str {self.issuer} }}{path_condition}")
+
+        # Validate audience (if configured)
+        if self.audience:
+            lines.append(f"http-request deny content-type 'text/html' string 'Invalid JWT audience' unless {{ var(txn.aud) -m str {self.audience} }}{path_condition}")
+
+        # Validate signature
+        lines.append(f"http-request deny content-type 'text/html' string 'Invalid JWT signature' unless {{ http_auth_bearer,jwt_verify(txn.alg,\"{pubkey_file}\") -m int 1 }}{path_condition}")
+
+        # Validate expiration
+        lines.append("")
+        lines.append("# Validate expiration")
+        lines.append(f"http-request set-var(txn.now) date(){path_condition}")
+        lines.append(f"http-request deny content-type 'text/html' string 'JWT has expired' if {{ var(txn.exp),sub(txn.now) -m int lt 0 }}{path_condition}")
+
+        haproxy_config = "\n".join(lines)
+
+        # Build metadata
+        metadata = {
+            "domain": context.domain,
+            "algorithm": self.algorithm,
+            "pubkey_file": pubkey_file,
+            "validates_issuer": self.issuer is not None,
+            "validates_audience": self.audience is not None,
+            "path_validation": len(self.paths) > 0,
+            "only_paths": self.only_paths
+        }
+
+        if self.issuer:
+            metadata["issuer"] = self.issuer
+        if self.audience:
+            metadata["audience"] = self.audience
+        if self.pubkey:
+            metadata["pubkey_content"] = self.pubkey
+        if self.paths:
+            metadata["paths"] = self.paths
+
+        return PluginResult(
+            haproxy_config=haproxy_config,
+            modified_easymapping=None,
+            metadata=metadata
+        )
+```
+
+### Example 4: Cleanup Plugin (GLOBAL)
+
+Perform cleanup tasks during each discovery cycle.
+
+```python
+"""
+Cleanup Plugin for EasyHAProxy
+
+This plugin performs cleanup tasks during each discovery cycle.
+It runs as a GLOBAL plugin (once per cycle).
+
+Configuration:
+    - enabled: Enable/disable the plugin (default: true)
+    - max_idle_time: Maximum idle time before cleanup in seconds (default: 300)
+    - cleanup_temp_files: Clean up temporary files (default: true)
+
+Example YAML config:
+    plugins:
+      cleanup:
+        enabled: true
+        max_idle_time: 300
+        cleanup_temp_files: true
+
+Example Environment Variable:
+    EASYHAPROXY_PLUGINS_ENABLED=cleanup
+    EASYHAPROXY_PLUGIN_CLEANUP_MAX_IDLE_TIME=600
+"""
+
+import os
+import sys
+import glob
+import time
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from plugins import PluginInterface, PluginType, PluginContext, PluginResult
+from functions import loggerEasyHaproxy
+
+
+class CleanupPlugin(PluginInterface):
+    """Plugin to perform cleanup tasks during discovery cycle"""
+
+    def __init__(self):
+        self.enabled = True
+        self.max_idle_time = 300  # 5 minutes
+        self.cleanup_temp_files = True
+
+    @property
+    def name(self) -> str:
+        return "cleanup"
 
     @property
     def plugin_type(self) -> PluginType:
         return PluginType.GLOBAL
 
     def configure(self, config: dict) -> None:
+        """
+        Configure the plugin
+
+        Args:
+            config: Dictionary with configuration options
+                - enabled: Whether plugin is enabled
+                - max_idle_time: Maximum idle time in seconds
+                - cleanup_temp_files: Whether to clean up temp files
+        """
         if "enabled" in config:
             self.enabled = str(config["enabled"]).lower() in ["true", "1", "yes"]
 
-        if "message" in config:
-            self.message = config["message"]
+        if "max_idle_time" in config:
+            try:
+                self.max_idle_time = int(config["max_idle_time"])
+            except ValueError:
+                loggerEasyHaproxy.warning(f"Invalid max_idle_time value: {config['max_idle_time']}, using default")
+
+        if "cleanup_temp_files" in config:
+            self.cleanup_temp_files = str(config["cleanup_temp_files"]).lower() in ["true", "1", "yes"]
 
     def process(self, context: PluginContext) -> PluginResult:
+        """
+        Perform cleanup tasks
+
+        Args:
+            context: Plugin execution context
+
+        Returns:
+            PluginResult with metadata about cleanup actions
+        """
         if not self.enabled:
             return PluginResult()
 
-        # When enabled, return maintenance page for all requests
-        # This would need custom error pages configured in HAProxy
+        cleanup_actions = []
+
+        # Cleanup temporary files
+        if self.cleanup_temp_files:
+            temp_dirs = ["/tmp", "/var/tmp"]
+            current_time = time.time()
+
+            for temp_dir in temp_dirs:
+                if not os.path.exists(temp_dir):
+                    continue
+
+                try:
+                    # Find old EasyHAProxy temp files
+                    pattern = os.path.join(temp_dir, "easyhaproxy_*")
+                    for filepath in glob.glob(pattern):
+                        try:
+                            file_age = current_time - os.path.getmtime(filepath)
+                            if file_age > self.max_idle_time:
+                                os.remove(filepath)
+                                cleanup_actions.append(f"Removed old temp file: {filepath}")
+                                loggerEasyHaproxy.debug(f"Cleanup plugin: Removed {filepath}")
+                        except Exception as e:
+                            loggerEasyHaproxy.warning(f"Failed to remove temp file {filepath}: {e}")
+                except Exception as e:
+                    loggerEasyHaproxy.warning(f"Failed to cleanup {temp_dir}: {e}")
+
+        # Log cleanup summary
+        if cleanup_actions:
+            loggerEasyHaproxy.info(f"Cleanup plugin: Performed {len(cleanup_actions)} cleanup action(s)")
+
         return PluginResult(
+            haproxy_config="",  # No HAProxy config needed for cleanup
+            modified_easymapping=None,
             metadata={
-                "maintenance_mode": True,
-                "message": self.message
+                "actions_performed": len(cleanup_actions),
+                "actions": cleanup_actions
             }
         )
 ```
+
+---
 
 ## Best Practices
 
 ### 1. Error Handling
 
-Always handle errors gracefully:
+Always handle errors gracefully to avoid breaking HAProxy configuration.
+
+**Do:**
+```python
+def configure(self, config: dict) -> None:
+    if "port" in config:
+        try:
+            self.port = int(config["port"])
+        except ValueError:
+            loggerEasyHaproxy.warning(f"Invalid port value: {config['port']}, using default")
+            self.port = 8080
+```
+
+**Don't:**
+```python
+def configure(self, config: dict) -> None:
+    self.port = int(config["port"])  # Crashes if not an integer!
+```
+
+### 2. Configuration Validation
+
+Validate configuration during `configure()` phase, not during `process()`.
+
+**Do:**
+```python
+def configure(self, config: dict) -> None:
+    if "allowed_ips" in config:
+        ips_str = str(config["allowed_ips"])
+        self.allowed_ips = [ip.strip() for ip in ips_str.split(",") if ip.strip()]
+
+        # Validate IPs
+        if not self.allowed_ips:
+            loggerEasyHaproxy.warning("IP whitelist plugin: No valid IPs configured")
+            self.enabled = False
+```
+
+**Don't:**
+```python
+def process(self, context: PluginContext) -> PluginResult:
+    # Too late - validation should happen during configure()
+    if not self.allowed_ips:
+        raise ValueError("No IPs configured")
+```
+
+### 3. Use Metadata for Debugging
+
+Include useful debugging information in metadata.
+
+```python
+return PluginResult(
+    haproxy_config=config_snippet,
+    metadata={
+        "domain": context.domain,
+        "rules_generated": 5,
+        "algorithm": self.algorithm,
+        "validation_enabled": True,
+        "paths_protected": self.paths
+    }
+)
+```
+
+### 4. Handle Boolean Configuration
+
+Support multiple boolean formats (true/false, 1/0, yes/no).
+
+```python
+def configure(self, config: dict) -> None:
+    if "enabled" in config:
+        self.enabled = str(config["enabled"]).lower() in ["true", "1", "yes"]
+```
+
+### 5. Support Multiple Configuration Formats
+
+Support both list and comma-separated string formats for lists.
+
+```python
+def configure(self, config: dict) -> None:
+    if "paths" in config:
+        paths_config = config["paths"]
+        if isinstance(paths_config, list):
+            self.paths = [str(p).strip() for p in paths_config if str(p).strip()]
+        elif isinstance(paths_config, str):
+            # Support comma-separated paths for container labels
+            self.paths = [p.strip() for p in paths_config.split(",") if p.strip()]
+        else:
+            self.paths = []
+```
+
+### 6. Use Descriptive Names
+
+Use clear, descriptive names for plugins, configuration keys, and ACLs.
+
+**Do:**
+```python
+@property
+def name(self) -> str:
+    return "jwt_validator"  # Clear and descriptive
+
+# In generated config:
+acl jwt_protected_path path_beg /api
+```
+
+**Don't:**
+```python
+@property
+def name(self) -> str:
+    return "jv"  # Too cryptic
+
+# In generated config:
+acl p1 path_beg /api  # What is p1?
+```
+
+### 7. Document Your Plugin
+
+Include comprehensive docstrings with configuration examples.
+
+```python
+"""
+Plugin Name for EasyHAProxy
+
+Brief description of what the plugin does.
+
+Configuration:
+    - option1: Description (default: value)
+    - option2: Description (default: value)
+
+Example YAML config:
+    plugins:
+      plugin_name:
+        option1: value1
+        option2: value2
+
+Example Container Label:
+    easyhaproxy.http.plugins: "plugin_name"
+    easyhaproxy.http.plugin.plugin_name.option1: value1
+"""
+```
+
+### 8. Return Empty Result When Disabled
+
+Always check `enabled` flag and return empty result early.
 
 ```python
 def process(self, context: PluginContext) -> PluginResult:
-    try:
-        # Your plugin logic
-        result = do_something()
-        return PluginResult(haproxy_config=result)
-    except Exception as e:
-        loggerEasyHaproxy.error(f"Plugin {self.name} failed: {e}")
-        return PluginResult()  # Return empty result on error
+    if not self.enabled:
+        return PluginResult()
+
+    # Plugin logic here...
 ```
 
-### 2. Logging
+### 9. Use Logger Appropriately
 
-Use structured logging:
+Use appropriate log levels for different messages.
 
 ```python
 from functions import loggerEasyHaproxy
 
-# Info level for important events
-loggerEasyHaproxy.info(f"Plugin {self.name} executed successfully")
+# For debugging
+loggerEasyHaproxy.debug(f"Processing domain: {context.domain}")
 
-# Debug level for detailed info
-loggerEasyHaproxy.debug(f"Plugin {self.name} config: {self.my_option}")
+# For informational messages
+loggerEasyHaproxy.info(f"Loaded plugin configuration: {self.name}")
 
-# Warning for non-critical issues
-loggerEasyHaproxy.warning(f"Plugin {self.name}: config missing, using default")
+# For warnings (non-fatal issues)
+loggerEasyHaproxy.warning(f"Invalid configuration value, using default")
 
-# Error for failures
-loggerEasyHaproxy.error(f"Plugin {self.name} failed: {error}")
+# For errors (fatal issues)
+loggerEasyHaproxy.error(f"Failed to load required file: {filepath}")
 ```
 
-### 3. Configuration Validation
+### 10. Make Domain-Safe Identifiers
 
-Validate configuration values:
+Replace special characters when generating HAProxy identifiers.
 
 ```python
-def configure(self, config: dict) -> None:
-    if "timeout" in config:
-        try:
-            timeout = int(config["timeout"])
-            if timeout < 0:
-                loggerEasyHaproxy.warning(f"{self.name}: timeout must be positive, using default")
-                self.timeout = 30
-            else:
-                self.timeout = timeout
-        except ValueError:
-            loggerEasyHaproxy.warning(f"{self.name}: invalid timeout value, using default")
-            self.timeout = 30
+# Replace dots and colons with underscores for valid HAProxy identifier
+domain_safe = context.domain.replace(".", "_").replace(":", "_")
+fcgi_app_name = f"fcgi_{domain_safe}"
+
+# example.com:8080 → fcgi_example_com_8080
 ```
 
-### 4. Documentation
+---
 
-Document your plugin thoroughly:
-
-```python
-class MyPlugin(PluginInterface):
-    """
-    One-line description.
-
-    Detailed description of what the plugin does and why you'd use it.
-
-    Configuration Options:
-        enabled (bool): Enable/disable plugin (default: true)
-        option1 (str): Description of option1 (default: "value")
-        option2 (int): Description of option2 (default: 100)
-
-    Example YAML:
-        plugins:
-          my_plugin:
-            enabled: true
-            option1: custom_value
-            option2: 200
-
-    Example Container Label:
-        easyhaproxy.http.plugins: my_plugin
-        easyhaproxy.http.plugin.my_plugin.option1: custom_value
-        easyhaproxy.http.plugin.my_plugin.option2: 200
-
-    HAProxy Config Generated:
-        # My Plugin - Description
-        directive1 value
-        directive2 value
-    """
-```
-
-### 5. Testing
-
-Test your plugin with various configurations:
-
-```python
-# Test 1: Plugin disabled
-config = {"enabled": "false"}
-plugin.configure(config)
-result = plugin.process(context)
-assert result.haproxy_config == ""
-
-# Test 2: Plugin with default config
-plugin = MyPlugin()
-result = plugin.process(context)
-assert "expected output" in result.haproxy_config
-
-# Test 3: Plugin with custom config
-config = {"my_option": "custom"}
-plugin.configure(config)
-result = plugin.process(context)
-assert "custom" in result.haproxy_config
-```
-
-### 6. Performance
-
-Keep plugins lightweight:
-
-```python
-# DON'T: Make external API calls in domain plugins
-def process(self, context: PluginContext) -> PluginResult:
-    # This runs for EVERY domain!
-    data = requests.get("https://api.example.com/data")  # BAD
-
-# DO: Cache data or use global plugins for external calls
-def process(self, context: PluginContext) -> PluginResult:
-    # Use cached data
-    data = self.cached_data
-```
-
-## Testing Plugins
+## Testing Guidelines
 
 ### Unit Testing
 
-Create tests in `src/tests/test_my_plugin.py`:
+Create unit tests for your plugin in `/src/tests/test_plugins.py`.
 
 ```python
+"""Test cases for MyPlugin"""
+
 import sys
 import os
+
+# Add src to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from plugins import PluginContext
-from plugins.my_plugin import MyPlugin
+from plugins.builtin.my_plugin import MyPlugin
 
 
-def test_plugin_initialization():
-    plugin = MyPlugin()
-    assert plugin.name == "my_plugin"
-    assert plugin.enabled is True
+class TestMyPlugin:
+    """Test cases for MyPlugin (DOMAIN plugin)"""
 
+    def test_plugin_initialization(self):
+        """Test plugin initializes with correct defaults"""
+        plugin = MyPlugin()
+        assert plugin.name == "my_plugin"
+        assert plugin.enabled is True
+        assert plugin.my_setting == "default_value"
 
-def test_plugin_configuration():
-    plugin = MyPlugin()
-    plugin.configure({"enabled": "false", "my_option": "custom"})
-    assert plugin.enabled is False
-    assert plugin.my_option == "custom"
+    def test_plugin_configuration(self):
+        """Test plugin configuration"""
+        plugin = MyPlugin()
 
+        # Test custom setting
+        plugin.configure({"my_setting": "custom_value"})
+        assert plugin.my_setting == "custom_value"
 
-def test_plugin_generates_config():
-    plugin = MyPlugin()
-    context = PluginContext(
-        parsed_object={},
-        easymapping=[],
-        container_env={},
-        domain="example.com",
-        port="80",
-        host_config={}
-    )
+        # Test disabling
+        plugin.configure({"enabled": "false"})
+        assert plugin.enabled is False
 
-    result = plugin.process(context)
-    assert "X-My-Header" in result.haproxy_config
-    assert result.metadata["domain"] == "example.com"
+        # Test enabling with various values
+        plugin.configure({"enabled": "true"})
+        assert plugin.enabled is True
 
+        plugin.configure({"enabled": "1"})
+        assert plugin.enabled is True
 
-def test_plugin_disabled():
-    plugin = MyPlugin()
-    plugin.configure({"enabled": "false"})
+    def test_plugin_generates_config(self):
+        """Test plugin generates correct HAProxy config"""
+        plugin = MyPlugin()
+        plugin.configure({"my_setting": "test_value"})
 
-    context = PluginContext(
-        parsed_object={},
-        easymapping=[],
-        container_env={},
-        domain="example.com"
-    )
+        context = PluginContext(
+            parsed_object={},
+            easymapping=[],
+            container_env={},
+            domain="example.com",
+            port="80",
+            host_config={}
+        )
 
-    result = plugin.process(context)
-    assert result.haproxy_config == ""
+        result = plugin.process(context)
+
+        assert result.haproxy_config is not None
+        assert "My Plugin" in result.haproxy_config
+        assert "X-My-Header test_value" in result.haproxy_config
+        assert result.metadata["domain"] == "example.com"
+        assert result.metadata["setting_value"] == "test_value"
+
+    def test_plugin_disabled(self):
+        """Test plugin returns empty config when disabled"""
+        plugin = MyPlugin()
+        plugin.configure({"enabled": "false"})
+
+        context = PluginContext(
+            parsed_object={},
+            easymapping=[],
+            container_env={},
+            domain="example.com"
+        )
+
+        result = plugin.process(context)
+        assert result.haproxy_config == ""
+        assert result.metadata == {}
 ```
 
-Run tests:
+### Integration Testing
+
+Test your plugin in a real environment.
+
+**Create test fixture:**
+
 ```bash
-pytest src/tests/test_my_plugin.py -v
+# Create test service configuration
+mkdir -p /home/jg/Projects/opensource/github/byjg/docker-easy-haproxy/src/tests/fixtures/services-my-plugin
 ```
+
+**Create expected output:**
+
+```bash
+# Create expected HAProxy configuration
+cat > /home/jg/Projects/opensource/github/byjg/docker-easy-haproxy/src/tests/expected/services-my-plugin.txt << 'EOF'
+# Generated HAProxy configuration with my_plugin enabled
+backend be_example_com_80
+    # My Plugin - Custom functionality
+    http-request set-header X-My-Header custom_value
+EOF
+```
+
+**Run tests:**
+
+```bash
+cd /home/jg/Projects/opensource/github/byjg/docker-easy-haproxy/src
+python -m pytest tests/test_plugins.py::TestMyPlugin -v
+```
+
+### Manual Testing
+
+Test your plugin with a live container:
+
+```yaml
+# docker-compose.yml
+version: '3.8'
+
+services:
+  web:
+    image: nginx:latest
+    labels:
+      easyhaproxy.http.host: test.example.com
+      easyhaproxy.http.port: 80
+      easyhaproxy.http.plugins: my_plugin
+      easyhaproxy.http.plugin.my_plugin.my_setting: test_value
+
+  haproxy:
+    build: .
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./my_plugin.py:/etc/haproxy/plugins/my_plugin.py
+    environment:
+      - EASYHAPROXY_DISCOVER=docker
+```
+
+**Verify plugin loading:**
+
+```bash
+docker-compose up -d
+docker-compose logs haproxy | grep my_plugin
+```
+
+Expected output:
+```
+[INFO] Loaded external plugin: my_plugin (domain)
+[DEBUG] Configured plugin: my_plugin with config: {'my_setting': 'test_value'}
+[DEBUG] Executing domain plugin: my_plugin for domain: test.example.com
+```
+
+**Verify generated configuration:**
+
+```bash
+docker-compose exec haproxy cat /etc/haproxy/haproxy.cfg | grep -A 5 "My Plugin"
+```
+
+---
 
 ## Troubleshooting
 
 ### Plugin Not Loading
 
-**Check logs:**
-```
-ERROR: Failed to load plugin from /etc/haproxy/plugins/my_plugin.py: <error>
-```
+**Symptom:** Plugin not appearing in logs.
 
-**Common causes:**
-- Syntax errors in Python code
-- Missing imports
-- Class doesn't inherit from `PluginInterface`
-- `__init__.py` in plugins directory (remove it)
+**Possible causes:**
+
+1. **File not in plugins directory**
+   ```bash
+   ls -la /etc/haproxy/plugins/
+   # Ensure my_plugin.py exists
+   ```
+
+2. **Invalid Python syntax**
+   ```bash
+   python3 -m py_compile /etc/haproxy/plugins/my_plugin.py
+   # Check for syntax errors
+   ```
+
+3. **Class doesn't inherit PluginInterface**
+   ```python
+   # Wrong:
+   class MyPlugin:
+       pass
+
+   # Correct:
+   class MyPlugin(PluginInterface):
+       pass
+   ```
+
+4. **Missing required imports**
+   ```python
+   # Add this at the top of your plugin:
+   import os
+   import sys
+   sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+   from plugins import PluginInterface, PluginType, PluginContext, PluginResult
+   ```
 
 ### Plugin Not Executing
 
-**Check logs:**
-```
-DEBUG: Executing domain plugin: my_plugin for domain: example.com
-```
+**Symptom:** Plugin loads but doesn't execute.
 
-**If missing:**
-- Plugin not enabled in labels/YAML/env
-- Plugin name mismatch
-- Plugin returned by `name` property doesn't match
+**Possible causes:**
 
-### Configuration Not Working
+1. **Plugin not enabled in configuration**
+   ```yaml
+   # Add to config.yaml:
+   plugins:
+     enabled: [my_plugin]
+   ```
 
-**Enable debug logging:**
+2. **Wrong plugin type for use case**
+   - GLOBAL plugins don't receive domain context
+   - DOMAIN plugins execute per domain, not globally
+
+3. **Plugin disabled via configuration**
+   ```python
+   # Check enabled flag:
+   if not self.enabled:
+       return PluginResult()  # Plugin is disabled
+   ```
+
+### Configuration Not Applied
+
+**Symptom:** Plugin executes but configuration not applied.
+
+**Possible causes:**
+
+1. **Configuration key mismatch**
+   ```yaml
+   # Wrong:
+   plugins:
+     config:
+       my-plugin:  # Hyphen instead of underscore
+         my_setting: value
+
+   # Correct:
+   plugins:
+     config:
+       my_plugin:  # Must match plugin.name
+         my_setting: value
+   ```
+
+2. **Configuration not parsed in configure()**
+   ```python
+   def configure(self, config: dict) -> None:
+       # Make sure to check for your config key:
+       if "my_setting" in config:
+           self.my_setting = config["my_setting"]
+   ```
+
+### HAProxy Configuration Invalid
+
+**Symptom:** HAProxy fails to reload with syntax error.
+
+**Possible causes:**
+
+1. **Invalid HAProxy syntax in generated config**
+   ```bash
+   # Test configuration manually:
+   haproxy -c -f /etc/haproxy/haproxy.cfg
+   ```
+
+2. **Missing quotes or escaping**
+   ```python
+   # Wrong:
+   config = f"http-request set-header X-Value {value}"
+
+   # Correct (if value contains spaces):
+   config = f"http-request set-header X-Value \"{value}\""
+   ```
+
+3. **Invalid ACL names**
+   ```python
+   # Wrong (contains special characters):
+   acl_name = f"acl_{context.domain}"  # example.com → acl_example.com (dot invalid)
+
+   # Correct:
+   acl_name = f"acl_{context.domain.replace('.', '_')}"  # example_com
+   ```
+
+### Plugin Errors
+
+**Symptom:** Plugin crashes or throws exceptions.
+
+**Debug steps:**
+
+1. **Enable debug logging**
+   ```bash
+   # Set environment variable:
+   EASYHAPROXY_LOG_LEVEL=DEBUG
+   ```
+
+2. **Add debug statements**
+   ```python
+   def process(self, context: PluginContext) -> PluginResult:
+       loggerEasyHaproxy.debug(f"Plugin {self.name} processing domain: {context.domain}")
+       loggerEasyHaproxy.debug(f"Plugin config: enabled={self.enabled}, setting={self.my_setting}")
+       # ... rest of plugin logic
+   ```
+
+3. **Check abort_on_error setting**
+   ```python
+   # In PluginManager initialization:
+   # abort_on_error=False (default) - logs errors and continues
+   # abort_on_error=True - crashes on errors for debugging
+   ```
+
+4. **Wrap risky operations**
+   ```python
+   def process(self, context: PluginContext) -> PluginResult:
+       try:
+           # Risky operation
+           result = self.do_something_risky()
+       except Exception as e:
+           loggerEasyHaproxy.error(f"Plugin {self.name} error: {str(e)}")
+           return PluginResult()  # Return empty result on error
+   ```
+
+### Metadata Not Appearing in Logs
+
+**Symptom:** Plugin metadata not visible in logs.
+
+**Solution:**
+
+1. **Enable debug logging**
+   ```bash
+   EASYHAPROXY_LOG_LEVEL=DEBUG
+   ```
+
+2. **Ensure metadata is returned**
+   ```python
+   return PluginResult(
+       haproxy_config=config,
+       metadata={
+           "domain": context.domain,
+           "setting": self.my_setting
+       }
+   )
+   ```
+
+---
+
+## Distribution
+
+### Sharing Your Plugin
+
+#### Option 1: Single File Distribution
+
+Share your plugin as a single `.py` file:
+
 ```bash
-EASYHAPROXY_LOG_LEVEL=DEBUG
+# Users copy the file to their plugins directory:
+cp my_plugin.py /etc/haproxy/plugins/
 ```
 
-**Check:**
+**Advantages:**
+- Simple distribution
+- No installation required
+- Works immediately
+
+**Best for:** Simple plugins without dependencies
+
+#### Option 2: GitHub Repository
+
+Create a GitHub repository with installation instructions:
+
 ```
-DEBUG: Configured my_plugin: enabled=True, option=value
+my-easyhaproxy-plugin/
+├── README.md
+├── my_plugin.py
+├── tests/
+│   └── test_my_plugin.py
+└── examples/
+    ├── docker-compose.yml
+    └── config.yaml
 ```
 
-**Verify precedence:**
-1. Container labels (highest)
-2. YAML config
-3. Environment variables (lowest)
+**Installation:**
+```bash
+# Users download and install:
+wget https://raw.githubusercontent.com/user/my-plugin/main/my_plugin.py -O /etc/haproxy/plugins/my_plugin.py
+```
 
-## Further Reading
+#### Option 3: Docker Image with Plugin
 
-- [Using Plugins](plugins.md) - How to use existing plugins
-- [Built-in Plugin Source Code](https://github.com/byjg/docker-easy-haproxy/tree/master/src/plugins/builtin) - Examples to learn from
-- [HAProxy Configuration Manual](http://docs.haproxy.org/2.8/configuration.html) - HAProxy directive reference
+Create a custom EasyHAProxy image with your plugin included:
 
-## Support
+```dockerfile
+FROM byjg/easy-haproxy:latest
 
-For issues or questions:
-- GitHub Issues: https://github.com/byjg/docker-easy-haproxy/issues
-- Documentation: https://byjg.github.io/docker-easy-haproxy
+# Copy plugin to builtin directory
+COPY my_plugin.py /app/src/plugins/builtin/
+
+# Optional: Add default configuration
+COPY plugin_config.yaml /etc/haproxy/static/config.yaml
+```
+
+**Build and distribute:**
+```bash
+docker build -t my-org/easy-haproxy-with-plugin:latest .
+docker push my-org/easy-haproxy-with-plugin:latest
+```
+
+### Documentation
+
+Include comprehensive documentation with your plugin:
+
+```markdown
+# My Plugin for EasyHAProxy
+
+Brief description of what your plugin does.
+
+## Features
+
+- Feature 1
+- Feature 2
+- Feature 3
+
+## Installation
+
+### Docker
+\`\`\`bash
+wget https://example.com/my_plugin.py -O /etc/haproxy/plugins/my_plugin.py
+\`\`\`
+
+### Kubernetes
+\`\`\`yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: haproxy-plugins
+data:
+  my_plugin.py: |
+    # Plugin content here
+\`\`\`
+
+## Configuration
+
+### Options
+
+- `enabled` (boolean, default: true) - Enable/disable plugin
+- `option1` (string, default: "value") - Description
+
+### Examples
+
+#### Docker Compose
+\`\`\`yaml
+services:
+  web:
+    labels:
+      easyhaproxy.http.plugins: my_plugin
+      easyhaproxy.http.plugin.my_plugin.option1: value
+\`\`\`
+
+#### YAML Config
+\`\`\`yaml
+plugins:
+  my_plugin:
+    enabled: true
+    option1: value
+\`\`\`
+
+## Troubleshooting
+
+Common issues and solutions.
+
+## License
+
+MIT
+```
+
+### Version Control
+
+Use semantic versioning for your plugin:
+
+```python
+class MyPlugin(PluginInterface):
+    """
+    My Plugin for EasyHAProxy
+
+    Version: 1.0.0
+    Author: Your Name
+    License: MIT
+    """
+
+    VERSION = "1.0.0"
+```
+
+### Contributing to EasyHAProxy
+
+To contribute your plugin to the EasyHAProxy core:
+
+1. **Fork the repository**
+   ```bash
+   git clone https://github.com/byjg/docker-easy-haproxy.git
+   ```
+
+2. **Add your plugin to builtin/**
+   ```bash
+   cp my_plugin.py src/plugins/builtin/
+   ```
+
+3. **Add tests**
+   ```bash
+   # Add test class to src/tests/test_plugins.py
+   ```
+
+4. **Update documentation**
+   ```bash
+   # Add plugin to docs/plugins.md
+   ```
+
+5. **Create pull request**
+   - Describe plugin functionality
+   - Include usage examples
+   - Show test results
+
+---
+
+## Conclusion
+
+You now have a comprehensive understanding of the EasyHAProxy plugin system. Key takeaways:
+
+- **Plugin Types:** GLOBAL (once per cycle) vs DOMAIN (per domain)
+- **Plugin Lifecycle:** Load → Configure → Execute → Result
+- **API:** PluginInterface, PluginContext, PluginResult
+- **Best Practices:** Error handling, validation, logging, testing
+- **Distribution:** Single file, GitHub, or Docker image
+
+For more examples, see the builtin plugins in `/src/plugins/builtin/`:
+- `cloudflare.py` - Simple DOMAIN plugin
+- `fastcgi.py` - Advanced DOMAIN plugin with complex config
+- `jwt_validator.py` - Security plugin with path-based logic
+- `ip_whitelist.py` - Access control plugin
+- `cleanup.py` - GLOBAL plugin example
+
+Happy plugin development!

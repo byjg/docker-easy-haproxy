@@ -1,0 +1,226 @@
+# JWT Validator Plugin
+
+**Type:** Domain Plugin
+**Runs:** Once for each discovered domain/host
+
+## Overview
+
+The JWT Validator plugin validates JWT (JSON Web Token) authentication tokens using HAProxy's built-in JWT functionality.
+
+## Why Use It
+
+Protect APIs and services with JWT authentication without needing application-level code.
+
+## Configuration Options
+
+| Option        | Description                                                                                  | Default     |
+|---------------|----------------------------------------------------------------------------------------------|-------------|
+| `enabled`     | Enable/disable plugin                                                                        | `true`      |
+| `algorithm`   | JWT signing algorithm                                                                        | `RS256`     |
+| `issuer`      | Expected JWT issuer (optional, set to `none`/`null` to skip validation)                      | (optional)  |
+| `audience`    | Expected JWT audience (optional, set to `none`/`null` to skip validation)                    | (optional)  |
+| `pubkey_path` | Path to public key file (required if `pubkey` not provided)                                  | (required)  |
+| `pubkey`      | Public key content as base64-encoded string (required if `pubkey_path` not provided)         | (optional)  |
+| `paths`       | List of paths that require JWT validation (optional)                                         | (all paths) |
+| `only_paths`  | If `true`, only specified paths are accessible; if `false`, only specified paths require JWT | `false`     |
+
+## Path Validation Logic
+
+- **No paths configured:** ALL requests to the domain require JWT validation (default behavior)
+- **Paths configured + `only_paths=false`:** Only specified paths require JWT validation, other paths pass through without validation
+- **Paths configured + `only_paths=true`:** Only specified paths are accessible (with JWT validation), all other paths are denied
+
+## Configuration Examples
+
+### Docker/Docker Compose (Protect All Paths)
+
+```yaml
+services:
+  api:
+    labels:
+      easyhaproxy.http.host: api.example.com
+      easyhaproxy.http.plugins: jwt_validator
+      easyhaproxy.http.plugin.jwt_validator.algorithm: RS256
+      easyhaproxy.http.plugin.jwt_validator.issuer: https://auth.example.com/
+      easyhaproxy.http.plugin.jwt_validator.audience: https://api.example.com
+      easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+    volumes:
+      - ./pubkey.pem:/etc/haproxy/jwt_keys/api_pubkey.pem:ro
+```
+
+### Protect Specific Paths Only
+
+```yaml
+labels:
+  easyhaproxy.http.plugins: jwt_validator
+  easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+  easyhaproxy.http.plugin.jwt_validator.paths: /api/admin,/api/sensitive
+  easyhaproxy.http.plugin.jwt_validator.only_paths: false
+# /api/health, /api/docs, etc. remain publicly accessible
+```
+
+### Only Allow Specific Paths
+
+```yaml
+labels:
+  easyhaproxy.http.plugins: jwt_validator
+  easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+  easyhaproxy.http.plugin.jwt_validator.paths: /api/public,/api/v1
+  easyhaproxy.http.plugin.jwt_validator.only_paths: true
+# All paths except /api/public and /api/v1 are denied
+```
+
+### Skip Issuer/Audience Validation
+
+```yaml
+labels:
+  easyhaproxy.http.plugin.jwt_validator.issuer: none
+  easyhaproxy.http.plugin.jwt_validator.audience: none
+  easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+```
+
+### Kubernetes Annotations
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    easyhaproxy.plugins: "jwt_validator"
+    easyhaproxy.plugin.jwt_validator.algorithm: "RS256"
+    easyhaproxy.plugin.jwt_validator.issuer: "https://auth.example.com/"
+    easyhaproxy.plugin.jwt_validator.audience: "https://api.example.com"
+    easyhaproxy.plugin.jwt_validator.pubkey_path: "/etc/haproxy/jwt_keys/api_pubkey.pem"
+    easyhaproxy.plugin.jwt_validator.paths: "/api/admin,/api/users"
+    easyhaproxy.plugin.jwt_validator.only_paths: "false"
+spec:
+  rules:
+    - host: api.example.com
+      http:
+        paths:
+          - path: /
+            backend:
+              service:
+                name: api-service
+                port:
+                  number: 8080
+```
+
+### Static YAML Configuration
+
+```yaml
+# /etc/haproxy/static/config.yaml
+easymapping:
+  - host: api.example.com
+    port: 443
+    container: api-service:8080
+    plugins:
+      - jwt_validator
+    plugin_config:
+      jwt_validator:
+        algorithm: RS256
+        issuer: https://auth.example.com/
+        audience: https://api.example.com
+        pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+```
+
+## Generated HAProxy Configuration
+
+### All Paths Protected
+
+```haproxy
+# JWT Validator - Validate JWT tokens
+http-request deny content-type 'text/html' string 'Missing Authorization HTTP header' unless { req.hdr(authorization) -m found }
+
+# Extract JWT header and payload
+http-request set-var(txn.alg) http_auth_bearer,jwt_header_query('$.alg')
+http-request set-var(txn.iss) http_auth_bearer,jwt_payload_query('$.iss')
+http-request set-var(txn.aud) http_auth_bearer,jwt_payload_query('$.aud')
+http-request set-var(txn.exp) http_auth_bearer,jwt_payload_query('$.exp','int')
+
+# Validate JWT
+http-request deny content-type 'text/html' string 'Unsupported JWT signing algorithm' unless { var(txn.alg) -m str RS256 }
+http-request deny content-type 'text/html' string 'Invalid JWT issuer' unless { var(txn.iss) -m str https://auth.example.com/ }
+http-request deny content-type 'text/html' string 'Invalid JWT audience' unless { var(txn.aud) -m str https://api.example.com }
+http-request deny content-type 'text/html' string 'Invalid JWT signature' unless { http_auth_bearer,jwt_verify(txn.alg,"/etc/haproxy/jwt_keys/api_pubkey.pem") -m int 1 }
+
+# Validate expiration
+http-request set-var(txn.now) date()
+http-request deny content-type 'text/html' string 'JWT has expired' if { var(txn.exp),sub(txn.now) -m int lt 0 }
+```
+
+### Specific Paths Only (only_paths=false)
+
+```haproxy
+# JWT Validator - Validate JWT tokens
+
+# Define paths that require JWT validation
+acl jwt_protected_path path_beg /api/admin
+acl jwt_protected_path path_beg /api/sensitive
+
+http-request deny content-type 'text/html' string 'Missing Authorization HTTP header' unless { req.hdr(authorization) -m found } if jwt_protected_path
+
+# Extract JWT header and payload
+http-request set-var(txn.alg) http_auth_bearer,jwt_header_query('$.alg') if jwt_protected_path
+http-request set-var(txn.iss) http_auth_bearer,jwt_payload_query('$.iss') if jwt_protected_path
+http-request set-var(txn.aud) http_auth_bearer,jwt_payload_query('$.aud') if jwt_protected_path
+http-request set-var(txn.exp) http_auth_bearer,jwt_payload_query('$.exp','int') if jwt_protected_path
+
+# Validate JWT (only on protected paths)
+http-request deny content-type 'text/html' string 'Unsupported JWT signing algorithm' unless { var(txn.alg) -m str RS256 } if jwt_protected_path
+http-request deny content-type 'text/html' string 'Invalid JWT signature' unless { http_auth_bearer,jwt_verify(txn.alg,"/etc/haproxy/jwt_keys/api_pubkey.pem") -m int 1 } if jwt_protected_path
+
+# Validate expiration
+http-request set-var(txn.now) date() if jwt_protected_path
+http-request deny content-type 'text/html' string 'JWT has expired' if { var(txn.exp),sub(txn.now) -m int lt 0 } if jwt_protected_path
+```
+
+### Specific Paths Only (only_paths=true)
+
+```haproxy
+# JWT Validator - Validate JWT tokens
+
+# Define paths that require JWT validation
+acl jwt_protected_path path_beg /api/public
+acl jwt_protected_path path_beg /api/v1
+
+# Deny access to paths not in the protected list
+http-request deny content-type 'text/html' string 'Access denied' unless jwt_protected_path
+
+http-request deny content-type 'text/html' string 'Missing Authorization HTTP header' unless { req.hdr(authorization) -m found }
+
+# Extract JWT header and payload
+http-request set-var(txn.alg) http_auth_bearer,jwt_header_query('$.alg')
+http-request set-var(txn.iss) http_auth_bearer,jwt_payload_query('$.iss')
+http-request set-var(txn.aud) http_auth_bearer,jwt_payload_query('$.aud')
+http-request set-var(txn.exp) http_auth_bearer,jwt_payload_query('$.exp','int')
+
+# Validate JWT (all requests at this point are on allowed paths)
+http-request deny content-type 'text/html' string 'Unsupported JWT signing algorithm' unless { var(txn.alg) -m str RS256 }
+http-request deny content-type 'text/html' string 'Invalid JWT signature' unless { http_auth_bearer,jwt_verify(txn.alg,"/etc/haproxy/jwt_keys/api_pubkey.pem") -m int 1 }
+
+# Validate expiration
+http-request set-var(txn.now) date()
+http-request deny content-type 'text/html' string 'JWT has expired' if { var(txn.exp),sub(txn.now) -m int lt 0 }
+```
+
+## What It Validates
+
+- ✅ Authorization header presence
+- ✅ JWT signing algorithm (RS256, RS512, etc.)
+- ✅ JWT issuer (if configured)
+- ✅ JWT audience (if configured)
+- ✅ JWT signature using public key
+- ✅ JWT expiration time
+
+## Important Notes
+
+- **Required:** HAProxy 2.5+ with JWT support
+- Mount public key file as read-only volume
+- The plugin runs once per domain during the discovery cycle
+- Test thoroughly with your JWT provider before deploying to production
+
+## Related Documentation
+
+- [Plugin System Overview](../plugins.md)
+- [Container Labels Reference](../container-labels.md)
