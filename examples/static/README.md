@@ -154,6 +154,20 @@ Access at: `http://localhost:1936`
 
 ## Running the Example
 
+### Prerequisites: Generate SSL Certificates
+
+Before running the examples, you need to generate the required SSL certificates:
+
+```bash
+# From the repository root
+./examples/generate-keys.sh
+```
+
+This script automatically generates:
+- SSL certificates for host1.local and host2.local
+- JWT keys for authentication examples
+- All other .pem files needed for testing
+
 ### 1. Start the Example
 
 ```bash

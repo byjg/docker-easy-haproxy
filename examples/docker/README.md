@@ -2,6 +2,24 @@
 
 This directory contains various Docker Compose examples demonstrating different EasyHAProxy configurations.
 
+## Prerequisites: Generate SSL Certificates
+
+**IMPORTANT:** Before running any examples, you must generate the required SSL certificates and JWT keys:
+
+```bash
+# From the repository root
+./examples/generate-keys.sh
+```
+
+This script automatically generates:
+- SSL certificates for host1.local and host2.local
+- JWT keys (jwt_private.pem and jwt_pubkey.pem) for JWT validation examples
+- All other .pem files needed for testing
+
+**Note:** These are self-signed certificates for testing only. Do not use in production.
+
+---
+
 ## Examples Overview
 
 ### 1. Basic Configuration (`docker-compose.yml`)

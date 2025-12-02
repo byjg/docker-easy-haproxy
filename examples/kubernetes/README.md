@@ -4,13 +4,26 @@ This directory contains Kubernetes manifest examples demonstrating EasyHAProxy i
 
 ## Prerequisites
 
-1. **EasyHAProxy installed in your cluster:**
+1. **Generate SSL Certificates (Required for TLS examples):**
+   ```bash
+   # From the repository root
+   ./examples/generate-keys.sh
+   ```
+
+   This script automatically generates:
+   - SSL certificates for testing (host1.local, host2.local)
+   - JWT keys for authentication examples
+   - All other .pem files needed for examples
+
+   **Note:** These are self-signed certificates for testing only. For production, use Let's Encrypt or your own certificates.
+
+2. **EasyHAProxy installed in your cluster:**
    ```bash
    kubectl create namespace easyhaproxy
    kubectl apply -f https://raw.githubusercontent.com/byjg/docker-easy-haproxy/4.6.0/deploy/kubernetes/easyhaproxy-daemonset.yml
    ```
 
-2. **Label the node where EasyHAProxy will run:**
+3. **Label the node where EasyHAProxy will run:**
    ```bash
    kubectl label nodes <node-name> "easyhaproxy/node=master"
    ```

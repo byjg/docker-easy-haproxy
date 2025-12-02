@@ -47,6 +47,24 @@ docker network create --driver overlay --attachable easyhaproxy
 
 ---
 
+## Prerequisites: Generate SSL Certificates
+
+**IMPORTANT:** Before running any examples, you must generate the required SSL certificates:
+
+```bash
+# From the repository root
+./examples/generate-keys.sh
+```
+
+This script automatically generates:
+- SSL certificates for host1.local and host2.local (placed in `examples/swarm/certs/`)
+- JWT keys for authentication examples
+- All other .pem files needed for testing
+
+**Note:** These are self-signed certificates for testing only. Do not use in production.
+
+---
+
 ## Quick Start
 
 ### 1. Deploy EasyHAProxy
