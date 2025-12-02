@@ -89,12 +89,12 @@ Detailed configuration guides for advanced setups:
 - [Environment Variables](docs/environment-variable.md) - Configure EasyHAProxy behavior
 - [Volumes](docs/volumes.md) - Map volumes for certificates, config, and custom files
 - [Plugins](docs/plugins.md) - Extend HAProxy with plugins ([Development Guide](docs/plugin-development.md))
-  - [Cloudflare](docs/plugins/cloudflare.md) - Restore visitor IP from Cloudflare CDN
-  - [Cleanup](docs/plugins/cleanup.md) - Automatic cleanup of temporary files
-  - [Deny Pages](docs/plugins/deny-pages.md) - Block access to specific paths
-  - [IP Whitelist](docs/plugins/ip-whitelist.md) - Restrict access to IPs/CIDR ranges
-  - [JWT Validator](docs/plugins/jwt-validator.md) - JWT authentication validation
-  - [FastCGI](docs/plugins/fastcgi.md) - PHP-FPM and FastCGI application support
+  - [JWT Validator](docs/Plugins/jwt-validator.md) - JWT authentication validation
+  - [FastCGI](docs/Plugins/fastcgi.md) - PHP-FPM and FastCGI application support
+  - [Cloudflare](docs/Plugins/cloudflare.md) - Restore visitor IP from Cloudflare CDN
+  - [IP Whitelist](docs/Plugins/ip-whitelist.md) - Restrict access to IPs/CIDR ranges
+  - [Deny Pages](docs/Plugins/deny-pages.md) - Block access to specific paths
+  - [Cleanup](docs/Plugins/cleanup.md) - Automatic cleanup of temporary files
 - [Other Configurations](docs/other.md) - Additional configurations (ports, custom errors, etc.)
 - [Limitations](docs/limitations.md) - Important limitations and considerations
 

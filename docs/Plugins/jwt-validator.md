@@ -157,6 +157,24 @@ easymapping:
         pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
 ```
 
+### Environment Variables
+
+Configure JWT Validator plugin defaults for all domains:
+
+| Environment Variable                               | Config Key        | Type    | Default | Description                                 |
+|----------------------------------------------------|-------------------|---------|---------|---------------------------------------------|
+| `EASYHAPROXY_PLUGIN_JWT_VALIDATOR_ENABLED`         | `enabled`         | boolean | `true`  | Enable/disable plugin for all domains       |
+| `EASYHAPROXY_PLUGIN_JWT_VALIDATOR_ALGORITHM`       | `algorithm`       | string  | `RS256` | JWT signing algorithm                       |
+| `EASYHAPROXY_PLUGIN_JWT_VALIDATOR_ISSUER`          | `issuer`          | string  | -       | Expected JWT issuer (optional)              |
+| `EASYHAPROXY_PLUGIN_JWT_VALIDATOR_AUDIENCE`        | `audience`        | string  | -       | Expected JWT audience (optional)            |
+| `EASYHAPROXY_PLUGIN_JWT_VALIDATOR_PUBKEY_PATH`     | `pubkey_path`     | string  | -       | Path to public key file                     |
+| `EASYHAPROXY_PLUGIN_JWT_VALIDATOR_PUBKEY`          | `pubkey`          | string  | -       | Public key as base64-encoded string         |
+| `EASYHAPROXY_PLUGIN_JWT_VALIDATOR_PATHS`           | `paths`           | string  | -       | Comma-separated paths requiring JWT         |
+| `EASYHAPROXY_PLUGIN_JWT_VALIDATOR_ONLY_PATHS`      | `only_paths`      | boolean | `false` | If true, only specified paths accessible    |
+| `EASYHAPROXY_PLUGIN_JWT_VALIDATOR_ALLOW_ANONYMOUS` | `allow_anonymous` | boolean | `false` | Allow requests without Authorization header |
+
+**Note:** Environment variables set defaults for ALL domains. To configure per-domain, use container labels or Kubernetes annotations.
+
 ## Generated HAProxy Configuration
 
 ### All Paths Protected

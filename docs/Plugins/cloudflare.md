@@ -80,6 +80,18 @@ plugins:
       use_builtin_ips: true  # Uses built-in Cloudflare IPs (default)
 ```
 
+### Environment Variables
+
+Configure Cloudflare plugin defaults for all domains:
+
+| Environment Variable                            | Config Key        | Type     | Default                           | Description                           |
+|-------------------------------------------------|-------------------|----------|-----------------------------------|---------------------------------------|
+| `EASYHAPROXY_PLUGIN_CLOUDFLARE_ENABLED`         | `enabled`         | boolean  | `true`                            | Enable/disable plugin for all domains |
+| `EASYHAPROXY_PLUGIN_CLOUDFLARE_USE_BUILTIN_IPS` | `use_builtin_ips` | boolean  | `true`                            | Use built-in Cloudflare IP ranges     |
+| `EASYHAPROXY_PLUGIN_CLOUDFLARE_IP_LIST_PATH`    | `ip_list_path`    | string   | `/etc/haproxy/cloudflare_ips.lst` | Path to Cloudflare IP list file       |
+
+**Note:** Environment variables set defaults for ALL domains. To enable/disable per-domain, use container labels or Kubernetes annotations.
+
 ## Generated HAProxy Configuration
 
 ```haproxy

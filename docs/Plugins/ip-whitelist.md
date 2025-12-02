@@ -85,6 +85,18 @@ easymapping:
         status_code: 403
 ```
 
+### Environment Variables
+
+Configure IP Whitelist plugin defaults for all domains:
+
+| Environment Variable                          | Config Key    | Type     | Default | Description                                      |
+|-----------------------------------------------|---------------|----------|---------|--------------------------------------------------|
+| `EASYHAPROXY_PLUGIN_IP_WHITELIST_ENABLED`     | `enabled`     | boolean  | `true`  | Enable/disable plugin for all domains            |
+| `EASYHAPROXY_PLUGIN_IP_WHITELIST_ALLOWED_IPS` | `allowed_ips` | string   | -       | Comma-separated list of IPs/CIDR ranges to allow |
+| `EASYHAPROXY_PLUGIN_IP_WHITELIST_STATUS_CODE` | `status_code` | integer  | `403`   | HTTP status code to return for blocked IPs       |
+
+**Note:** Environment variables set defaults for ALL domains. To configure per-domain, use container labels or Kubernetes annotations.
+
 ## Generated HAProxy Configuration
 
 ```haproxy

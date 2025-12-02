@@ -39,10 +39,16 @@ plugins:
 
 ### Environment Variables
 
-```bash
-EASYHAPROXY_PLUGINS_ENABLED=cleanup
-EASYHAPROXY_PLUGIN_CLEANUP_MAX_IDLE_TIME=600
-```
+Configure the Cleanup plugin globally:
+
+| Environment Variable                            | Config Key           | Type     | Default | Description                                  |
+|-------------------------------------------------|----------------------|----------|---------|----------------------------------------------|
+| `EASYHAPROXY_PLUGINS_ENABLED`                   | -                    | string   | -       | Enable cleanup plugin (value: `cleanup`)     |
+| `EASYHAPROXY_PLUGIN_CLEANUP_ENABLED`            | `enabled`            | boolean  | `true`  | Enable/disable plugin                        |
+| `EASYHAPROXY_PLUGIN_CLEANUP_MAX_IDLE_TIME`      | `max_idle_time`      | integer  | `300`   | Maximum age in seconds before deleting files |
+| `EASYHAPROXY_PLUGIN_CLEANUP_CLEANUP_TEMP_FILES` | `cleanup_temp_files` | boolean  | `true`  | Enable temp file cleanup                     |
+
+**Note:** This is a global plugin - configuration applies to the entire system.
 
 ### Custom Idle Time (1 hour)
 

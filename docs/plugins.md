@@ -44,12 +44,12 @@ Execute **once for each discovered domain/host**.
 
 EasyHAProxy includes several built-in plugins ready to use:
 
-- [Cloudflare](plugins/cloudflare.md) - Restore visitor IP from Cloudflare CDN
-- [Cleanup](plugins/cleanup.md) - Cleanup temporary files
-- [Deny Pages](plugins/deny-pages.md) - Block specific paths
-- [IP Whitelist](plugins/ip-whitelist.md) - Restrict access to IPs/CIDR ranges
-- [JWT Validator](plugins/jwt-validator.md) - Validate JWT tokens
-- [FastCGI](plugins/fastcgi.md) - Configure PHP-FPM and FastCGI applications
+- [Cloudflare](Plugins/cloudflare.md) - Restore visitor IP from Cloudflare CDN
+- [Cleanup](Plugins/cleanup.md) - Cleanup temporary files
+- [Deny Pages](Plugins/deny-pages.md) - Block specific paths
+- [IP Whitelist](Plugins/ip-whitelist.md) - Restrict access to IPs/CIDR ranges
+- [JWT Validator](Plugins/jwt-validator.md) - Validate JWT tokens
+- [FastCGI](Plugins/fastcgi.md) - Configure PHP-FPM and FastCGI applications
 
 ## Configuration Methods
 
@@ -124,48 +124,67 @@ services:
 
 ### 3. Static YAML Configuration
 
-Configure plugins globally in `/etc/haproxy/static/config.yaml`:
+Configure plugins in `/etc/haproxy/static/config.yaml`:
 
 ```yaml
 plugins:
   # Global settings
   abort_on_error: false  # Log and continue on errors (recommended)
 
-  # Enable global plugins
+  # Enable GLOBAL plugins (run once per discovery cycle)
   enabled: [cleanup]
 
-  # Configure individual plugins
+  # Configure plugins (both global and domain plugins)
   config:
-    cloudflare:
-      enabled: true
-      ip_list_path: /etc/haproxy/cloudflare_ips.lst
-
+    # Global plugin configuration (cleanup runs once per cycle)
     cleanup:
       enabled: true
       max_idle_time: 600
 
+    # Domain plugin configuration (applies to ALL domains by default)
+    cloudflare:
+      enabled: true           # Apply to all domains
+      use_builtin_ips: true   # Use built-in Cloudflare IPs
+
+    # Domain plugin disabled by default (enable per-domain via labels/annotations)
     deny_pages:
-      enabled: false  # Disable globally, enable per-container via labels
+      enabled: false
 ```
+
+**Important distinctions:**
+
+- **Global plugins** (like `cleanup`): Run once per discovery cycle, configured here only
+- **Domain plugins** (like `cloudflare`, `deny_pages`, `jwt_validator`):
+  - Configuration here sets **defaults for ALL domains**
+  - Can be enabled/disabled per-domain via container labels or Kubernetes annotations
+  - Per-domain configuration overrides these defaults
 
 ### 4. Environment Variables
 
-Configure plugins via environment variables:
+Configure plugins via environment variables. **Note:** Environment variables set system-wide defaults and cannot configure plugins per-domain.
 
 ```bash
-# Global settings
+# Enable GLOBAL plugins (run once per discovery cycle)
 EASYHAPROXY_PLUGINS_ENABLED=cleanup
 EASYHAPROXY_PLUGINS_ABORT_ON_ERROR=false
 
-# Plugin-specific configuration
+# Configure GLOBAL plugins
 EASYHAPROXY_PLUGIN_CLEANUP_ENABLED=true
 EASYHAPROXY_PLUGIN_CLEANUP_MAX_IDLE_TIME=600
-EASYHAPROXY_PLUGIN_CLOUDFLARE_IP_LIST_PATH=/etc/haproxy/cloudflare_ips.lst
+
+# Configure DOMAIN plugins (sets defaults for ALL domains)
+EASYHAPROXY_PLUGIN_CLOUDFLARE_ENABLED=true
+EASYHAPROXY_PLUGIN_CLOUDFLARE_USE_BUILTIN_IPS=true
 ```
 
 **Variable format:**
-- Enable plugins: `EASYHAPROXY_PLUGINS_ENABLED=plugin1,plugin2`
+- Enable global plugins: `EASYHAPROXY_PLUGINS_ENABLED=plugin1,plugin2`
 - Configure plugin: `EASYHAPROXY_PLUGIN_<PLUGIN_NAME>_<CONFIG_KEY>=value`
+
+**Scope limitations:**
+- **Global plugins**: Environment variables configure the single instance
+- **Domain plugins**: Environment variables set defaults for ALL domains
+- **Per-domain configuration**: Use container labels (Docker) or annotations (Kubernetes) instead
 
 ## Common Use Cases
 

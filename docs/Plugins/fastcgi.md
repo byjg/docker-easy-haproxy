@@ -115,6 +115,20 @@ easymapping:
         path_info: true
 ```
 
+### Environment Variables
+
+Configure FastCGI plugin defaults for all domains:
+
+| Environment Variable                         | Config Key        | Type     | Default         | Description                           |
+|----------------------------------------------|-------------------|----------|-----------------|---------------------------------------|
+| `EASYHAPROXY_PLUGIN_FASTCGI_ENABLED`         | `enabled`         | boolean  | `true`          | Enable/disable plugin for all domains |
+| `EASYHAPROXY_PLUGIN_FASTCGI_DOCUMENT_ROOT`   | `document_root`   | string   | `/var/www/html` | Document root path                    |
+| `EASYHAPROXY_PLUGIN_FASTCGI_SCRIPT_FILENAME` | `script_filename` | string   | `%[path]`       | Custom pattern for SCRIPT_FILENAME    |
+| `EASYHAPROXY_PLUGIN_FASTCGI_INDEX_FILE`      | `index_file`      | string   | `index.php`     | Default index file                    |
+| `EASYHAPROXY_PLUGIN_FASTCGI_PATH_INFO`       | `path_info`       | boolean  | `true`          | Enable PATH_INFO support              |
+
+**Note:** Environment variables set defaults for ALL domains. To configure per-domain, use container labels or Kubernetes annotations. Custom params (`custom_params`) cannot be configured via environment variables - use YAML or labels instead.
+
 ## Generated HAProxy Configuration
 
 The plugin generates a top-level `fcgi-app` section and a `use-fcgi-app` directive in the backend:
