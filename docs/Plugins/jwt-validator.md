@@ -15,6 +15,14 @@ The JWT Validator plugin validates JWT (JSON Web Token) authentication tokens us
 
 Protect APIs and services with JWT authentication without needing application-level code.
 
+## Generating JWT Keys
+
+```bash
+# Generate RSA key pair (idempotent - skips if exists)
+[ -f jwt_private.pem ] || openssl genrsa -out jwt_private.pem 2048
+[ -f jwt_pubkey.pem ] || openssl rsa -in jwt_private.pem -pubout -out jwt_pubkey.pem
+```
+
 ## Configuration Options
 
 | Option            | Description                                                                                  | Default     |

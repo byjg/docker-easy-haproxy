@@ -12,12 +12,12 @@
 #
 # REQUIREMENTS (run these first):
 # ```bash
-# # Generate JWT keys (idempotent - skips if exists)
-# [ -f jwt_private.pem ] || openssl genrsa -out jwt_private.pem 2048
-# [ -f jwt_pubkey.pem ] || openssl rsa -in jwt_private.pem -pubout -out jwt_pubkey.pem
+# # Generate SSL certificates and JWT keys (from project root)
+# cd ../.. && ./examples/generate-keys.sh && cd examples/docker
 #
 # # Download Cloudflare IPs (idempotent - overwrites if exists)
 # curl -s https://www.cloudflare.com/ips-v4 > cloudflare_ips.lst
+# echo "" >> cloudflare_ips.lst
 # curl -s https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
 #
 # # Add to /etc/hosts (idempotent)
@@ -133,6 +133,6 @@ services:
       # IP whitelist only (strictest security)
       easyhaproxy.http.plugins: ip_whitelist
 
-      # Only allow local and private networks
-      easyhaproxy.http.plugin.ip_whitelist.allowed_ips: 127.0.0.1,192.168.0.0/16,10.0.0.0/8
+      # Only allow local and private networks (including Docker bridge)
+      easyhaproxy.http.plugin.ip_whitelist.allowed_ips: 127.0.0.1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12
       easyhaproxy.http.plugin.ip_whitelist.status_code: 403

@@ -10,9 +10,8 @@
 #
 # REQUIREMENTS (run these first):
 # ```bash
-# # Generate RSA key pair (idempotent - skips if exists)
-# [ -f jwt_private.pem ] || openssl genrsa -out jwt_private.pem 2048
-# [ -f jwt_pubkey.pem ] || openssl rsa -in jwt_private.pem -pubout -out jwt_pubkey.pem
+# # Generate SSL certificates and JWT keys (from project root)
+# cd ../.. && ./examples/generate-keys.sh && cd examples/docker
 #
 # # Add to /etc/hosts (idempotent)
 # grep -q "api.local" /etc/hosts || echo "127.0.0.1 api.local" | sudo tee -a /etc/hosts
