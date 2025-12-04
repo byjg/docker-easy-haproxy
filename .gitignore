@@ -6,3 +6,11 @@ __pycache__
 .pytest_cache
 *.pyc
 .env
+/examples/static/conf/config.yml
+/examples/docker/certs/haproxy/.place_holder_cert.pem
+/examples/static/host1.local.pem
+/examples/swarm/certs/host1.local.pem
+/examples/docker/host2.local.pem
+/examples/swarm/certs/host2.local.pem
+/examples/docker/jwt_private.pem
+/examples/docker/jwt_pubkey.pem

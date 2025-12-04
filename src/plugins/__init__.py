@@ -145,7 +145,7 @@ class PluginManager:
                                 elif plugin.plugin_type == PluginType.DOMAIN:
                                     self.domain_plugins.append(plugin)
 
-                                self.logger.info(f"Loaded {source} plugin: {plugin.name} ({plugin.plugin_type.value})")
+                                self.logger.debug(f"Loaded {source} plugin: {plugin.name} ({plugin.plugin_type.value})")
 
                 except Exception as e:
                     self._handle_error(f"Failed to load plugin from {filepath}: {str(e)}")

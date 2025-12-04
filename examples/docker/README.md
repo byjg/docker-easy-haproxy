@@ -145,6 +145,25 @@ labels:
   myproxy.http.port: 80
 ```
 
+
+**Usage:**
+```bash
+docker compose -f docker-compose-changed-label.yml up -d
+```
+
+**Test:**
+```bash
+# Test load balancing (hostname changes between containers)
+curl -H "Host: www.helloworld.com" localhost:19901
+# Response: f6d8d45b7411
+curl -H "Host: www.helloworld.com" localhost:19901
+# Response: 59b213cb8592
+
+# Test redirect
+curl -I -H "Host: google.helloworld.com" localhost:19901
+# Should redirect to: www.google.com/
+```
+
 ---
 
 ### 5. Portainer Integration (`docker-compose-portainer.yml`)

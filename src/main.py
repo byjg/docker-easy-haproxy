@@ -1,5 +1,4 @@
 import os
-import logging
 
 from deepdiff import DeepDiff
 
