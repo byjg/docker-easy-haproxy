@@ -70,7 +70,7 @@ version: "3.7"
 
 services:
   haproxy:
-    image: byjg/easy-haproxy:4.6.0
+    image: byjg/easy-haproxy:5.0.0
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     configs:
