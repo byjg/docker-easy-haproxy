@@ -1,5 +1,5 @@
 ---
-sidebar_position: 14
+sidebar_position: 22
 ---
 
 # Other configurations
@@ -9,7 +9,7 @@ sidebar_position: 14
 Some ports on the EasyHAProxy container and in the firewall are required to be open. However, you don't need to expose the other container ports because EasyHAProxy will handle that.
 
 - The ports `80` and `443`.
-- If you enable the HAProxy statistics, you must also expose the port defined in `HAPROXY_STATS_PORT` environment variable (default 1936). Be aware that statistics are enabled by default with no password.
+- If you enable the HAProxy statistics, you must also expose the port defined in `HAPROXY_STATS_PORT` environment variable (default 1936). Statistics are only generated when you set `HAPROXY_PASSWORD`.
 - Every port defined in `easyhaproxy.[definitions].port` also should be exposed. 
 
 For example:
