@@ -27,8 +27,6 @@
 #    curl -H "Authorization: Bearer $TOKEN" http://api.local/
 #    # Response: Success
 
-version: "3"
-
 services:
   haproxy:
     image: byjg/easy-haproxy:4.6.0

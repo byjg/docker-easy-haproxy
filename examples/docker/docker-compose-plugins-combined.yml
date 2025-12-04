@@ -29,8 +29,6 @@
 #    # Admin panel (IP whitelist only)
 #    curl http://admin.local/  # Success from localhost
 
-version: "3"
-
 services:
   haproxy:
     image: byjg/easy-haproxy:4.6.0

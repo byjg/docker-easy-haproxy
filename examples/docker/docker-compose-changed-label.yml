@@ -4,8 +4,6 @@
 # or add to /etc/hosts
 # 127.0.0.1 host1.local
 
-version: "3"
-
 services:
   haproxy:
     image: byjg/easy-haproxy:4.6.0

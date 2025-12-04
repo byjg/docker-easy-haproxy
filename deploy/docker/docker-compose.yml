@@ -1,5 +1,3 @@
-version: "3"
-
 services:
   easyhaproxy:
     image: byjg/easy-haproxy:4.6.0

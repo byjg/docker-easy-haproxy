@@ -7,8 +7,6 @@
 # content-length: 0
 # location: www.google.com/
 
-version: "3"
-
 services:
   haproxy:
     image: byjg/easy-haproxy:4.6.0

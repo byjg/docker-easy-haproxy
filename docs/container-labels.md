@@ -69,8 +69,6 @@ docker run \
 If you are using docker-compose you can use this way:
 
 ```yaml
-version: "3"
-
 services:
   mycontainer:
     image: some/myimage
@@ -102,8 +100,6 @@ EasyHAProxy supports FastCGI protocol for PHP-FPM and other FastCGI applications
 #### Using Unix Socket
 
 ```yaml title="PHP-FPM with Unix socket"
-version: "3"
-
 services:
   php-fpm:
     image: php:8.2-fpm
@@ -119,8 +115,6 @@ services:
 #### Using TCP Connection
 
 ```yaml title="PHP-FPM with TCP connection"
-version: "3"
-
 services:
   php-fpm:
     image: php:8.2-fpm

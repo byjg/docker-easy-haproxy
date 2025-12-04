@@ -19,8 +19,6 @@
 #
 # Note: Update the allowed_ips label with your actual IP addresses/networks
 
-version: "3"
-
 services:
   haproxy:
     image: byjg/easy-haproxy:4.6.0

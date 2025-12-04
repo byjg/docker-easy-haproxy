@@ -104,8 +104,6 @@ docker stack deploy -c portainer.yml portainer
 ### easyhaproxy.yml
 
 ```yaml
-version: "3"
-
 services:
   haproxy:
     image: byjg/easy-haproxy:4.6.0
@@ -152,8 +150,6 @@ Service labels are similar to container labels but applied to **services**, not 
 ### Basic Service Example
 
 ```yaml
-version: "3"
-
 services:
   webapp:
     image: nginx:alpine
@@ -188,8 +184,6 @@ labels:
 ### Use Case 1: Simple HTTP Service
 
 ```yaml
-version: "3"
-
 services:
   myapp:
     image: my-app:latest
@@ -215,8 +209,6 @@ docker stack deploy -c myapp.yml myapp
 ### Use Case 2: HTTPS with Let's Encrypt
 
 ```yaml
-version: "3"
-
 services:
   secure-app:
     image: secure-app:latest
@@ -296,8 +288,6 @@ services:
 ### Use Case 5: Multiple Services with Load Balancing
 
 ```yaml
-version: "3"
-
 services:
   frontend:
     image: frontend-app:latest
@@ -349,8 +339,6 @@ networks:
 Secure your API with JWT token validation in Swarm:
 
 ```yaml
-version: "3"
-
 services:
   haproxy:
     image: byjg/easy-haproxy:4.6.0
@@ -421,8 +409,6 @@ curl -H "Authorization: Bearer eyJhbGc..." http://api.example.com/users
 Restore original visitor IPs in Swarm environment:
 
 ```yaml
-version: "3"
-
 services:
   haproxy:
     image: byjg/easy-haproxy:4.6.0
@@ -480,8 +466,6 @@ docker stack deploy -c cloudflare-stack.yml myapp
 Restrict admin panel to specific IPs in Swarm:
 
 ```yaml
-version: "3"
-
 services:
   admin:
     image: admin-panel:latest
@@ -522,8 +506,6 @@ curl http://admin.example.com
 Production-ready setup with multiple security layers:
 
 ```yaml
-version: "3"
-
 services:
   haproxy:
     image: byjg/easy-haproxy:4.6.0
@@ -750,7 +732,7 @@ Place certificate files:
 docker secret create example_com_cert ./example.com.pem
 
 # Use in stack
-version: "3"
+
 services:
   haproxy:
     secrets:

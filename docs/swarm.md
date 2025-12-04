@@ -31,8 +31,6 @@ docker network create -d overlay --attachable easyhaproxy
 And then deploy the EasyHAProxy stack:
 
 ```yaml
-version: "3"
-
 services:
   haproxy:
     image: byjg/easy-haproxy:4.6.0
@@ -76,8 +74,6 @@ Mapping to `/var/run/docker.sock` is necessary to discover the docker containers
 To make your containers "discoverable" by EasyHAProxy, that is the minimum configuration you need:
 
 ```yaml
-version: "3"
-
 services:
   container:
     image: my/image:tag

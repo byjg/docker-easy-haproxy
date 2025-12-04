@@ -172,6 +172,11 @@ curl -I -H "Host: google.helloworld.com" localhost:19901
 - Running Portainer behind EasyHAProxy
 - Real-world application example
 
+**Usage:**
+```bash
+docker compose -f docker-compose-portainer.yml up -d
+```
+
 **Access Portainer:**
 - URL: http://portainer.local (add to `/etc/hosts` or use real DNS)
 - First time: Create admin user
@@ -183,6 +188,11 @@ curl -I -H "Host: google.helloworld.com" localhost:19901
 **What it demonstrates:**
 - Multiple applications behind EasyHAProxy
 - Portainer + custom app setup
+
+**Usage:**
+```bash
+docker compose -f docker-compose-portainer-app-example.yml up -d
+```
 
 ---
 
@@ -212,8 +222,6 @@ Run PHP applications with FastCGI protocol support:
 
 **Configuration:**
 ```yaml
-version: "3"
-
 services:
   haproxy:
     image: byjg/easy-haproxy:4.6.0
@@ -304,8 +312,6 @@ The `php-app/` directory contains:
 Protect your API with JWT token validation:
 
 ```yaml
-version: "3"
-
 services:
   haproxy:
     image: byjg/easy-haproxy:4.6.0
@@ -370,8 +376,6 @@ openssl rsa -in jwt_private.pem -pubout -out jwt_pubkey.pem
 Restore original visitor IPs when using Cloudflare CDN:
 
 ```yaml
-version: "3"
-
 services:
   haproxy:
     image: byjg/easy-haproxy:4.6.0
@@ -413,8 +417,6 @@ curl https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
 Restrict access to specific IP addresses:
 
 ```yaml
-version: "3"
-
 services:
   haproxy:
     image: byjg/easy-haproxy:4.6.0
@@ -460,8 +462,6 @@ curl http://admin.example.com
 Combine multiple plugins for enhanced security:
 
 ```yaml
-version: "3"
-
 services:
   haproxy:
     image: byjg/easy-haproxy:4.6.0

@@ -4,8 +4,6 @@
 # - public IP pointing your machine
 # - open ports 80 and 443 in your firewall
 
-version: "3"
-
 services:
   haproxy:
     image: byjg/easy-haproxy:4.6.0

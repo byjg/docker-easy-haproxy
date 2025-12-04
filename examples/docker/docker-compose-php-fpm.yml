@@ -21,8 +21,6 @@
 # - PATH_INFO support for routing
 # - Custom FastCGI parameters
 
-version: "3"
-
 services:
   haproxy:
     image: byjg/easy-haproxy:4.6.0

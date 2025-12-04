@@ -24,8 +24,6 @@
 # Without Cloudflare, the request won't come from Cloudflare IPs, so the plugin
 # won't activate. This example is for demonstration and testing purposes.
 
-version: "3"
-
 services:
   haproxy:
     image: byjg/easy-haproxy:4.6.0
