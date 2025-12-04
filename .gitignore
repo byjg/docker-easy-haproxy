@@ -14,3 +14,4 @@ __pycache__
 /examples/swarm/certs/host2.local.pem
 /examples/docker/jwt_private.pem
 /examples/docker/jwt_pubkey.pem
+/examples/docker/cloudflare_ips.lst

@@ -21,6 +21,7 @@
 #
 # # Download Cloudflare IP ranges and create Docker config
 # curl https://www.cloudflare.com/ips-v4 > cloudflare_ips.lst
+# echo "" >> cloudflare_ips.lst
 # curl https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
 # docker config create cloudflare_ips cloudflare_ips.lst
 # rm cloudflare_ips.lst

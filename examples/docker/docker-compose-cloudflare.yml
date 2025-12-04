@@ -12,6 +12,7 @@
 # ```bash
 # # Download Cloudflare IP ranges (idempotent - overwrites if exists)
 # curl -s https://www.cloudflare.com/ips-v4 > cloudflare_ips.lst
+# echo "" >> cloudflare_ips.lst
 # curl -s https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
 #
 # # Add to /etc/hosts (idempotent)
@@ -74,5 +75,6 @@ services:
       # Enable Cloudflare plugin
       easyhaproxy.http.plugins: cloudflare
 
-      # Optional: Specify custom IP list path
-      # easyhaproxy.http.plugin.cloudflare.ip_list_path: /etc/haproxy/cloudflare_ips.lst
+      # Use custom IP list (disable built-in IPs)
+      easyhaproxy.http.plugin.cloudflare.use_builtin_ips: false
+      easyhaproxy.http.plugin.cloudflare.ip_list_path: /etc/haproxy/cloudflare_ips.lst
