@@ -154,39 +154,15 @@ jobs:
       - name: Get result
         run: echo "${{ needs.Build.outputs.tags }}"
 
-      - name: Update versions
+      - name: Verify versions are pre-bumped
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           TAG="${{ needs.Build.outputs.tags }}"
-          CURRENT_VERSION=$(grep "appVersion: " helm/easyhaproxy/Chart.yaml |  sed 's#appVersion: "\(.*\)"#\1#g')
-
-          if [ "$TAG" = "$CURRENT_VERSION" ]; then
-            echo "Skipping version $CURRENT_VERSION..."
-          elif [ "$TAG" = "latest" ]; then
-            echo "Skipping latest version..."
-          else
-            sed -i "s#easy-haproxy:[a-zA-Z0-9\.-]*#easy-haproxy:$TAG#g" deploy/docker/docker-compose.yml 
-            sed -i "s#version: \"[a-zA-Z0-9\.-]*\"#version: \"$TAG\"#g" deploy/kubernetes/easyhaproxy-*.yml 
-            sed -i "s#easy-haproxy:[a-zA-Z0-9\.-]*#easy-haproxy:$TAG#g" deploy/kubernetes/easyhaproxy-*.yml
-
-            sed -i "s#easy-haproxy/[a-zA-Z0-9\.-]*/#easy-haproxy/$TAG/#g" docs/kubernetes.md
-            sed -i "s#easy-haproxy:[a-zA-Z0-9\.-]*#easy-haproxy:$TAG#g" docs/swarm.md
-            sed -i "s#appVersion: \"[a-zA-Z0-9\.-]*\"#appVersion: \"$TAG\"#g" helm/easyhaproxy/Chart.yaml
-          
-            find examples -type f -name '*.yml' -exec sed -i "s#\(byjg/easy-haproxy:\)[a-zA-Z0-9\.-]*#\1$TAG#g" {} \; -print
-
-            VERSION=$(grep "version: " helm/easyhaproxy/Chart.yaml |  sed 's#version: ##g')
-            NEW_VERSION=$(echo $VERSION | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.)
-
-            sed -i "s#version: [a-zA-Z0-9\.]*#version: $NEW_VERSION#g" helm/easyhaproxy/Chart.yaml
-            sed -i "s#chart: easyhaproxy-[a-zA-Z0-9\.]*#chart: easyhaproxy-$NEW_VERSION#g" deploy/kubernetes/easyhaproxy-*.yml 
-
-            git add .
-            git config --global user.name "$GITHUB_ACTOR CI/CD"
-            git config --global user.email "info@byjg.com.br"
-            git commit -m "[skip ci] Update from $CURRENT_VERSION to $TAG"
-            git push
+          if [ "$TAG" = "latest" ]; then
+            echo "Skipping latest tag verification"
+            exit 0
           fi
+          ./scripts/bump-version.sh --verify "$TAG"
 
   HelmDeploy:
     if: github.ref == 'refs/heads/master'

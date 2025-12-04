@@ -83,34 +83,31 @@ The automated release process is triggered by pushing a semantic version tag.
    docker build -t byjg/easy-haproxy:local -f build/Dockerfile .
    ```
 
-### Step 2: Create and Push a Release Tag
+### Step 2: Bump Versions (script + PR)
 
-1. **Create a new semantic version tag:**
+1. **Run the bump script from the repo root:**
    ```bash
-   # For a new minor version (new features)
-   git tag 4.7.0
+   ./scripts/bump-version.sh 5.0.0
+   ```
+   This updates image tags, docs, Helm chart `appVersion`, and bumps the chart version patch.
 
-   # For a patch version (bug fixes)
-   git tag 4.6.1
+2. **Review and commit the changes on a branch:**
+   ```bash
+   git status
+   git add .
+   git commit -m "Bump version to 5.0.0"
+   git push origin <your-branch>
+   ```
 
-   # For a major version (breaking changes)
+3. **Open a PR to `master` and merge it.** Branch protection requires merging through a PR; CI/CD no longer pushes directly.
+
+4. **Tag from `master` after the PR merges:**
+   ```bash
+   git checkout master
+   git pull
    git tag 5.0.0
+   git push origin 5.0.0
    ```
-
-2. **Push the tag to GitHub:**
-   ```bash
-   git push origin 4.7.0
-   ```
-
-3. **Monitor the GitHub Actions workflow:**
-   - Go to: https://github.com/byjg/docker-easy-haproxy/actions
-   - Watch the "Docker" workflow progress
-   - Verify all jobs complete successfully:
-     - ✅ Test
-     - ✅ Build (multi-arch)
-     - ✅ Helm
-     - ✅ HelmDeploy
-     - ✅ Documentation
 
 ### Step 3: What Happens Automatically
 
@@ -125,16 +122,9 @@ When you push a semantic version tag, GitHub Actions will:
    - Tag image with version number (e.g., `byjg/easy-haproxy:4.7.0`)
    - Push to Docker Hub
 
-3. **Update Versions** (`Helm` job):
-   - Update `helm/easyhaproxy/Chart.yaml`:
-     - `appVersion`: Set to new version (e.g., `4.7.0`)
-     - `version`: Auto-increment patch version (e.g., `0.1.9` → `0.1.10`)
-   - Update all version references in:
-     - `deploy/docker/docker-compose.yml`
-     - `deploy/kubernetes/easyhaproxy-*.yml`
-     - `docs/kubernetes.md`
-     - `examples/*/*.yml`
-   - Commit and push changes with message: `[skip ci] Update from X.Y.Z to A.B.C`
+3. **Verify Versions** (`Helm` job):
+   - Ensures the repository already contains the tag version via `./scripts/bump-version.sh --verify <tag>`
+   - Fails fast if the repo was not prepared before tagging (no auto-commits)
 
 4. **Publish Helm Chart** (`HelmDeploy` job):
    - Package Helm chart
