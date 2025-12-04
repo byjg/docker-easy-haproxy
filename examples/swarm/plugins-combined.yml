@@ -1,31 +1,93 @@
-# Multiple Plugins Combined Example for Docker Swarm
+# ==============================================================================
+# EXAMPLE: Multiple Plugins Combined (Swarm)
+# ==============================================================================
 #
-# This example demonstrates using multiple plugins together for enhanced security
+# WHAT THIS DEMONSTRATES:
+# - Using multiple plugins together for layered security
+# - Three different security profiles for different service types:
+#   * Public website: Cloudflare IP restoration + path blocking
+#   * Protected API: JWT authentication + path blocking
+#   * Admin panel: Strict IP whitelist
+# - Complex production-ready security configuration
 #
-# Prerequisites:
-# 1. Docker Swarm initialized:
-#    docker swarm init
+# REQUIREMENTS (run these first):
+# ```bash
+# # Initialize Docker Swarm (if not already initialized)
+# docker swarm init
 #
-# 2. Create overlay network:
-#    docker network create --driver overlay --attachable easyhaproxy
+# # Create overlay network (idempotent)
+# docker network ls | grep -q easyhaproxy || docker network create --driver overlay --attachable easyhaproxy
 #
-# 3. Generate JWT keys and create Docker config:
-#    openssl genrsa -out jwt_private.pem 2048
-#    openssl rsa -in jwt_private.pem -pubout -out jwt_pubkey.pem
-#    docker config create jwt_api_pubkey jwt_pubkey.pem
+# # Ensure EasyHAProxy is deployed
+# docker stack deploy -c easyhaproxy.yml easyhaproxy
 #
-# 4. Download Cloudflare IPs and create Docker config:
-#    curl https://www.cloudflare.com/ips-v4 > cloudflare_ips.lst
-#    curl https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
-#    docker config create cloudflare_ips cloudflare_ips.lst
+# # Generate JWT key pair (RS256 algorithm)
+# openssl genrsa -out jwt_private.pem 2048
+# openssl rsa -in jwt_private.pem -pubout -out jwt_pubkey.pem
+# docker config create jwt_api_pubkey jwt_pubkey.pem
 #
-# 5. Deploy the stack:
-#    docker stack deploy -c plugins-combined.yml production
+# # Download Cloudflare IP ranges and create Docker config
+# curl https://www.cloudflare.com/ips-v4 > cloudflare_ips.lst
+# curl https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
+# docker config create cloudflare_ips cloudflare_ips.lst
+# rm cloudflare_ips.lst jwt_private.pem jwt_pubkey.pem
 #
-# This creates three services with different security profiles:
-# - Public website: Cloudflare + path blocking
-# - Protected API: JWT validation + path blocking
-# - Admin panel: Strict IP whitelist
+# # Add to /etc/hosts for local testing (idempotent)
+# grep -q "website.example.com" /etc/hosts || echo "127.0.0.1 website.example.com api.example.com admin.example.com" | sudo tee -a /etc/hosts
+#
+# # IMPORTANT: Edit this file (plugins-combined.yml) line 124 to add your actual IP!
+# ```
+#
+# HOW TO START:
+# ```bash
+# docker stack deploy -c plugins-combined.yml production
+# ```
+#
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Check stack is deployed
+# docker stack ls | grep production
+# # Expected: production stack listed
+#
+# # Check all services are running
+# docker service ls | grep production
+# # Expected: 3 services (website, api, admin) with all replicas running
+#
+# # Test public website (Cloudflare + deny_pages)
+# curl -H "Host: website.example.com" http://localhost/
+# # Expected: 200 OK with "Public Website"
+# curl -H "Host: website.example.com" http://localhost/admin
+# # Expected: HTTP 404 (blocked by deny_pages)
+#
+# # Test protected API (JWT + deny_pages)
+# curl -H "Host: api.example.com" http://localhost/
+# # Expected: HTTP 401 with "Missing Authorization HTTP header"
+#
+# # Generate JWT at https://jwt.io (see jwt-validator.yml for details)
+# TOKEN="eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+# curl -H "Host: api.example.com" -H "Authorization: Bearer $TOKEN" http://localhost/
+# # Expected: 200 OK with "Protected API"
+# curl -H "Host: api.example.com" -H "Authorization: Bearer $TOKEN" http://localhost/internal
+# # Expected: HTTP 403 (blocked by deny_pages)
+#
+# # Test admin panel (IP whitelist)
+# curl -H "Host: admin.example.com" http://localhost/
+# # Expected: 200 OK if your IP is whitelisted, 403 otherwise
+#
+# # View HAProxy stats to see all plugin configurations
+# # URL: http://localhost:1936
+# # Username: admin
+# # Password: password
+# ```
+#
+# CLEAN UP:
+# ```bash
+# docker stack rm production
+# # To also remove Docker configs:
+# # docker config rm cloudflare_ips jwt_api_pubkey
+# ```
+#
+# ==============================================================================
 
 version: "3.7"
 

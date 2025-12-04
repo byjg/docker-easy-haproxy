@@ -1,5 +1,46 @@
-# To install:
+# ==============================================================================
+# EXAMPLE: Portainer Behind EasyHAProxy (Swarm)
+# ==============================================================================
+#
+# WHAT THIS DEMONSTRATES:
+# - Running Portainer management UI in Swarm mode
+# - Service discovery with EasyHAProxy
+# - Using persistent volumes for Portainer data
+#
+# REQUIREMENTS (run these first):
+# ```bash
+# # Ensure EasyHAProxy is deployed
+# docker stack deploy -c easyhaproxy.yml easyhaproxy
+#
+# # Add to /etc/hosts (idempotent)
+# grep -q "portainer.local" /etc/hosts || echo "127.0.0.1 portainer.local" | sudo tee -a /etc/hosts
+# ```
+#
+# HOW TO START:
+# ```bash
 # docker stack deploy -c portainer.yml portainer
+# ```
+#
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Check service is running
+# docker service ls | grep portainer
+# # Expected: portainer_portainer with 1/1 replicas
+#
+# # Access Portainer
+# curl http://portainer.local
+# # Or open in browser: http://portainer.local
+# # First time: Create admin user
+# ```
+#
+# CLEAN UP:
+# ```bash
+# docker stack rm portainer
+# # To also remove data volume:
+# # docker volume rm portainer_portainer_data
+# ```
+#
+# ==============================================================================
 
 services:
   portainer:

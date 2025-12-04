@@ -1,28 +1,48 @@
-# Cloudflare IP Restoration Plugin Example
+# ==============================================================================
+# EXAMPLE: Cloudflare IP Restoration Plugin
+# ==============================================================================
 #
-# This example demonstrates restoring original visitor IPs when using Cloudflare CDN
+# WHAT THIS DEMONSTRATES:
+# - Restoring original visitor IPs when behind Cloudflare CDN
+# - Detecting requests from Cloudflare IP ranges
+# - Using CF-Connecting-IP header for real client IP
+# - Accurate IP logging for applications behind Cloudflare
 #
-# Prerequisites:
-# 1. Download Cloudflare IP ranges:
-#    curl https://www.cloudflare.com/ips-v4 > cloudflare_ips.lst
-#    curl https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
+# REQUIREMENTS (run these first):
+# ```bash
+# # Download Cloudflare IP ranges (idempotent - overwrites if exists)
+# curl -s https://www.cloudflare.com/ips-v4 > cloudflare_ips.lst
+# curl -s https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
 #
-# 2. Add to /etc/hosts:
-#    127.0.0.1 myapp.local
+# # Add to /etc/hosts (idempotent)
+# grep -q "myapp.local" /etc/hosts || echo "127.0.0.1 myapp.local" | sudo tee -a /etc/hosts
+# ```
 #
-# 3. Start the stack:
-#    docker compose -f docker-compose-cloudflare.yml up -d
+# HOW TO START:
+# ```bash
+# docker compose -f docker-compose-cloudflare.yml up -d
+# ```
 #
-# 4. Test (simulating Cloudflare request):
-#    # Without CF-Connecting-IP header:
-#    curl -H "Host: myapp.local" http://127.0.0.1/
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Test normal request
+# curl -H "Host: myapp.local" http://127.0.0.1/
+# # Expected: 200 OK
 #
-#    # With CF-Connecting-IP header (simulating Cloudflare):
-#    curl -H "Host: myapp.local" -H "CF-Connecting-IP: 203.0.113.50" http://127.0.0.1/
+# # Test with CF-Connecting-IP header (simulating Cloudflare)
+# curl -H "Host: myapp.local" -H "CF-Connecting-IP: 203.0.113.50" http://127.0.0.1/
+# # Expected: 200 OK (backend sees 203.0.113.50 as client IP)
 #
-# Note: This plugin is most useful when your site is actually behind Cloudflare.
-# Without Cloudflare, the request won't come from Cloudflare IPs, so the plugin
-# won't activate. This example is for demonstration and testing purposes.
+# # Note: This plugin is most useful when your site is actually behind Cloudflare
+# # In production, requests come from Cloudflare IPs and the plugin restores real client IPs
+# ```
+#
+# CLEAN UP:
+# ```bash
+# docker compose -f docker-compose-cloudflare.yml down
+# ```
+#
+# ==============================================================================
 
 services:
   haproxy:

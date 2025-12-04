@@ -1,41 +1,69 @@
-# JWT Validator Plugin Example for Kubernetes
+# ==============================================================================
+# EXAMPLE: JWT Validator Plugin for Kubernetes
+# ==============================================================================
 #
-# This example demonstrates JWT token validation for API protection in Kubernetes
+# WHAT THIS DEMONSTRATES:
+# - JWT token validation for API protection in Kubernetes
+# - RS256 algorithm signature verification
+# - Using ConfigMaps to mount JWT public keys
+# - Issuer and audience validation
 #
-# Prerequisites:
-# 1. EasyHAProxy installed in your cluster
-# 2. Generate RSA key pair:
-#    openssl genrsa -out jwt_private.pem 2048
-#    openssl rsa -in jwt_private.pem -pubout -out jwt_pubkey.pem
+# REQUIREMENTS (run these first):
+# ```bash
+# # 1. Ensure EasyHAProxy is installed in your cluster
+# kubectl create namespace easyhaproxy
+# kubectl apply -f https://raw.githubusercontent.com/byjg/docker-easy-haproxy/4.6.0/deploy/kubernetes/easyhaproxy-daemonset.yml
 #
-# 3. Create ConfigMap with public key:
-#    kubectl create configmap jwt-keys --from-file=api_pubkey.pem=jwt_pubkey.pem
+# # 2. Generate RSA key pair (idempotent - skips if exists)
+# [ -f jwt_private.pem ] || openssl genrsa -out jwt_private.pem 2048
+# [ -f jwt_pubkey.pem ] || openssl rsa -in jwt_private.pem -pubout -out jwt_pubkey.pem
 #
-# 4. Mount the ConfigMap in EasyHAProxy deployment (add to volumeMounts and volumes):
-#    volumeMounts:
-#      - name: jwt-keys
-#        mountPath: /etc/haproxy/jwt_keys
-#    volumes:
-#      - name: jwt-keys
-#        configMap:
-#          name: jwt-keys
+# # 3. Create ConfigMap with public key
+# kubectl create configmap jwt-keys --from-file=api_pubkey.pem=jwt_pubkey.pem
 #
-# 5. Apply this manifest:
-#    kubectl apply -f jwt-validator.yml
+# # 4. Mount the ConfigMap in EasyHAProxy deployment:
+# # Edit your EasyHAProxy deployment and add:
+# #   volumeMounts:
+# #     - name: jwt-keys
+# #       mountPath: /etc/haproxy/jwt_keys
+# #   volumes:
+# #     - name: jwt-keys
+# #       configMap:
+# #         name: jwt-keys
+# ```
 #
-# 6. Test without token (should fail):
-#    curl http://api.example.local/
-#    # Response: Missing Authorization HTTP header
+# HOW TO START:
+# ```bash
+# kubectl apply -f jwt-validator.yml
+# ```
 #
-# 7. Generate test JWT at https://jwt.io with:
-#    - Algorithm: RS256
-#    - Payload: {"iss":"https://auth.example.com/","aud":"https://api.example.com","exp":9999999999}
-#    - Use your jwt_private.pem for signing
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Check resources are created
+# kubectl get deployment,service,ingress -l app=api
 #
-# 8. Test with token:
-#    TOKEN="eyJhbGc..."
-#    curl -H "Authorization: Bearer $TOKEN" http://api.example.local/
-#    # Response: Success
+# # Test without token (should fail)
+# kubectl port-forward -n easyhaproxy deployment/easyhaproxy 8080:80
+# curl -H "Host: api.example.local" http://localhost:8080
+# # Expected: HTTP 403 - Missing Authorization HTTP header
+#
+# # Generate test JWT at https://jwt.io with:
+# # - Algorithm: RS256
+# # - Payload: {"iss":"https://auth.example.com/","aud":"https://api.example.com","exp":9999999999}
+# # - Paste contents of jwt_private.pem in private key field
+#
+# # Test with valid token
+# TOKEN="eyJhbGc..."  # Replace with your generated token
+# curl -H "Authorization: Bearer $TOKEN" -H "Host: api.example.local" http://localhost:8080
+# # Expected: 200 OK with "Protected API - JWT Required"
+# ```
+#
+# CLEAN UP:
+# ```bash
+# kubectl delete -f jwt-validator.yml
+# ```
+#
+# ==============================================================================
 
 ---
 apiVersion: v1

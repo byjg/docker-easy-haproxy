@@ -1,3 +1,58 @@
+# ==============================================================================
+# EXAMPLE: TLS/SSL Kubernetes Ingress
+# ==============================================================================
+#
+# WHAT THIS DEMONSTRATES:
+# - HTTPS/TLS configuration with custom certificates
+# - Kubernetes TLS secrets for SSL certificates
+# - Complete deployment + service + secret + ingress with TLS
+# - Using pre-generated test certificates
+#
+# REQUIREMENTS (run these first):
+# ```bash
+# # 1. Ensure EasyHAProxy is installed in your cluster
+# kubectl create namespace easyhaproxy
+# kubectl apply -f https://raw.githubusercontent.com/byjg/docker-easy-haproxy/4.6.0/deploy/kubernetes/easyhaproxy-daemonset.yml
+#
+# # 2. Label the node where EasyHAProxy will run
+# kubectl label nodes <node-name> "easyhaproxy/node=master"
+#
+# # 3. Add to /etc/hosts for local testing (idempotent)
+# grep -q "host2.local" /etc/hosts || echo "<node-ip> host2.local" | sudo tee -a /etc/hosts
+#
+# # Note: This example uses embedded test certificates
+# # For production, create your own secret:
+# # kubectl create secret tls host2-tls --cert=cert.crt --key=cert.key
+# ```
+#
+# HOW TO START:
+# ```bash
+# kubectl apply -f service_tls.yml
+# ```
+#
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Check resources are created
+# kubectl get deployment,service,ingress,secret tls-example
+# kubectl get secret host2-tls
+#
+# # Test HTTPS (using port-forward)
+# kubectl port-forward -n easyhaproxy deployment/easyhaproxy 8443:443
+# curl -k -H "Host: host2.local" https://localhost:8443
+# # Expected: 200 OK with "My Host Example"
+#
+# # Verify certificate
+# openssl s_client -showcerts -connect localhost:8443 -servername host2.local < /dev/null
+# # Expected: Certificate for host2.local
+# ```
+#
+# CLEAN UP:
+# ```bash
+# kubectl delete -f service_tls.yml
+# ```
+#
+# ==============================================================================
+
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress

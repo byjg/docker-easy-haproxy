@@ -1,31 +1,56 @@
-# JWT Validator Plugin Example
+# ==============================================================================
+# EXAMPLE: JWT Validator Plugin
+# ==============================================================================
 #
-# This example demonstrates JWT token validation for API protection
+# WHAT THIS DEMONSTRATES:
+# - JWT token validation for API protection
+# - RS256 algorithm signature verification
+# - Issuer and audience validation
+# - Public key-based JWT verification
 #
-# Prerequisites:
-# 1. Generate RSA key pair:
-#    openssl genrsa -out jwt_private.pem 2048
-#    openssl rsa -in jwt_private.pem -pubout -out jwt_pubkey.pem
+# REQUIREMENTS (run these first):
+# ```bash
+# # Generate RSA key pair (idempotent - skips if exists)
+# [ -f jwt_private.pem ] || openssl genrsa -out jwt_private.pem 2048
+# [ -f jwt_pubkey.pem ] || openssl rsa -in jwt_private.pem -pubout -out jwt_pubkey.pem
 #
-# 2. Add to /etc/hosts:
-#    127.0.0.1 api.local
+# # Add to /etc/hosts (idempotent)
+# grep -q "api.local" /etc/hosts || echo "127.0.0.1 api.local" | sudo tee -a /etc/hosts
+# ```
 #
-# 3. Start the stack:
-#    docker compose -f docker-compose-jwt-validator.yml up -d
+# HOW TO START:
+# ```bash
+# docker compose -f docker-compose-jwt-validator.yml up -d
+# ```
 #
-# 4. Test without token (should fail):
-#    curl http://api.local/
-#    # Response: Missing Authorization HTTP header
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Test without token (should fail)
+# curl http://api.local/
+# # Expected: HTTP 403 - Missing Authorization HTTP header
 #
-# 5. Generate test JWT at https://jwt.io with:
-#    - Algorithm: RS256
-#    - Payload: {"iss":"https://auth.example.com/","aud":"https://api.example.com","exp":9999999999}
-#    - Use your jwt_private.pem for signing
+# # Generate test JWT at https://jwt.io with:
+# # - Algorithm: RS256
+# # - Payload: {"iss":"https://auth.example.com/","aud":"https://api.example.com","exp":9999999999}
+# # - Paste contents of jwt_private.pem in private key field
 #
-# 6. Test with token:
-#    TOKEN="eyJhbGc..."
-#    curl -H "Authorization: Bearer $TOKEN" http://api.local/
-#    # Response: Success
+# # Test with valid token
+# TOKEN="eyJhbGc..."  # Replace with your generated token
+# curl -H "Authorization: Bearer $TOKEN" http://api.local/
+# # Expected: 200 OK with API response
+#
+# # View HAProxy stats
+# # URL: http://localhost:1936
+# # Username: admin
+# # Password: password
+# ```
+#
+# CLEAN UP:
+# ```bash
+# docker compose -f docker-compose-jwt-validator.yml down
+# ```
+#
+# ==============================================================================
 
 services:
   haproxy:

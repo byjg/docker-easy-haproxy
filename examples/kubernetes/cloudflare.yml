@@ -1,34 +1,65 @@
-# Cloudflare IP Restoration Plugin Example for Kubernetes
+# ==============================================================================
+# EXAMPLE: Cloudflare IP Restoration Plugin for Kubernetes
+# ==============================================================================
 #
-# This example demonstrates restoring original visitor IPs when using Cloudflare CDN
+# WHAT THIS DEMONSTRATES:
+# - Restoring original visitor IPs when behind Cloudflare CDN
+# - Using ConfigMaps to mount Cloudflare IP ranges
+# - Detecting requests from Cloudflare IP ranges
+# - Accurate client IP logging for applications behind Cloudflare
 #
-# Prerequisites:
-# 1. EasyHAProxy installed in your cluster
+# REQUIREMENTS (run these first):
+# ```bash
+# # 1. Ensure EasyHAProxy is installed in your cluster
+# kubectl create namespace easyhaproxy
+# kubectl apply -f https://raw.githubusercontent.com/byjg/docker-easy-haproxy/4.6.0/deploy/kubernetes/easyhaproxy-daemonset.yml
 #
-# 2. Download Cloudflare IP ranges and create ConfigMap:
-#    curl https://www.cloudflare.com/ips-v4 > cloudflare_ips.lst
-#    curl https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
-#    kubectl create configmap cloudflare-ips \
-#      --from-file=cloudflare_ips.lst=cloudflare_ips.lst \
-#      -n easyhaproxy
+# # 2. Download Cloudflare IP ranges
+# curl -s https://www.cloudflare.com/ips-v4 > cloudflare_ips.lst
+# curl -s https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
 #
-# 3. Mount the ConfigMap in EasyHAProxy deployment (add to volumeMounts and volumes):
-#    volumeMounts:
-#      - name: cloudflare-ips
-#        mountPath: /etc/haproxy/cloudflare_ips.lst
-#        subPath: cloudflare_ips.lst
-#    volumes:
-#      - name: cloudflare-ips
-#        configMap:
-#          name: cloudflare-ips
+# # 3. Create ConfigMap with Cloudflare IPs
+# kubectl create configmap cloudflare-ips \
+#   --from-file=cloudflare_ips.lst=cloudflare_ips.lst \
+#   -n easyhaproxy
 #
-# 4. Apply this manifest:
-#    kubectl apply -f cloudflare.yml
+# # 4. Mount the ConfigMap in EasyHAProxy deployment:
+# # Edit your EasyHAProxy deployment and add:
+# #   volumeMounts:
+# #     - name: cloudflare-ips
+# #       mountPath: /etc/haproxy/cloudflare_ips.lst
+# #       subPath: cloudflare_ips.lst
+# #   volumes:
+# #     - name: cloudflare-ips
+# #       configMap:
+# #         name: cloudflare-ips
+# ```
 #
-# 5. Test:
-#    curl http://myapp.example.local/
+# HOW TO START:
+# ```bash
+# kubectl apply -f cloudflare.yml
+# ```
 #
-# Note: This plugin is most useful when your site is actually behind Cloudflare.
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Check resources are created
+# kubectl get deployment,service,ingress -l app=webapp
+#
+# # Test via port-forward
+# kubectl port-forward -n easyhaproxy deployment/easyhaproxy 8080:80
+# curl -H "Host: myapp.example.local" http://localhost:8080
+# # Expected: 200 OK with "App Behind Cloudflare"
+#
+# # In production behind Cloudflare, the plugin will restore real client IPs
+# # from the CF-Connecting-IP header
+# ```
+#
+# CLEAN UP:
+# ```bash
+# kubectl delete -f cloudflare.yml
+# ```
+#
+# ==============================================================================
 
 ---
 apiVersion: v1

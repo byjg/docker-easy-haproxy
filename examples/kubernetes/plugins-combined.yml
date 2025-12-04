@@ -1,31 +1,70 @@
-# Multiple Plugins Combined Example for Kubernetes
+# ==============================================================================
+# EXAMPLE: Multiple Plugins Combined for Kubernetes
+# ==============================================================================
 #
-# This example demonstrates using multiple plugins together for enhanced security
+# WHAT THIS DEMONSTRATES:
+# - Using multiple security plugins together
+# - Different plugin combinations for different services
+# - Layered security approach in Kubernetes
+# - Three services with different security profiles:
+#   1. Public website: Cloudflare + path blocking
+#   2. Protected API: JWT validation + path blocking
+#   3. Admin panel: Strict IP whitelist
 #
-# Prerequisites:
-# 1. EasyHAProxy installed in your cluster
+# REQUIREMENTS (run these first):
+# ```bash
+# # 1. Ensure EasyHAProxy is installed in your cluster
+# kubectl create namespace easyhaproxy
+# kubectl apply -f https://raw.githubusercontent.com/byjg/docker-easy-haproxy/4.6.0/deploy/kubernetes/easyhaproxy-daemonset.yml
 #
-# 2. Generate JWT keys and create ConfigMap:
-#    openssl genrsa -out jwt_private.pem 2048
-#    openssl rsa -in jwt_private.pem -pubout -out jwt_pubkey.pem
-#    kubectl create configmap jwt-keys --from-file=api_pubkey.pem=jwt_pubkey.pem
+# # 2. Generate JWT keys (idempotent - skips if exists)
+# [ -f jwt_private.pem ] || openssl genrsa -out jwt_private.pem 2048
+# [ -f jwt_pubkey.pem ] || openssl rsa -in jwt_private.pem -pubout -out jwt_pubkey.pem
+# kubectl create configmap jwt-keys --from-file=api_pubkey.pem=jwt_pubkey.pem
 #
-# 3. Download Cloudflare IPs and create ConfigMap:
-#    curl https://www.cloudflare.com/ips-v4 > cloudflare_ips.lst
-#    curl https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
-#    kubectl create configmap cloudflare-ips \
-#      --from-file=cloudflare_ips.lst=cloudflare_ips.lst \
-#      -n easyhaproxy
+# # 3. Download Cloudflare IPs
+# curl -s https://www.cloudflare.com/ips-v4 > cloudflare_ips.lst
+# curl -s https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
+# kubectl create configmap cloudflare-ips \
+#   --from-file=cloudflare_ips.lst=cloudflare_ips.lst \
+#   -n easyhaproxy
 #
-# 4. Mount ConfigMaps in EasyHAProxy deployment
+# # 4. Mount ConfigMaps in EasyHAProxy deployment
+# # (See individual plugin examples for mount configuration)
+# ```
 #
-# 5. Apply this manifest:
-#    kubectl apply -f plugins-combined.yml
+# HOW TO START:
+# ```bash
+# kubectl apply -f plugins-combined.yml
+# ```
 #
-# This creates three services with different security profiles:
-# - Public website: Cloudflare + path blocking
-# - Protected API: JWT validation + path blocking
-# - Admin panel: Strict IP whitelist
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Check all resources are created
+# kubectl get deployment,service,ingress
+#
+# # Test public website (Cloudflare + path blocking)
+# kubectl port-forward -n easyhaproxy deployment/easyhaproxy 8080:80
+# curl -H "Host: website.example.local" http://localhost:8080
+# # Expected: 200 OK with "Public Website"
+# curl -H "Host: website.example.local" http://localhost:8080/admin
+# # Expected: HTTP 404 - Path blocked
+#
+# # Test protected API (JWT required)
+# curl -H "Host: api.example.local" http://localhost:8080
+# # Expected: HTTP 403 - Missing Authorization header
+#
+# # Test admin panel (IP whitelist)
+# curl -H "Host: admin.example.local" http://localhost:8080
+# # Expected: 200 OK from allowed IP, or HTTP 403 from blocked IP
+# ```
+#
+# CLEAN UP:
+# ```bash
+# kubectl delete -f plugins-combined.yml
+# ```
+#
+# ==============================================================================
 
 ---
 # Public website service

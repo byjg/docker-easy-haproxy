@@ -1,312 +1,77 @@
 # Static Configuration Example
 
-This directory demonstrates EasyHAProxy using **static YAML configuration** instead of dynamic service discovery.
+Self-contained example for EasyHAProxy using static YAML configuration. **All documentation is in the docker-compose file as header comments.**
 
-Static mode is useful for:
-- Non-containerized backends (VMs, bare metal)
-- Fixed infrastructure
-- Explicit routing control
+## Quick Start
 
----
+1. Open [docker-compose.yml](docker-compose.yml)
+2. Read the header comments for complete instructions
+3. Choose a configuration scenario from `conf/` directory
+4. Run the commands step-by-step
 
-## Prerequisites
+## What is Static Mode?
 
-### 1. Generate SSL Certificates
+Static mode uses explicit YAML configuration files instead of dynamic service discovery. This is useful for:
+- **Non-containerized backends** - VMs, bare metal servers, external APIs
+- **Fixed infrastructure** - When your backend IPs/ports don't change
+- **Explicit routing control** - Precise control over HAProxy configuration
 
-```bash
-# From repository root
-./examples/generate-keys.sh
-```
-
-### 2. Add Host Entry
-
-```bash
-echo "127.0.0.1 host1.local www.host1.local" | sudo tee -a /etc/hosts
-echo "127.0.0.1 host2.local www.host2.local" | sudo tee -a /etc/hosts
-```
-
----
-
-## Scenario 1: Basic (HTTP → HTTPS Redirect)
-
-**What it does:** Simple HTTP to HTTPS redirect with SSL termination.
-
-### Getting Started
-
-```bash
-cd examples/static
-
-# 1. Copy the basic config
-cp conf/config-basic.yml conf/config.yml
-
-# 2. Start backend container
-docker run -d --name container -p 8080:8080 byjg/static-httpserver
-
-# 3. Start EasyHAProxy
-docker compose up -d
-```
-
-### Test
-
-```bash
-# Test HTTP redirect
-curl -I http://host1.local
-# Expected: HTTP/1.1 301 Moved Permanently
-# Expected: Location: https://host1.local
-
-# Test HTTPS
-curl -k https://host1.local
-# Expected: Hello from Static HTTP Server!
-
-# Test www redirect
-curl -I http://www.host1.local
-# Expected: HTTP/1.1 301 Moved Permanently
-# Expected: Location: https://host1.local
-```
-
-### Stats Interface
-
-Open: http://localhost:1936
-- Username: `admin`
-- Password: `password`
-
-### Clean Up
-
-```bash
-docker compose down
-docker stop container && docker rm container
-```
-
----
-
-## Scenario 2: Certbot (Let's Encrypt SSL)
-
-**What it does:** Automatic SSL certificates from Let's Encrypt using ACME HTTP-01 challenge.
-
-### Requirements
-
-- Public IP address
-- Domain pointing to your IP
-- Ports 80/443 publicly accessible
-
-### Getting Started
-
-```bash
-cd examples/static
-
-# 1. Copy the certbot config
-cp conf/config-certbot.yml conf/config.yml
-
-# 2. Edit config.yml and change:
-#    - Replace "example.com" with your real domain
-#    - Update EASYHAPROXY_CERTBOT_EMAIL in docker-compose.yml
-
-# 3. Start backend container
-docker run -d --name container -p 8080:8080 byjg/static-httpserver
-
-# 4. Start EasyHAProxy
-docker compose up -d
-
-# 5. Check logs for certificate generation
-docker compose logs -f
-```
-
-### What to Expect
-
-```
-# Certbot will:
-# 1. Request certificate from Let's Encrypt
-# 2. Complete HTTP-01 challenge
-# 3. Save certificate in /certs/certbot/
-# 4. Reload HAProxy with new certificate
-```
-
-### Test
-
-```bash
-# Test HTTPS with real certificate
-curl https://your-domain.com
-# Expected: No certificate warnings (valid SSL)
-
-# Test HTTP redirect
-curl -I http://your-domain.com
-# Expected: HTTP/1.1 301 Moved Permanently
-```
-
-### Clean Up
-
-```bash
-docker compose down
-docker stop container && docker rm container
-```
-
-**Note:** Certificates are stored in Docker volume `certs_certbot` and persist across restarts.
-
----
-
-## Scenario 3: Deny Pages (Block Specific Paths)
-
-**What it does:** Blocks access to sensitive paths like `/admin`, `/wp-login.php`, etc.
-
-### Getting Started
-
-```bash
-cd examples/static
-
-# 1. Copy the deny-pages config
-cp conf/config-deny-pages.yml conf/config.yml
-
-# 2. Start backend container
-docker run -d --name container -p 8080:8080 byjg/static-httpserver
-
-# 3. Start EasyHAProxy
-docker compose up -d
-```
-
-### Test
-
-```bash
-# Test normal page (should work)
-curl -k https://host1.local/
-# Expected: Hello from Static HTTP Server!
-
-# Test blocked path (should fail)
-curl -I -k https://host1.local/admin
-# Expected: HTTP/1.1 404 Not Found
-
-curl -I -k https://host1.local/wp-login.php
-# Expected: HTTP/1.1 404 Not Found
-
-curl -I -k https://host1.local/.env
-# Expected: HTTP/1.1 404 Not Found
-```
-
-### What's Blocked
-
-The example blocks these paths:
-- `/admin`
-- `/wp-admin`
-- `/wp-login.php`
-- `/.env`
-- `/config`
-
-### Customize Blocked Paths
-
-Edit `conf/config.yml`:
-
-```yaml
-plugin_config:
-  deny_pages:
-    paths: /admin,/private,/internal
-    status_code: 403  # or 404
-```
-
-### Clean Up
-
-```bash
-docker compose down
-docker stop container && docker rm container
-```
-
----
-
-## Scenario 4: JWT Validator (API Authentication)
-
-**What it does:** Validates JWT tokens in Authorization header before allowing access.
-
-### Getting Started
-
-```bash
-cd examples/static
-
-# 1. Copy the JWT validator config
-cp conf/config-jwt-validator.yml conf/config.yml
-
-# 2. JWT keys were already generated by generate-keys.sh
-# Location: examples/docker/jwt_pubkey.pem and jwt_private.pem
-
-# 3. Start backend container
-docker run -d --name container -p 8080:8080 byjg/static-httpserver
-
-# 4. Start EasyHAProxy
-docker compose up -d
-```
-
-### Test Without Token (Should Fail)
-
-```bash
-curl -k https://host1.local/
-# Expected: Missing Authorization HTTP header
-```
-
-### Test With Valid Token
-
-```bash
-# 1. Generate a test JWT token using jwt_private.pem
-# You can use https://jwt.io or a JWT library
-
-# 2. Example with valid token:
-TOKEN="eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
-curl -k -H "Authorization: Bearer $TOKEN" https://host1.local/
-# Expected: Hello from Static HTTP Server! (if token is valid)
-```
-
-### Generate Test Token
-
-```python
-# Python example using PyJWT
-import jwt
-from datetime import datetime, timedelta
-
-with open('examples/docker/jwt_private.pem', 'r') as f:
-    private_key = f.read()
-
-payload = {
-    'iss': 'https://auth.example.com/',
-    'aud': 'https://api.example.com',
-    'exp': datetime.utcnow() + timedelta(hours=1)
-}
-
-token = jwt.encode(payload, private_key, algorithm='RS256')
-print(token)
-```
-
-### What's Validated
-
-- Authorization header must be present
-- Token must be valid JWT format
-- Signature must match public key (`jwt_pubkey.pem`)
-- Issuer must match: `https://auth.example.com/`
-- Audience must match: `https://api.example.com`
-- Token must not be expired
-
-### Customize JWT Settings
-
-Edit `conf/config.yml`:
-
-```yaml
-plugin_config:
-  jwt_validator:
-    algorithm: RS256
-    issuer: https://your-auth-server.com/
-    audience: https://your-api.com
-    pubkey_path: /certs/haproxy/jwt_pubkey.pem
-```
-
-### Clean Up
-
-```bash
-docker compose down
-docker stop container && docker rm container
-```
-
----
-
-## Configuration File Reference
+## Configuration Files
 
 All scenarios use `/etc/haproxy/static/config.yml` mounted from `./conf/config.yml`.
 
-### Basic Structure
+Choose one of these pre-made configurations:
+
+| Configuration File         | Description                                     |
+|----------------------------|-------------------------------------------------|
+| `config-basic.yml`         | Simple HTTP→HTTPS redirect with SSL termination |
+| `config-certbot.yml`       | Let's Encrypt SSL (requires public domain)      |
+| `config-deny-pages.yml`    | Block specific paths (e.g., `/admin`, `/.env`)  |
+| `config-jwt-validator.yml` | JWT token validation for API authentication     |
+
+## Prerequisites
+
+- SSL certificates generated (`./examples/generate-keys.sh`)
+- `/etc/hosts` entry for `host1.local`
+- Backend container running on port 8080
+
+See header comments in [docker-compose.yml](docker-compose.yml) for detailed setup.
+
+## Documentation Structure
+
+The docker-compose.yml file contains:
+- **WHAT THIS DEMONSTRATES** - Key features and concepts
+- **REQUIREMENTS** - Idempotent setup commands (safe to run multiple times)
+- **HOW TO START** - Commands to start backend and EasyHAProxy
+- **HOW TO VERIFY IT'S WORKING** - Test commands with expected outputs
+- **CLEAN UP** - Commands to stop and remove resources
+
+## Example Workflow
+
+```bash
+# 1. Generate certificates
+cd ../.. && ./examples/generate-keys.sh && cd examples/static
+
+# 2. Choose a configuration
+cp conf/config-basic.yml conf/config.yml
+
+# 3. Start backend
+docker run -d --name container -p 8080:8080 byjg/static-httpserver
+
+# 4. Start EasyHAProxy
+docker compose up -d
+
+# 5. Test
+curl -k https://host1.local/
+
+# 6. Clean up
+docker compose down
+docker stop container && docker rm container
+```
+
+## Configuration File Reference
+
+Basic structure of `config.yml`:
 
 ```yaml
 stats:
@@ -314,111 +79,19 @@ stats:
   password: password
   port: 1936
 
-customerrors: true
-
-easymapping:
-  - port: 80
-    redirect:
-      host1.local: https://host1.local
-
-  - port: 443
-    ssl: true
-    hosts:
-      host1.local:
-        containers:
-          - container:8080
-```
-
-### With Plugins
-
-```yaml
 easymapping:
   - port: 443
     ssl: true
     hosts:
       host1.local:
         containers:
-          - container:8080
-        plugins:
-          - deny_pages
-        plugin_config:
-          deny_pages:
-            paths: /admin,/private
-            status_code: 404
+          - container:8080  # Can also be IP:PORT for external backends
 ```
 
----
+See `conf/` directory for complete examples.
 
-## Advanced: Multiple Backends
-
-Load balance across multiple containers:
-
-```yaml
-hosts:
-  api.example.com:
-    containers:
-      - api1:8080
-      - api2:8080
-      - api3:8080
-```
-
----
-
-## Advanced: External Backends
-
-Route to non-Docker backends:
-
-```yaml
-hosts:
-  legacy.example.com:
-    containers:
-      - 192.168.1.100:8080
-      - 192.168.1.101:8080
-```
-
----
-
-## Troubleshooting
-
-### FileNotFoundError: config.yml
-
-```bash
-# Make sure config.yml exists
-ls conf/config.yml
-
-# If missing, copy from an example:
-cp conf/config-basic.yml conf/config.yml
-```
-
-### 503 Service Unavailable
-
-```bash
-# Check backend is running
-docker ps | grep container
-curl http://localhost:8080
-```
-
-### SSL Certificate Not Found
-
-```bash
-# Verify certificate exists
-ls -la host1.local.pem
-
-# Regenerate if needed
-cd ../.. && ./examples/generate-keys.sh
-```
-
-### Changes Not Applied
-
-```bash
-# Restart to reload config
-docker compose restart
-```
-
----
-
-## Further Reading
+## Additional Documentation
 
 - [Static Configuration Guide](../../docs/static.md)
-- [Using Plugins](../../docs/plugins.md)
+- [Using Plugins](../../docs/plugins/)
 - [Environment Variables](../../docs/environment-variable.md)

@@ -1,3 +1,46 @@
+# ==============================================================================
+# EXAMPLE: Additional Application with Portainer
+# ==============================================================================
+#
+# WHAT THIS DEMONSTRATES:
+# - Adding more applications to an existing EasyHAProxy setup
+# - Using the shared "easyhaproxy" network
+# - Multiple applications behind the same HAProxy instance
+#
+# REQUIREMENTS (run these first):
+# ```bash
+# # 1. First start the Portainer stack (creates network and HAProxy)
+# docker compose -f docker-compose-portainer.yml up -d
+#
+# # 2. Edit this file and change:
+# # - Line 6: easyhaproxy.http.host to your real domain
+# ```
+#
+# HOW TO START:
+# ```bash
+# docker compose -f docker-compose-portainer-app-example.yml up -d
+# ```
+#
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Check container is running
+# docker compose -f docker-compose-portainer-app-example.yml ps
+#
+# # Test the application
+# curl http://test.xpto.us
+# # OR with /etc/hosts: echo "127.0.0.1 test.xpto.us" | sudo tee -a /etc/hosts
+#
+# # Verify both apps in HAProxy stats (port 1936)
+# # You should see backends for both portainer.xpto.us and test.xpto.us
+# ```
+#
+# CLEAN UP:
+# ```bash
+# docker compose -f docker-compose-portainer-app-example.yml down
+# ```
+#
+# ==============================================================================
+
 services:
   container:
     image: byjg/static-httpserver

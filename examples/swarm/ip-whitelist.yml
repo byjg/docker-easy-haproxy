@@ -1,25 +1,65 @@
-# IP Whitelist Plugin Example for Docker Swarm
+# ==============================================================================
+# EXAMPLE: IP Whitelist Plugin (Swarm)
+# ==============================================================================
 #
-# This example demonstrates restricting access to specific IP addresses in Swarm
+# WHAT THIS DEMONSTRATES:
+# - Restricting access to specific IP addresses/networks
+# - IP-based access control for admin panels or sensitive services
+# - Returning custom status codes for blocked IPs
+# - Service discovery in Swarm mode with plugins
 #
-# Prerequisites:
-# 1. Docker Swarm initialized:
-#    docker swarm init
+# REQUIREMENTS (run these first):
+# ```bash
+# # Initialize Docker Swarm (if not already initialized)
+# docker swarm init
 #
-# 2. Create overlay network:
-#    docker network create --driver overlay --attachable easyhaproxy
+# # Create overlay network (idempotent)
+# docker network ls | grep -q easyhaproxy || docker network create --driver overlay --attachable easyhaproxy
 #
-# 3. Update allowed_ips label with your actual IP addresses/networks
+# # Ensure EasyHAProxy is deployed
+# docker stack deploy -c easyhaproxy.yml easyhaproxy
 #
-# 4. Deploy the stack:
-#    docker stack deploy -c ip-whitelist.yml admin
+# # Add to /etc/hosts for local testing (idempotent)
+# grep -q "admin.example.com" /etc/hosts || echo "127.0.0.1 admin.example.com" | sudo tee -a /etc/hosts
 #
-# 5. Test from allowed IP:
-#    curl http://<swarm-ip>/
-#    # Response: Success (200 OK)
+# # IMPORTANT: Edit this file (ip-whitelist.yml) line 64 to add your actual IP addresses!
+# # Get your current IP: curl ifconfig.me
+# ```
 #
-# 6. Test from non-allowed IP:
-#    # Response: HTTP 403 Forbidden
+# HOW TO START:
+# ```bash
+# docker stack deploy -c ip-whitelist.yml admin
+# ```
+#
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Check stack is deployed
+# docker stack ls | grep admin
+# # Expected: admin stack listed
+#
+# # Check service is running
+# docker service ls | grep admin_admin
+# # Expected: admin_admin with 3/3 replicas
+#
+# # Test from allowed IP (assumes 127.0.0.1 or your IP is in the whitelist)
+# curl -H "Host: admin.example.com" http://localhost/
+# # Expected: 200 OK with "Admin Panel - IP Restricted"
+#
+# # Test from blocked IP (using a different IP via proxy or VPN)
+# # Expected: HTTP 403 Forbidden
+#
+# # View HAProxy stats to see IP whitelist rules
+# # URL: http://localhost:1936
+# # Username: admin
+# # Password: password
+# ```
+#
+# CLEAN UP:
+# ```bash
+# docker stack rm admin
+# ```
+#
+# ==============================================================================
 
 version: "3.7"
 

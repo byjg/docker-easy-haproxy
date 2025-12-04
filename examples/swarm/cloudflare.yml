@@ -1,26 +1,69 @@
-# Cloudflare IP Restoration Plugin Example for Docker Swarm
+# ==============================================================================
+# EXAMPLE: Cloudflare IP Restoration (Swarm)
+# ==============================================================================
 #
-# This example demonstrates restoring original visitor IPs when using Cloudflare CDN
+# WHAT THIS DEMONSTRATES:
+# - Restoring original visitor IPs when behind Cloudflare CDN
+# - Using Docker configs to manage Cloudflare IP lists
+# - Service discovery in Swarm mode with plugins
+# - Load balancing across multiple replicas
 #
-# Prerequisites:
-# 1. Docker Swarm initialized:
-#    docker swarm init
+# REQUIREMENTS (run these first):
+# ```bash
+# # Initialize Docker Swarm (if not already initialized)
+# docker swarm init
 #
-# 2. Create overlay network:
-#    docker network create --driver overlay --attachable easyhaproxy
+# # Create overlay network (idempotent)
+# docker network ls | grep -q easyhaproxy || docker network create --driver overlay --attachable easyhaproxy
 #
-# 3. Download Cloudflare IPs and create Docker config:
-#    curl https://www.cloudflare.com/ips-v4 > cloudflare_ips.lst
-#    curl https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
-#    docker config create cloudflare_ips cloudflare_ips.lst
+# # Ensure EasyHAProxy is deployed
+# docker stack deploy -c easyhaproxy.yml easyhaproxy
 #
-# 4. Deploy the stack:
-#    docker stack deploy -c cloudflare.yml webapp
+# # Download Cloudflare IP ranges and create Docker config
+# curl https://www.cloudflare.com/ips-v4 > cloudflare_ips.lst
+# curl https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
+# docker config create cloudflare_ips cloudflare_ips.lst
+# rm cloudflare_ips.lst
 #
-# 5. Test:
-#    curl http://<swarm-ip>/
+# # Add to /etc/hosts for local testing (idempotent)
+# grep -q "myapp.example.com" /etc/hosts || echo "127.0.0.1 myapp.example.com" | sudo tee -a /etc/hosts
+# ```
 #
-# Note: This plugin is most useful when your site is actually behind Cloudflare.
+# HOW TO START:
+# ```bash
+# docker stack deploy -c cloudflare.yml webapp
+# ```
+#
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Check stack is deployed
+# docker stack ls | grep webapp
+# # Expected: webapp stack listed
+#
+# # Check service is running
+# docker service ls | grep webapp_webapp
+# # Expected: webapp_webapp with 4/4 replicas
+#
+# # Test the application
+# curl -H "Host: myapp.example.com" http://localhost/
+# # Expected: 200 OK with "App Behind Cloudflare"
+#
+# # Check HAProxy config includes Cloudflare IPs
+# docker exec $(docker ps -q -f name=easyhaproxy_haproxy) cat /etc/haproxy/haproxy.cfg | grep -A 5 "cloudflare"
+# # Expected: ACL rules for Cloudflare IP ranges
+# ```
+#
+# CLEAN UP:
+# ```bash
+# docker stack rm webapp
+# # To also remove the Cloudflare IPs config:
+# # docker config rm cloudflare_ips
+# ```
+#
+# NOTE: This plugin is most useful when your site is actually behind Cloudflare CDN.
+# The plugin uses the CF-Connecting-IP header to restore the original visitor IP.
+#
+# ==============================================================================
 
 version: "3.7"
 

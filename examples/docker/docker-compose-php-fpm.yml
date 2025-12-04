@@ -1,25 +1,51 @@
-# FastCGI Plugin Example with PHP-FPM
+# ==============================================================================
+# EXAMPLE: FastCGI Plugin with PHP-FPM
+# ==============================================================================
 #
-# This example demonstrates PHP-FPM configuration with FastCGI protocol support
-# using HAProxy as a reverse proxy and the FastCGI plugin for PHP environment setup.
+# WHAT THIS DEMONSTRATES:
+# - PHP-FPM configuration with FastCGI protocol (proto: fcgi)
+# - FastCGI plugin for PHP environment variable configuration
+# - TCP connection to PHP-FPM on port 9000
+# - PATH_INFO support for RESTful routing
+# - Custom document root and index file configuration
 #
-# Prerequisites:
-# 1. Add to /etc/hosts:
-#    127.0.0.1 phpapp.local
+# REQUIREMENTS (run these first):
+# ```bash
+# # Add to /etc/hosts (idempotent)
+# grep -q "phpapp.local" /etc/hosts || echo "127.0.0.1 phpapp.local" | sudo tee -a /etc/hosts
+# ```
 #
-# 2. Start the stack:
-#    docker compose -f docker-compose-php-fpm.yml up -d
+# HOW TO START:
+# ```bash
+# docker compose -f docker-compose-php-fpm.yml up -d
+# ```
 #
-# 3. Test PHP application:
-#    curl http://phpapp.local/
-#    curl http://phpapp.local/info.php
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Test main page
+# curl http://phpapp.local/
+# # Expected: 200 OK with PHP environment info
 #
-# Features:
-# - PHP-FPM 8.5 with TCP connection on port 9000
-# - FastCGI protocol support
-# - Custom document root
-# - PATH_INFO support for routing
-# - Custom FastCGI parameters
+# # Test PHP info page
+# curl http://phpapp.local/info.php
+# # Expected: phpinfo() output
+#
+# # Test PATH_INFO routing
+# curl http://phpapp.local/test-path-info.php/users/123
+# # Expected: PATH_INFO=/users/123
+#
+# # View HAProxy stats
+# # URL: http://localhost:1936
+# # Username: admin
+# # Password: password
+# ```
+#
+# CLEAN UP:
+# ```bash
+# docker compose -f docker-compose-php-fpm.yml down
+# ```
+#
+# ==============================================================================
 
 services:
   haproxy:

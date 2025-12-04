@@ -1,23 +1,48 @@
-# IP Whitelist Plugin Example for Kubernetes
+# ==============================================================================
+# EXAMPLE: IP Whitelist Plugin for Kubernetes
+# ==============================================================================
 #
-# This example demonstrates restricting access to specific IP addresses
+# WHAT THIS DEMONSTRATES:
+# - Restricting access to specific IP addresses or CIDR ranges
+# - Using annotations for IP-based access control
+# - Protecting admin panels or sensitive services in Kubernetes
+# - Custom HTTP status code for blocked requests
 #
-# Prerequisites:
-# 1. EasyHAProxy installed in your cluster
+# REQUIREMENTS (run these first):
+# ```bash
+# # 1. Ensure EasyHAProxy is installed in your cluster
+# kubectl create namespace easyhaproxy
+# kubectl apply -f https://raw.githubusercontent.com/byjg/docker-easy-haproxy/4.6.0/deploy/kubernetes/easyhaproxy-daemonset.yml
 #
-# 2. Update the allowed_ips annotation with your actual IP addresses/networks
+# # 2. IMPORTANT: Edit this file (line 80) and update allowed_ips
+# #    with your actual office/VPN IP addresses or networks
+# ```
 #
-# 3. Apply this manifest:
-#    kubectl apply -f ip-whitelist.yml
+# HOW TO START:
+# ```bash
+# kubectl apply -f ip-whitelist.yml
+# ```
 #
-# 4. Test from allowed IP:
-#    curl http://admin.example.local/
-#    # Response: Success (200 OK)
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Check resources are created
+# kubectl get deployment,service,ingress -l app=admin
 #
-# 5. Test from non-allowed IP:
-#    # Response: HTTP 403 Forbidden
+# # Test from allowed IP
+# kubectl port-forward -n easyhaproxy deployment/easyhaproxy 8080:80
+# curl -H "Host: admin.example.local" http://localhost:8080
+# # Expected: 200 OK with "Admin Panel - IP Restricted" (if your IP is in allowed_ips)
 #
-# Note: Update the allowed_ips annotation with your actual office/VPN IPs
+# # Test from non-allowed IP
+# # Expected: HTTP 403 Forbidden
+# ```
+#
+# CLEAN UP:
+# ```bash
+# kubectl delete -f ip-whitelist.yml
+# ```
+#
+# ==============================================================================
 
 ---
 apiVersion: v1

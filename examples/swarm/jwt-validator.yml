@@ -1,35 +1,78 @@
-# JWT Validator Plugin Example for Docker Swarm
+# ==============================================================================
+# EXAMPLE: JWT Validator Plugin (Swarm)
+# ==============================================================================
 #
-# This example demonstrates JWT token validation for API protection in Swarm
+# WHAT THIS DEMONSTRATES:
+# - JWT token validation for API authentication
+# - Using Docker configs to manage JWT public keys
+# - Validating issuer, audience, and expiration claims
+# - Service discovery in Swarm mode with plugins
 #
-# Prerequisites:
-# 1. Docker Swarm initialized:
-#    docker swarm init
+# REQUIREMENTS (run these first):
+# ```bash
+# # Initialize Docker Swarm (if not already initialized)
+# docker swarm init
 #
-# 2. Create overlay network:
-#    docker network create --driver overlay --attachable easyhaproxy
+# # Create overlay network (idempotent)
+# docker network ls | grep -q easyhaproxy || docker network create --driver overlay --attachable easyhaproxy
 #
-# 3. Generate JWT keys and create Docker config:
-#    openssl genrsa -out jwt_private.pem 2048
-#    openssl rsa -in jwt_private.pem -pubout -out jwt_pubkey.pem
-#    docker config create jwt_api_pubkey jwt_pubkey.pem
+# # Ensure EasyHAProxy is deployed
+# docker stack deploy -c easyhaproxy.yml easyhaproxy
 #
-# 4. Deploy the stack:
-#    docker stack deploy -c jwt-validator.yml api
+# # Generate JWT key pair (RS256 algorithm)
+# openssl genrsa -out jwt_private.pem 2048
+# openssl rsa -in jwt_private.pem -pubout -out jwt_pubkey.pem
 #
-# 5. Test without token (should fail):
-#    curl http://<swarm-ip>/
-#    # Response: Missing Authorization HTTP header
+# # Create Docker config with public key
+# docker config create jwt_api_pubkey jwt_pubkey.pem
 #
-# 6. Generate test JWT at https://jwt.io with:
-#    - Algorithm: RS256
-#    - Payload: {"iss":"https://auth.example.com/","aud":"https://api.example.com","exp":9999999999}
-#    - Use your jwt_private.pem for signing
+# # Add to /etc/hosts for local testing (idempotent)
+# grep -q "api.example.com" /etc/hosts || echo "127.0.0.1 api.example.com" | sudo tee -a /etc/hosts
+# ```
 #
-# 7. Test with token:
-#    TOKEN="eyJhbGc..."
-#    curl -H "Authorization: Bearer $TOKEN" http://<swarm-ip>/
-#    # Response: Success
+# HOW TO START:
+# ```bash
+# docker stack deploy -c jwt-validator.yml api
+# ```
+#
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Check stack is deployed
+# docker stack ls | grep api
+# # Expected: api stack listed
+#
+# # Check service is running
+# docker service ls | grep api_api
+# # Expected: api_api with 5/5 replicas
+#
+# # Test without token (should fail)
+# curl -H "Host: api.example.com" http://localhost/
+# # Expected: HTTP 401 with "Missing Authorization HTTP header"
+#
+# # Generate test JWT at https://jwt.io with:
+# # - Algorithm: RS256
+# # - Payload: {"iss":"https://auth.example.com/","aud":"https://api.example.com","exp":9999999999}
+# # - Use your jwt_private.pem content in "Verify Signature" section
+#
+# # Test with valid token (replace TOKEN with your JWT)
+# TOKEN="eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+# curl -H "Host: api.example.com" -H "Authorization: Bearer $TOKEN" http://localhost/
+# # Expected: 200 OK with "Protected API - JWT Required"
+#
+# # Test with invalid/expired token
+# curl -H "Host: api.example.com" -H "Authorization: Bearer invalid_token" http://localhost/
+# # Expected: HTTP 401 with error message
+# ```
+#
+# CLEAN UP:
+# ```bash
+# docker stack rm api
+# # To also remove the JWT public key config and generated keys:
+# # docker config rm jwt_api_pubkey
+# # rm jwt_private.pem jwt_pubkey.pem
+# ```
+#
+# ==============================================================================
 
 version: "3.7"
 

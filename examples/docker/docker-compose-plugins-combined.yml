@@ -1,33 +1,67 @@
-# Multiple Plugins Combined Example
+# ==============================================================================
+# EXAMPLE: Multiple Plugins Combined
+# ==============================================================================
 #
-# This example demonstrates using multiple plugins together for enhanced security
+# WHAT THIS DEMONSTRATES:
+# - Using multiple security plugins together
+# - Different plugin combinations for different services
+# - Cloudflare + path blocking for public sites
+# - JWT validation + path blocking for APIs
+# - IP whitelist for admin panels
+# - Layered security approach
 #
-# Prerequisites:
-# 1. Generate JWT keys:
-#    openssl genrsa -out jwt_private.pem 2048
-#    openssl rsa -in jwt_private.pem -pubout -out jwt_pubkey.pem
+# REQUIREMENTS (run these first):
+# ```bash
+# # Generate JWT keys (idempotent - skips if exists)
+# [ -f jwt_private.pem ] || openssl genrsa -out jwt_private.pem 2048
+# [ -f jwt_pubkey.pem ] || openssl rsa -in jwt_private.pem -pubout -out jwt_pubkey.pem
 #
-# 2. Download Cloudflare IPs:
-#    curl https://www.cloudflare.com/ips-v4 > cloudflare_ips.lst
-#    curl https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
+# # Download Cloudflare IPs (idempotent - overwrites if exists)
+# curl -s https://www.cloudflare.com/ips-v4 > cloudflare_ips.lst
+# curl -s https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
 #
-# 3. Add to /etc/hosts:
-#    127.0.0.1 website.local api.local admin.local
+# # Add to /etc/hosts (idempotent)
+# grep -q "website.local" /etc/hosts || echo "127.0.0.1 website.local api.local admin.local" | sudo tee -a /etc/hosts
+# ```
 #
-# 4. Start the stack:
-#    docker compose -f docker-compose-plugins-combined.yml up -d
+# HOW TO START:
+# ```bash
+# docker compose -f docker-compose-plugins-combined.yml up -d
+# ```
 #
-# 5. Test each service:
-#    # Public website (Cloudflare + path blocking)
-#    curl http://website.local/
-#    curl http://website.local/admin  # Should be blocked (404)
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Test public website (Cloudflare + path blocking)
+# curl http://website.local/
+# # Expected: 200 OK
+# curl http://website.local/admin
+# # Expected: HTTP 404 - Path blocked
 #
-#    # Protected API (JWT required)
-#    curl http://api.local/  # Should fail - no JWT
-#    curl -H "Authorization: Bearer <token>" http://api.local/  # Success
+# # Test protected API (JWT required)
+# curl http://api.local/
+# # Expected: HTTP 403 - Missing Authorization header
+# # Generate JWT at https://jwt.io (see jwt-validator example for details)
+# TOKEN="eyJhbGc..."  # Replace with your token
+# curl -H "Authorization: Bearer $TOKEN" http://api.local/
+# # Expected: 200 OK
 #
-#    # Admin panel (IP whitelist only)
-#    curl http://admin.local/  # Success from localhost
+# # Test admin panel (IP whitelist)
+# curl http://admin.local/
+# # Expected: 200 OK from localhost
+#
+# # View HAProxy stats
+# # URL: http://localhost:1936
+# # Username: admin
+# # Password: password
+# # You should see 3 backends with different security configurations
+# ```
+#
+# CLEAN UP:
+# ```bash
+# docker compose -f docker-compose-plugins-combined.yml down
+# ```
+#
+# ==============================================================================
 
 services:
   haproxy:
