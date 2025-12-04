@@ -20,7 +20,12 @@ def test_container_env_empty():
                            "server": False,
                            "retry_count": 60,
                            "preferred_challenges": "http",
-                           "manual_auth_hook": False}
+                           "manual_auth_hook": False},
+               "plugins": {
+                   "abort_on_error": False,
+                   "config": {},
+                   "enabled": []
+               }
            } == ContainerEnv.read()
 
     # os.environ['CERTBOT_LOG_LEVEL'] = 'warn'
@@ -45,7 +50,12 @@ def test_container_env_customerrors():
                                "server": False,
                                "retry_count": 60,
                                "preferred_challenges": "http",
-                               "manual_auth_hook": False}
+                               "manual_auth_hook": False},
+                   "plugins": {
+                       "abort_on_error": False,
+                       "config": {},
+                       "enabled": []
+                   }
                } == ContainerEnv.read()
     finally:
         del os.environ['HAPROXY_CUSTOMERRORS']
@@ -70,7 +80,12 @@ def test_container_env_sslmode():
                                "server": False,
                                "retry_count": 60,
                                "preferred_challenges": "http",
-                               "manual_auth_hook": False}
+                               "manual_auth_hook": False},
+                   "plugins": {
+                       "abort_on_error": False,
+                       "config": {},
+                       "enabled": []
+                   }
                } == ContainerEnv.read()
     finally:
         del os.environ['EASYHAPROXY_SSL_MODE']
@@ -96,7 +111,12 @@ def test_container_env_stats():
                                "server": False,
                                "retry_count": 60,
                                "preferred_challenges": "http",
-                               "manual_auth_hook": False}
+                               "manual_auth_hook": False},
+                   "plugins": {
+                       "abort_on_error": False,
+                       "config": {},
+                       "enabled": []
+                   }
                } == ContainerEnv.read()
     finally:
         del os.environ['HAPROXY_USERNAME']
@@ -128,7 +148,12 @@ def test_container_env_stats_password():
                                "server": False,
                                "retry_count": 60,
                                "preferred_challenges": "http",
-                               "manual_auth_hook": False}
+                               "manual_auth_hook": False},
+                   "plugins": {
+                       "abort_on_error": False,
+                       "config": {},
+                       "enabled": []
+                   }
                } == ContainerEnv.read()
     finally:
         del os.environ['HAPROXY_PASSWORD']
@@ -160,7 +185,12 @@ def test_container_env_stats_password_2():
                                "server": False,
                                "retry_count": 60,
                                "preferred_challenges": "http",
-                               "manual_auth_hook": False}
+                               "manual_auth_hook": False},
+                   "plugins": {
+                       "abort_on_error": False,
+                       "config": {},
+                       "enabled": []
+                   }
                } == ContainerEnv.read()
     finally:
         del os.environ['HAPROXY_USERNAME']
@@ -189,6 +219,11 @@ def test_container_env_certbot_email():
                        "retry_count": 60,
                        "preferred_challenges": "http",
                        "manual_auth_hook": False
+                   },
+                   "plugins": {
+                       "abort_on_error": False,
+                       "config": {},
+                       "enabled": []
                    }
                } == ContainerEnv.read()
     finally:
@@ -222,6 +257,11 @@ def test_container_env_certbot_full():
                'retry_count': 10,
                "preferred_challenges": "dns",
                "manual_auth_hook": "something_manual_auth_hook"
+           },
+           "plugins": {
+               "abort_on_error": False,
+               "config": {},
+               "enabled": []
            }
         } == ContainerEnv.read()
     finally:
@@ -257,6 +297,11 @@ def test_container_log_level():
                "retry_count": 60,
                "preferred_challenges": "http",
                "manual_auth_hook": False
+           },
+           "plugins": {
+               "abort_on_error": False,
+               "config": {},
+               "enabled": []
            }
        } == ContainerEnv.read()
     finally:

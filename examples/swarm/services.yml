@@ -1,24 +1,58 @@
-# To install:
+# ==============================================================================
+# EXAMPLE: Basic Swarm Services with SSL
+# ==============================================================================
+#
+# WHAT THIS DEMONSTRATES:
+# - Basic Swarm services with SSL configuration
+# - HTTP to HTTPS redirect
+# - Two services with different SSL setups (embedded cert vs SSL file)
+# - Using deploy.labels for service discovery in Swarm
+#
+# REQUIREMENTS (run these first):
+# ```bash
+# # Ensure EasyHAProxy is deployed
+# docker stack deploy -c easyhaproxy.yml easyhaproxy
+#
+# # Generate SSL certificates
+# cd ../.. && ./examples/generate-keys.sh && cd examples/swarm
+#
+# # Add to /etc/hosts (idempotent)
+# grep -q "host1.local" /etc/hosts || echo "127.0.0.1 host1.local host2.local" | sudo tee -a /etc/hosts
+# ```
+#
+# HOW TO START:
+# ```bash
 # docker stack deploy -c services.yml services
+# ```
 #
-# To test:
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Check services are running
+# docker service ls | grep services
+# # Expected: services_container and services_container2 with 1/1 replicas
+#
+# # Test HTTPS for host1.local
 # curl -k -H "Host: host1.local" https://127.0.0.1/
+# # Expected: 200 OK with hostname
+#
+# # Test HTTPS for host2.local
 # curl -k -H "Host: host2.local" https://127.0.0.1/
-# 
-# curl -I -H Host:host1.local http://127.0.0.1
-# HTTP/1.1 301 Moved Permanently
-# content-length: 0
-# location: https://host1.local/
+# # Expected: 200 OK with hostname
 #
-# curl -I -H Host:host2.local http://127.0.0.1
-# HTTP/1.1 301 Moved Permanently
-# content-length: 0
-# location: https://host1.local/
+# # Test HTTP redirect
+# curl -I -H "Host: host1.local" http://127.0.0.1
+# # Expected: HTTP/1.1 301 Moved Permanently, Location: https://host1.local/
 #
-# Test SSL:
-# openssl s_client -showcerts -connect 127.0.0.1:443 -servername host1.local
-
-version: "3"
+# # Verify SSL certificate
+# openssl s_client -showcerts -connect 127.0.0.1:443 -servername host1.local < /dev/null
+# ```
+#
+# CLEAN UP:
+# ```bash
+# docker stack rm services
+# ```
+#
+# ==============================================================================
 
 services:
   container:

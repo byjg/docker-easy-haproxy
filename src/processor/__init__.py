@@ -116,6 +116,30 @@ class Static(ProcessorInterface):
 
     def parse(self):
         self.static_content = yaml.load(Functions.load(self.filename), Loader=yaml.FullLoader)
+
+        # Merge plugin config from YAML with env vars
+        if "plugins" in self.static_content:
+            # Get env var config
+            container_env = ContainerEnv.read()
+
+            # Merge YAML plugins config with env config
+            # YAML config takes precedence over env vars
+            if "plugins" not in self.static_content:
+                self.static_content["plugins"] = container_env.get("plugins", {})
+            else:
+                # Merge configs - YAML overrides env vars
+                yaml_plugins = self.static_content["plugins"]
+                env_plugins = container_env.get("plugins", {})
+
+                # Merge individual plugin configs
+                for plugin_name, plugin_config in env_plugins.get("config", {}).items():
+                    if plugin_name not in yaml_plugins:
+                        yaml_plugins[plugin_name] = {}
+                    # Env vars fill in missing keys, YAML takes precedence
+                    for key, value in plugin_config.items():
+                        if key not in yaml_plugins[plugin_name]:
+                            yaml_plugins[plugin_name][key] = value
+
         self.cfg = HaproxyConfigGenerator(self.static_content)
 
 
@@ -227,6 +251,13 @@ class Kubernetes(ProcessorInterface):
             redirect = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.redirect")
             mode = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.mode")
             listen_port = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.listen_port", 80)
+            plugins = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.plugins")
+
+            # Extract plugin-specific configurations
+            plugin_annotations = {}
+            for annotation_key, annotation_value in ingress.metadata.annotations.items():
+                if annotation_key.startswith("easyhaproxy.plugin."):
+                    plugin_annotations[annotation_key] = annotation_value
 
             data = {"creation_timestamp": ingress.metadata.creation_timestamp.strftime("%x %X"),
                     "resource_version": ingress.metadata.resource_version, "namespace": ingress.metadata.namespace}
@@ -272,6 +303,16 @@ class Kubernetes(ProcessorInterface):
                 if mode is not None:
                     rule_data["%s.mode" % definition] = mode
                 rule_data["%s.balance" % definition] = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.balance", "roundrobin")
+
+                # Add plugin configuration
+                if plugins is not None:
+                    rule_data["%s.plugins" % definition] = plugins
+
+                # Add plugin-specific configurations
+                for plugin_key, plugin_value in plugin_annotations.items():
+                    # Convert easyhaproxy.plugin.X.Y to easyhaproxy.{definition}.plugin.X.Y
+                    plugin_config_key = plugin_key.replace("easyhaproxy.plugin.", "%s.plugin." % definition)
+                    rule_data[plugin_config_key] = plugin_value
 
                 service_name = rule.http.paths[0].backend.service.name
                 try:

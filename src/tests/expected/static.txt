@@ -29,6 +29,7 @@ defaults
     errorfile 503 /etc/haproxy/errors-custom/503.http
     errorfile 504 /etc/haproxy/errors-custom/504.http
 
+
 frontend stats
     bind *:1936
     mode http

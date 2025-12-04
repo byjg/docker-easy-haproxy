@@ -1,3 +1,57 @@
+# ==============================================================================
+# EXAMPLE: Basic Kubernetes Ingress
+# ==============================================================================
+#
+# WHAT THIS DEMONSTRATES:
+# - Basic ingress configuration with EasyHAProxy
+# - Multiple domains pointing to the same service
+# - Complete deployment + service + ingress setup
+# - HTTP ingress without TLS
+#
+# REQUIREMENTS (run these first):
+# ```bash
+# # 1. Ensure EasyHAProxy is installed in your cluster
+# kubectl create namespace easyhaproxy
+# kubectl apply -f https://raw.githubusercontent.com/byjg/docker-easy-haproxy/4.6.0/deploy/kubernetes/easyhaproxy-daemonset.yml
+#
+# # 2. Label the node where EasyHAProxy will run
+# kubectl label nodes <node-name> "easyhaproxy/node=master"
+#
+# # 3. Add to /etc/hosts for local testing (idempotent)
+# grep -q "example.org" /etc/hosts || echo "<node-ip> example.org www.example.org" | sudo tee -a /etc/hosts
+# ```
+#
+# HOW TO START:
+# ```bash
+# kubectl apply -f service.yml
+# ```
+#
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Check resources are created
+# kubectl get deployment,service,ingress container-example
+#
+# # Test via node IP
+# curl -H "Host: example.org" http://<node-ip>:31080
+# # Expected: 200 OK with "My Host Example"
+#
+# # Or use port-forward for testing
+# kubectl port-forward -n easyhaproxy deployment/easyhaproxy 8080:80
+# curl -H "Host: example.org" http://localhost:8080
+# # Expected: 200 OK with "My Host Example"
+#
+# # Test second domain
+# curl -H "Host: www.example.org" http://<node-ip>:31080
+# # Expected: Same response
+# ```
+#
+# CLEAN UP:
+# ```bash
+# kubectl delete -f service.yml
+# ```
+#
+# ==============================================================================
+
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress

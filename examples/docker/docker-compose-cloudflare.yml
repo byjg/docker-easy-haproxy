@@ -1,0 +1,80 @@
+# ==============================================================================
+# EXAMPLE: Cloudflare IP Restoration Plugin
+# ==============================================================================
+#
+# WHAT THIS DEMONSTRATES:
+# - Restoring original visitor IPs when behind Cloudflare CDN
+# - Detecting requests from Cloudflare IP ranges
+# - Using CF-Connecting-IP header for real client IP
+# - Accurate IP logging for applications behind Cloudflare
+#
+# REQUIREMENTS (run these first):
+# ```bash
+# # Download Cloudflare IP ranges (idempotent - overwrites if exists)
+# curl -s https://www.cloudflare.com/ips-v4 > cloudflare_ips.lst
+# echo "" >> cloudflare_ips.lst
+# curl -s https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
+#
+# # Add to /etc/hosts (idempotent)
+# grep -q "myapp.local" /etc/hosts || echo "127.0.0.1 myapp.local" | sudo tee -a /etc/hosts
+# ```
+#
+# HOW TO START:
+# ```bash
+# docker compose -f docker-compose-cloudflare.yml up -d
+# ```
+#
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Test normal request
+# curl -H "Host: myapp.local" http://127.0.0.1/
+# # Expected: 200 OK
+#
+# # Test with CF-Connecting-IP header (simulating Cloudflare)
+# curl -H "Host: myapp.local" -H "CF-Connecting-IP: 203.0.113.50" http://127.0.0.1/
+# # Expected: 200 OK (backend sees 203.0.113.50 as client IP)
+#
+# # Note: This plugin is most useful when your site is actually behind Cloudflare
+# # In production, requests come from Cloudflare IPs and the plugin restores real client IPs
+# ```
+#
+# CLEAN UP:
+# ```bash
+# docker compose -f docker-compose-cloudflare.yml down
+# ```
+#
+# ==============================================================================
+
+services:
+  haproxy:
+    image: byjg/easy-haproxy:4.6.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Mount Cloudflare IP list
+      - ./cloudflare_ips.lst:/etc/haproxy/cloudflare_ips.lst:ro
+    environment:
+      EASYHAPROXY_DISCOVER: docker
+      HAPROXY_CUSTOMERRORS: "true"
+      HAPROXY_USERNAME: admin
+      HAPROXY_PASSWORD: password
+      HAPROXY_STATS_PORT: 1936
+    ports:
+      - "80:80/tcp"
+      - "1936:1936/tcp"
+
+  # Web application behind Cloudflare
+  webapp:
+    image: byjg/static-httpserver
+    environment:
+      TITLE: "App Behind Cloudflare"
+    labels:
+      easyhaproxy.http.host: myapp.local
+      easyhaproxy.http.port: 80
+      easyhaproxy.http.localport: 8080
+
+      # Enable Cloudflare plugin
+      easyhaproxy.http.plugins: cloudflare
+
+      # Use custom IP list (disable built-in IPs)
+      easyhaproxy.http.plugin.cloudflare.use_builtin_ips: false
+      easyhaproxy.http.plugin.cloudflare.ip_list_path: /etc/haproxy/cloudflare_ips.lst

@@ -1,0 +1,84 @@
+# ==============================================================================
+# EXAMPLE: FastCGI Plugin with PHP-FPM
+# ==============================================================================
+#
+# WHAT THIS DEMONSTRATES:
+# - PHP-FPM configuration with FastCGI protocol (proto: fcgi)
+# - FastCGI plugin for PHP environment variable configuration
+# - TCP connection to PHP-FPM on port 9000
+# - PATH_INFO support for RESTful routing
+# - Custom document root and index file configuration
+#
+# REQUIREMENTS (run these first):
+# ```bash
+# # Add to /etc/hosts (idempotent)
+# grep -q "phpapp.local" /etc/hosts || echo "127.0.0.1 phpapp.local" | sudo tee -a /etc/hosts
+# ```
+#
+# HOW TO START:
+# ```bash
+# docker compose -f docker-compose-php-fpm.yml up -d
+# ```
+#
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Test main page
+# curl http://phpapp.local/
+# # Expected: 200 OK with PHP environment info
+#
+# # Test PHP info page
+# curl http://phpapp.local/info.php
+# # Expected: phpinfo() output
+#
+# # Test PATH_INFO routing
+# curl http://phpapp.local/test-path-info.php/users/123
+# # Expected: PATH_INFO=/users/123
+#
+# # View HAProxy stats
+# # URL: http://localhost:1936
+# # Username: admin
+# # Password: password
+# ```
+#
+# CLEAN UP:
+# ```bash
+# docker compose -f docker-compose-php-fpm.yml down
+# ```
+#
+# ==============================================================================
+
+services:
+  haproxy:
+    image: byjg/easy-haproxy:4.6.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      EASYHAPROXY_DISCOVER: docker
+      HAPROXY_CUSTOMERRORS: "true"
+      HAPROXY_USERNAME: admin
+      HAPROXY_PASSWORD: password
+      HAPROXY_STATS_PORT: 1936
+    ports:
+      - "80:80/tcp"
+      - "1936:1936/tcp"
+
+  # PHP-FPM service using byjg/php image
+  php-fpm:
+    image: byjg/php:8.5-fpm
+    volumes:
+      # Mount PHP application files
+      - ./php-app:/var/www/html:ro
+    labels:
+      easyhaproxy.http.host: phpapp.local
+      easyhaproxy.http.port: 80
+      # PHP-FPM listens on port 9000
+      easyhaproxy.http.localport: 9000
+      easyhaproxy.http.proto: fcgi
+
+      # Enable FastCGI plugin for PHP environment configuration
+      easyhaproxy.http.plugins: fastcgi
+
+      # FastCGI plugin configuration
+      easyhaproxy.http.plugin.fastcgi.document_root: /var/www/html
+      easyhaproxy.http.plugin.fastcgi.index_file: index.php
+      easyhaproxy.http.plugin.fastcgi.path_info: "true"

@@ -1,0 +1,113 @@
+# ==============================================================================
+# EXAMPLE: IP Whitelist Plugin (Swarm)
+# ==============================================================================
+#
+# WHAT THIS DEMONSTRATES:
+# - Restricting access to specific IP addresses/networks
+# - IP-based access control for admin panels or sensitive services
+# - Returning custom status codes for blocked IPs
+# - Service discovery in Swarm mode with plugins
+#
+# REQUIREMENTS (run these first):
+# ```bash
+# # Initialize Docker Swarm (if not already initialized)
+# docker swarm init
+#
+# # Create overlay network (idempotent)
+# docker network ls | grep -q easyhaproxy || docker network create --driver overlay --attachable easyhaproxy
+#
+# # Ensure EasyHAProxy is deployed
+# docker stack deploy -c easyhaproxy.yml easyhaproxy
+#
+# # Add to /etc/hosts for local testing (idempotent)
+# grep -q "admin.example.com" /etc/hosts || echo "127.0.0.1 admin.example.com" | sudo tee -a /etc/hosts
+#
+# # IMPORTANT: Edit this file (ip-whitelist.yml) line 64 to add your actual IP addresses!
+# # Get your current IP: curl ifconfig.me
+# ```
+#
+# HOW TO START:
+# ```bash
+# docker stack deploy -c ip-whitelist.yml admin
+# ```
+#
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Check stack is deployed
+# docker stack ls | grep admin
+# # Expected: admin stack listed
+#
+# # Check service is running
+# docker service ls | grep admin_admin
+# # Expected: admin_admin with 3/3 replicas
+#
+# # Test from allowed IP (assumes 127.0.0.1 or your IP is in the whitelist)
+# curl -H "Host: admin.example.com" http://localhost/
+# # Expected: 200 OK with "Admin Panel - IP Restricted"
+#
+# # Test from blocked IP (using a different IP via proxy or VPN)
+# # Expected: HTTP 403 Forbidden
+#
+# # View HAProxy stats to see IP whitelist rules
+# # URL: http://localhost:1936
+# # Username: admin
+# # Password: password
+# ```
+#
+# CLEAN UP:
+# ```bash
+# docker stack rm admin
+# ```
+#
+# ==============================================================================
+
+version: "3.7"
+
+services:
+  haproxy:
+    image: byjg/easy-haproxy:4.6.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+    environment:
+      EASYHAPROXY_DISCOVER: swarm
+      HAPROXY_USERNAME: admin
+      HAPROXY_PASSWORD: password
+      HAPROXY_STATS_PORT: 1936
+    ports:
+      - "80:80/tcp"
+      - "1936:1936/tcp"
+    networks:
+      - easyhaproxy
+
+  # Admin panel with IP restrictions
+  admin:
+    image: byjg/static-httpserver
+    environment:
+      TITLE: "Admin Panel - IP Restricted"
+    deploy:
+      replicas: 3
+      labels:
+        easyhaproxy.http.host: "admin.example.com"
+        easyhaproxy.http.port: "80"
+        easyhaproxy.http.localport: "8080"
+
+        # Enable IP whitelist plugin
+        easyhaproxy.http.plugins: "ip_whitelist"
+
+        # Allow specific IPs and networks
+        # UPDATE THIS with your actual office/VPN IPs!
+        easyhaproxy.http.plugin.ip_whitelist.allowed_ips: "203.0.113.0/24,198.51.100.0/24,10.0.0.0/8"
+
+        # Status code to return for blocked IPs
+        easyhaproxy.http.plugin.ip_whitelist.status_code: "403"
+    networks:
+      - easyhaproxy
+
+networks:
+  easyhaproxy:
+    external: true

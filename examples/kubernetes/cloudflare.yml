@@ -1,0 +1,134 @@
+# ==============================================================================
+# EXAMPLE: Cloudflare IP Restoration Plugin for Kubernetes
+# ==============================================================================
+#
+# WHAT THIS DEMONSTRATES:
+# - Restoring original visitor IPs when behind Cloudflare CDN
+# - Using ConfigMaps to mount Cloudflare IP ranges
+# - Detecting requests from Cloudflare IP ranges
+# - Accurate client IP logging for applications behind Cloudflare
+#
+# REQUIREMENTS (run these first):
+# ```bash
+# # 1. Ensure EasyHAProxy is installed in your cluster
+# kubectl create namespace easyhaproxy
+# kubectl apply -f https://raw.githubusercontent.com/byjg/docker-easy-haproxy/4.6.0/deploy/kubernetes/easyhaproxy-daemonset.yml
+#
+# # 2. Download Cloudflare IP ranges
+# curl -s https://www.cloudflare.com/ips-v4 > cloudflare_ips.lst
+# curl -s https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
+#
+# # 3. Create ConfigMap with Cloudflare IPs
+# kubectl create configmap cloudflare-ips \
+#   --from-file=cloudflare_ips.lst=cloudflare_ips.lst \
+#   -n easyhaproxy
+#
+# # 4. Mount the ConfigMap in EasyHAProxy deployment:
+# # Edit your EasyHAProxy deployment and add:
+# #   volumeMounts:
+# #     - name: cloudflare-ips
+# #       mountPath: /etc/haproxy/cloudflare_ips.lst
+# #       subPath: cloudflare_ips.lst
+# #   volumes:
+# #     - name: cloudflare-ips
+# #       configMap:
+# #         name: cloudflare-ips
+# ```
+#
+# HOW TO START:
+# ```bash
+# kubectl apply -f cloudflare.yml
+# ```
+#
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Check resources are created
+# kubectl get deployment,service,ingress -l app=webapp
+#
+# # Test via port-forward
+# kubectl port-forward -n easyhaproxy deployment/easyhaproxy 8080:80
+# curl -H "Host: myapp.example.local" http://localhost:8080
+# # Expected: 200 OK with "App Behind Cloudflare"
+#
+# # In production behind Cloudflare, the plugin will restore real client IPs
+# # from the CF-Connecting-IP header
+# ```
+#
+# CLEAN UP:
+# ```bash
+# kubectl delete -f cloudflare.yml
+# ```
+#
+# ==============================================================================
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp-service
+  namespace: default
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+    app: webapp
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp
+  namespace: default
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: webapp
+  template:
+    metadata:
+      labels:
+        app: webapp
+    spec:
+      containers:
+      - name: webapp
+        image: byjg/static-httpserver
+        ports:
+        - containerPort: 8080
+        env:
+        - name: TITLE
+          value: "App Behind Cloudflare"
+        resources:
+          limits:
+            cpu: '0.1'
+            memory: '64Mi'
+          requests:
+            cpu: '0.05'
+            memory: '32Mi'
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: easyhaproxy-ingress
+
+    # Enable Cloudflare plugin
+    easyhaproxy.plugins: "cloudflare"
+
+    # Optional: Specify custom IP list path
+    # easyhaproxy.plugin.cloudflare.ip_list_path: "/etc/haproxy/cloudflare_ips.lst"
+  name: webapp-ingress-cloudflare
+  namespace: default
+spec:
+  rules:
+  - host: myapp.example.local
+    http:
+      paths:
+      - backend:
+          service:
+            name: webapp-service
+            port:
+              number: 8080
+        pathType: ImplementationSpecific

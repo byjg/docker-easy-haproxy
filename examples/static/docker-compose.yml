@@ -1,7 +1,62 @@
-# To test:
+# ==============================================================================
+# EXAMPLE: Static Configuration Mode
+# ==============================================================================
+#
+# WHAT THIS DEMONSTRATES:
+# - EasyHAProxy using static YAML configuration (no service discovery)
+# - Useful for non-containerized backends, VMs, or bare metal servers
+# - Configuration via /etc/haproxy/static/config.yml
+#
+# REQUIREMENTS (run these first):
+# ```bash
+# # Generate SSL certificates
+# cd ../.. && ./examples/generate-keys.sh && cd examples/static
+#
+# # Add to /etc/hosts (idempotent)
+# grep -q "host1.local" /etc/hosts || echo "127.0.0.1 host1.local" | sudo tee -a /etc/hosts
+#
+# # Copy a configuration file (choose one):
+# cp conf/config-basic.yml conf/config.yml              # Basic HTTP→HTTPS redirect
+# # OR
+# cp conf/config-certbot.yml conf/config.yml            # Let's Encrypt (requires public domain)
+# # OR
+# cp conf/config-deny-pages.yml conf/config.yml         # Block specific paths
+# # OR
+# cp conf/config-jwt-validator.yml conf/config.yml      # JWT authentication
+# ```
+#
+# HOW TO START:
+# ```bash
+# # Start backend container
+# docker run -d --name container -p 8080:8080 byjg/static-httpserver
+#
+# # Start EasyHAProxy
+# docker compose up -d
+# ```
+#
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Test HTTPS
 # curl -k -H "Host: host1.local" https://127.0.0.1/
-
-version: "3"
+# # Expected: 200 OK with "Hello from Static HTTP Server!"
+#
+# # Test HTTP redirect (if using basic config)
+# curl -I -H "Host: host1.local" http://127.0.0.1
+# # Expected: HTTP/1.1 301 Moved Permanently
+#
+# # View HAProxy stats
+# # URL: http://localhost:1936
+# # Username: admin
+# # Password: password
+# ```
+#
+# CLEAN UP:
+# ```bash
+# docker compose down
+# docker stop container && docker rm container
+# ```
+#
+# ==============================================================================
 
 services:
   haproxy:

@@ -1,0 +1,132 @@
+# ==============================================================================
+# EXAMPLE: JWT Validator Plugin (Swarm)
+# ==============================================================================
+#
+# WHAT THIS DEMONSTRATES:
+# - JWT token validation for API authentication
+# - Using Docker configs to manage JWT public keys
+# - Validating issuer, audience, and expiration claims
+# - Service discovery in Swarm mode with plugins
+#
+# REQUIREMENTS (run these first):
+# ```bash
+# # Initialize Docker Swarm (if not already initialized)
+# docker swarm init
+#
+# # Create overlay network (idempotent)
+# docker network ls | grep -q easyhaproxy || docker network create --driver overlay --attachable easyhaproxy
+#
+# # Ensure EasyHAProxy is deployed
+# docker stack deploy -c easyhaproxy.yml easyhaproxy
+#
+# # Generate JWT key pair (RS256 algorithm)
+# openssl genrsa -out jwt_private.pem 2048
+# openssl rsa -in jwt_private.pem -pubout -out jwt_pubkey.pem
+#
+# # Create Docker config with public key
+# docker config create jwt_api_pubkey jwt_pubkey.pem
+#
+# # Add to /etc/hosts for local testing (idempotent)
+# grep -q "api.example.com" /etc/hosts || echo "127.0.0.1 api.example.com" | sudo tee -a /etc/hosts
+# ```
+#
+# HOW TO START:
+# ```bash
+# docker stack deploy -c jwt-validator.yml api
+# ```
+#
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Check stack is deployed
+# docker stack ls | grep api
+# # Expected: api stack listed
+#
+# # Check service is running
+# docker service ls | grep api_api
+# # Expected: api_api with 5/5 replicas
+#
+# # Test without token (should fail)
+# curl -H "Host: api.example.com" http://localhost/
+# # Expected: HTTP 401 with "Missing Authorization HTTP header"
+#
+# # Generate test JWT at https://jwt.io with:
+# # - Algorithm: RS256
+# # - Payload: {"iss":"https://auth.example.com/","aud":"https://api.example.com","exp":9999999999}
+# # - Use your jwt_private.pem content in "Verify Signature" section
+#
+# # Test with valid token (replace TOKEN with your JWT)
+# TOKEN="eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+# curl -H "Host: api.example.com" -H "Authorization: Bearer $TOKEN" http://localhost/
+# # Expected: 200 OK with "Protected API - JWT Required"
+#
+# # Test with invalid/expired token
+# curl -H "Host: api.example.com" -H "Authorization: Bearer invalid_token" http://localhost/
+# # Expected: HTTP 401 with error message
+# ```
+#
+# CLEAN UP:
+# ```bash
+# docker stack rm api
+# # To also remove the JWT public key config and generated keys:
+# # docker config rm jwt_api_pubkey
+# # rm jwt_private.pem jwt_pubkey.pem
+# ```
+#
+# ==============================================================================
+
+version: "3.7"
+
+services:
+  haproxy:
+    image: byjg/easy-haproxy:4.6.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    configs:
+      - source: jwt_api_pubkey
+        target: /etc/haproxy/jwt_keys/api_pubkey.pem
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+    environment:
+      EASYHAPROXY_DISCOVER: swarm
+      HAPROXY_USERNAME: admin
+      HAPROXY_PASSWORD: password
+      HAPROXY_STATS_PORT: 1936
+    ports:
+      - "80:80/tcp"
+      - "1936:1936/tcp"
+    networks:
+      - easyhaproxy
+
+  # Protected API service
+  api:
+    image: byjg/static-httpserver
+    environment:
+      TITLE: "Protected API - JWT Required"
+    deploy:
+      replicas: 5
+      labels:
+        easyhaproxy.http.host: "api.example.com"
+        easyhaproxy.http.port: "80"
+        easyhaproxy.http.localport: "8080"
+
+        # Enable JWT validator plugin
+        easyhaproxy.http.plugins: "jwt_validator"
+
+        # JWT validator configuration
+        easyhaproxy.http.plugin.jwt_validator.algorithm: "RS256"
+        easyhaproxy.http.plugin.jwt_validator.issuer: "https://auth.example.com/"
+        easyhaproxy.http.plugin.jwt_validator.audience: "https://api.example.com"
+        easyhaproxy.http.plugin.jwt_validator.pubkey_path: "/etc/haproxy/jwt_keys/api_pubkey.pem"
+    networks:
+      - easyhaproxy
+
+networks:
+  easyhaproxy:
+    external: true
+
+configs:
+  jwt_api_pubkey:
+    external: true

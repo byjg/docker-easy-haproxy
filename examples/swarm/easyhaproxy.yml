@@ -1,9 +1,56 @@
-# To Install
-# docker network create --driver overlay --attachable easyhaproxy
+# ==============================================================================
+# EXAMPLE: EasyHAProxy for Docker Swarm
+# ==============================================================================
+#
+# WHAT THIS DEMONSTRATES:
+# - EasyHAProxy running in Swarm mode with service discovery
+# - HAProxy stats interface
+# - Let's Encrypt/Certbot support
+# - Shared overlay network for services
+#
+# REQUIREMENTS (run these first):
+# ```bash
+# # Initialize Docker Swarm (if not already initialized)
+# docker swarm init
+#
+# # Create overlay network (idempotent)
+# docker network ls | grep -q easyhaproxy || docker network create --driver overlay --attachable easyhaproxy
+#
+# # Edit this file and change:
+# # Line 18: EASYHAPROXY_CERTBOT_EMAIL to your email
+# ```
+#
+# HOW TO START:
+# ```bash
 # docker stack deploy -c easyhaproxy.yml easyhaproxy
+# ```
+#
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Check stack is deployed
+# docker stack ls
+# # Expected: easyhaproxy stack listed
+#
+# # Check service is running
+# docker service ls
+# # Expected: easyhaproxy_haproxy with 1/1 replicas
+#
+# # View HAProxy stats
+# # URL: http://localhost:1936
+# # Username: admin
+# # Password: password
+#
+# # Check logs
+# docker service logs -f easyhaproxy_haproxy
+# ```
+#
+# CLEAN UP:
+# ```bash
+# docker stack rm easyhaproxy
+# ```
+#
+# ==============================================================================
 
-
-version: "3"
 
 services:
   haproxy:

@@ -1,13 +1,48 @@
-# curl -H Host:www.helloworld.com localhost:19901
-# f6d8d45b7411
-# 59b213cb8592
-
-# curl -I -H Host:google.helloworld.com localhost:19901
-# HTTP/1.1 301 Moved Permanently
-# content-length: 0
-# location: www.google.com/
-
-version: "3"
+# ==============================================================================
+# EXAMPLE: Load Balancing with Multiple Container Replicas
+# ==============================================================================
+#
+# WHAT THIS DEMONSTRATES:
+# - Multiple container replicas behind a single domain
+# - Round-robin load balancing across replicas
+# - Domain redirect functionality
+# - Custom port configuration
+#
+# REQUIREMENTS (run these first):
+# ```bash
+# # No special requirements - this example runs on localhost:19901
+# ```
+#
+# HOW TO START:
+# ```bash
+# docker compose -f docker-compose-multi-containers.yml up -d
+# ```
+#
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Test load balancing - hostname should alternate between containers
+# curl -H "Host: www.helloworld.com" localhost:19901
+# # Expected: Container ID (e.g., f6d8d45b7411)
+# curl -H "Host: www.helloworld.com" localhost:19901
+# # Expected: Different container ID (e.g., 59b213cb8592)
+#
+# # Test domain redirect
+# curl -I -H "Host: google.helloworld.com" localhost:19901
+# # Expected: HTTP/1.1 301 Moved Permanently, Location: www.google.com/
+#
+# # View HAProxy stats
+# # URL: http://localhost:1936
+# # Username: admin
+# # Password: password
+# # You should see 2 backend servers
+# ```
+#
+# CLEAN UP:
+# ```bash
+# docker compose -f docker-compose-multi-containers.yml down
+# ```
+#
+# ==============================================================================
 
 services:
   haproxy:

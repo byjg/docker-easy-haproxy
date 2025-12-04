@@ -40,6 +40,13 @@ defaults
     errorfile 504 /etc/haproxy/errors-custom/504.http
 {% endif %}
 
+{% if global_plugin_configs %}
+# Global Plugin Configurations
+{% for config in global_plugin_configs %}
+{{ config }}
+{% endfor %}
+{% endif %}
+
 {% set data_stats = data["stats"] | default({}) %}
 {% if data_stats["port"] | default(1936) | int > 0 %}
 frontend stats
@@ -75,6 +82,12 @@ frontend {{ mode }}_in_{{ o["port"] }}
 backend srv_{{ host }}
     balance {{ o["balance"] | default("roundrobin") }}
     mode {{ mode }}
+        {% if o["hosts"][k]["plugin_configs"] is defined and o["hosts"][k]["plugin_configs"] | length > 0 %}
+    # Domain Plugin Configurations for {{ k }}
+            {% for config in o["hosts"][k]["plugin_configs"] %}
+{{ config | indent(4, first=True) }}
+            {% endfor %}
+        {% endif %}
         {% if mode == "http" %}
     option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
@@ -84,7 +97,7 @@ backend srv_{{ host }}
     tcp-check connect{{ " ssl" if o["ssl-check"] == "ssl" }}
         {% endif %}
         {% for c in o["hosts"][k]["containers"] %}
-    server srv-{{ loop.index0 }} {{ c }} check weight 1{{ " verify none" if o["ssl-check"] == "ssl" }}
+    server srv-{{ loop.index0 }} {{ c }} check weight 1{{ " verify none" if o["ssl-check"] == "ssl" }}{{ " proto " + o["hosts"][k]["proto"] if o["hosts"][k].get("proto") }}
         {% endfor %}
     {% endfor %}
 {% endfor %}

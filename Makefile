@@ -6,4 +6,4 @@ build:
 
 .PHONY: test
 test:
-	pytest tests/
+	cd src/ && pytest tests/ -vv

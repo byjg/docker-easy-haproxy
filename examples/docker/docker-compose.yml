@@ -1,21 +1,53 @@
-# To test:
+# ==============================================================================
+# EXAMPLE: Basic SSL Setup with Two Virtual Hosts
+# ==============================================================================
+#
+# WHAT THIS DEMONSTRATES:
+# - Basic SSL setup with custom certificates (embedded base64 and file-based)
+# - Automatic HTTP to HTTPS redirect
+# - Two virtual hosts (host1.local and host2.local)
+# - HAProxy stats interface
+#
+# REQUIREMENTS (run these first):
+# ```bash
+# # Add to /etc/hosts (idempotent)
+# grep -q "host1.local" /etc/hosts || echo "127.0.0.1 host1.local host2.local" | sudo tee -a /etc/hosts
+#
+# # Generate SSL certificates
+# cd ../.. && ./examples/generate-keys.sh && cd examples/docker
+# ```
+#
+# HOW TO START:
+# ```bash
+# docker compose up -d
+# ```
+#
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Test HTTPS
 # curl -k -H "Host: host1.local" https://127.0.0.1/
 # curl -k -H "Host: host2.local" https://127.0.0.1/
-# 
-# curl -I -H Host:host1.local http://127.0.0.1
-# HTTP/1.1 301 Moved Permanently
-# content-length: 0
-# location: https://host1.local/
+# # Expected: 200 OK with hostname in response
 #
-# curl -I -H Host:host2.local http://127.0.0.1
-# HTTP/1.1 301 Moved Permanently
-# content-length: 0
-# location: https://host1.local/
+# # Test HTTP redirect
+# curl -I -H "Host: host1.local" http://127.0.0.1
+# # Expected: HTTP/1.1 301 Moved Permanently, Location: https://host1.local/
 #
-# Test SSL:
-# openssl s_client -showcerts -connect 127.0.0.1:443 -servername host1.local
-
-version: "3"
+# # View SSL certificate
+# openssl s_client -showcerts -connect 127.0.0.1:443 -servername host1.local < /dev/null
+#
+# # Access stats interface
+# # URL: http://localhost:1936
+# # Username: admin
+# # Password: password
+# ```
+#
+# CLEAN UP:
+# ```bash
+# docker compose down
+# ```
+#
+# ==============================================================================
 
 services:
   haproxy:

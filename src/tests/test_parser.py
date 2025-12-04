@@ -124,7 +124,9 @@ def test_parser_finds_services_raw():
                         "my-stack_agent:9001"
                     ],
                     "certbot": False,
-                    "redirect_ssl": False
+                    "proto": "",
+                    "redirect_ssl": False,
+                    "plugin_configs": []
                 }
             },
             "redirect": {
@@ -142,7 +144,9 @@ def test_parser_finds_services_raw():
                         "my-stack_cadvisor:8080"
                     ],
                     "certbot": False,
-                    "redirect_ssl": False
+                    "proto": "",
+                    "redirect_ssl": False,
+                    "plugin_configs": []
                 },
                 "node-exporter.quantum.example.org":{
                     "balance": "roundrobin",
@@ -150,7 +154,9 @@ def test_parser_finds_services_raw():
                         "my-stack_node-exporter:9100"
                     ],
                     "certbot": True,
-                    "redirect_ssl": False
+                    "proto": "",
+                    "redirect_ssl": False,
+                    "plugin_configs": []
                 }
             },
             "redirect": {
@@ -168,7 +174,9 @@ def test_parser_finds_services_raw():
                         "my-stack_node-exporter:9100"
                     ],
                     "certbot": False,
-                    "redirect_ssl": False
+                    "proto": "",
+                    "redirect_ssl": False,
+                    "plugin_configs": []
                 },
                 "www.somehost.com.br":{
                     "balance": "roundrobin",
@@ -176,7 +184,9 @@ def test_parser_finds_services_raw():
                         "some-service:80"
                     ],
                     "certbot": False,
-                    "redirect_ssl": False
+                    "proto": "",
+                    "redirect_ssl": False,
+                    "plugin_configs": []
                 }
             },
             "redirect": {
@@ -199,7 +209,9 @@ def test_parser_finds_services_raw():
                         "some-service:80"
                     ],
                     "certbot": False,
-                    "redirect_ssl": False
+                    "proto": "",
+                    "redirect_ssl": False,
+                    "plugin_configs": []
                 }
             },
             "redirect": {
@@ -465,7 +477,9 @@ def test_parser_finds_services_clone_to_ssl_raw():
                     "10.152.183.215:8080"
                     ],
                     "certbot": False,
-                    "redirect_ssl": False
+                    "proto": "",
+                    "redirect_ssl": False,
+                    "plugin_configs": []
                 },
                 "valida.me":{
                     "balance":"roundrobin",
@@ -473,7 +487,9 @@ def test_parser_finds_services_clone_to_ssl_raw():
                     "10.152.183.62:8080"
                     ],
                     "certbot": False,
-                    "redirect_ssl": False
+                    "proto": "",
+                    "redirect_ssl": False,
+                    "plugin_configs": []
                 },
                 "www.valida.me":{
                     "balance":"roundrobin",
@@ -481,7 +497,9 @@ def test_parser_finds_services_clone_to_ssl_raw():
                     "10.152.183.62:8080"
                     ],
                     "certbot": False,
-                    "redirect_ssl": False
+                    "proto": "",
+                    "redirect_ssl": False,
+                    "plugin_configs": []
                 }
             },
             "mode": "http",
@@ -499,7 +517,9 @@ def test_parser_finds_services_clone_to_ssl_raw():
                     "10.152.183.215:8080"
                     ],
                     "certbot": False,
-                    "redirect_ssl": False
+                    "proto": "",
+                    "redirect_ssl": False,
+                    "plugin_configs": []
                 }
             },
             "mode": "http",
@@ -514,6 +534,37 @@ def test_parser_finds_services_clone_to_ssl_raw():
 
     assert parsed_object == processed
     assert [] == cfg.certbot_hosts
+
+def test_parser_fcgi():
+    """Test FastCGI support with proto and socket parameters"""
+    line_list = load_fixture("services-fcgi")
+
+    result = {
+        "customerrors": False,
+        "stats": {
+            "port": 0
+        }
+    }
+
+    cfg = easymapping.HaproxyConfigGenerator(result)
+    haproxy_config = cfg.generate(line_list)
+
+    assert len(haproxy_config) > 0
+
+    # Verify proto fcgi is in the output
+    assert "proto fcgi" in haproxy_config
+
+    # Verify Unix socket path is used
+    assert "/run/php/php-fpm.sock" in haproxy_config
+
+    # Verify TCP connection is also present
+    assert "172.17.0.3:9000" in haproxy_config
+
+    path = os.path.dirname(os.path.realpath(__file__))
+    with open(path + "/expected/services-fcgi.txt", 'r') as expected_file:
+        assert expected_file.read() == haproxy_config
+    assert [] == cfg.certbot_hosts
+
 
 # test_parser_finds_services_raw()
 # test_parser_tcp()

@@ -1,0 +1,121 @@
+# ==============================================================================
+# EXAMPLE: IP Whitelist Plugin for Kubernetes
+# ==============================================================================
+#
+# WHAT THIS DEMONSTRATES:
+# - Restricting access to specific IP addresses or CIDR ranges
+# - Using annotations for IP-based access control
+# - Protecting admin panels or sensitive services in Kubernetes
+# - Custom HTTP status code for blocked requests
+#
+# REQUIREMENTS (run these first):
+# ```bash
+# # 1. Ensure EasyHAProxy is installed in your cluster
+# kubectl create namespace easyhaproxy
+# kubectl apply -f https://raw.githubusercontent.com/byjg/docker-easy-haproxy/4.6.0/deploy/kubernetes/easyhaproxy-daemonset.yml
+#
+# # 2. IMPORTANT: Edit this file (line 80) and update allowed_ips
+# #    with your actual office/VPN IP addresses or networks
+# ```
+#
+# HOW TO START:
+# ```bash
+# kubectl apply -f ip-whitelist.yml
+# ```
+#
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Check resources are created
+# kubectl get deployment,service,ingress -l app=admin
+#
+# # Test from allowed IP
+# kubectl port-forward -n easyhaproxy deployment/easyhaproxy 8080:80
+# curl -H "Host: admin.example.local" http://localhost:8080
+# # Expected: 200 OK with "Admin Panel - IP Restricted" (if your IP is in allowed_ips)
+#
+# # Test from non-allowed IP
+# # Expected: HTTP 403 Forbidden
+# ```
+#
+# CLEAN UP:
+# ```bash
+# kubectl delete -f ip-whitelist.yml
+# ```
+#
+# ==============================================================================
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-service
+  namespace: default
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+    app: admin
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: admin
+  template:
+    metadata:
+      labels:
+        app: admin
+    spec:
+      containers:
+      - name: admin
+        image: byjg/static-httpserver
+        ports:
+        - containerPort: 8080
+        env:
+        - name: TITLE
+          value: "Admin Panel - IP Restricted"
+        resources:
+          limits:
+            cpu: '0.1'
+            memory: '64Mi'
+          requests:
+            cpu: '0.05'
+            memory: '32Mi'
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: easyhaproxy-ingress
+
+    # Enable IP whitelist plugin
+    easyhaproxy.plugins: "ip_whitelist"
+
+    # Allow specific IPs and networks
+    # UPDATE THIS with your actual office/VPN IPs!
+    easyhaproxy.plugin.ip_whitelist.allowed_ips: "203.0.113.0/24,198.51.100.42,10.0.0.0/8"
+
+    # Status code to return for blocked IPs
+    easyhaproxy.plugin.ip_whitelist.status_code: "403"
+  name: admin-ingress-whitelist
+  namespace: default
+spec:
+  rules:
+  - host: admin.example.local
+    http:
+      paths:
+      - backend:
+          service:
+            name: admin-service
+            port:
+              number: 8080
+        pathType: ImplementationSpecific

@@ -88,6 +88,23 @@ class ContainerEnv:
 
             os.environ['EASYHAPROXY_CERTBOT_SERVER'] = env_vars["certbot"]["server"]
 
+        # Plugin configuration
+        env_vars["plugins"] = {
+            "abort_on_error": os.getenv("EASYHAPROXY_PLUGINS_ABORT_ON_ERROR", "false").lower() == "true",
+            "enabled": os.getenv("EASYHAPROXY_PLUGINS_ENABLED", "").split(",") if os.getenv("EASYHAPROXY_PLUGINS_ENABLED") else [],
+            "config": {}  # Individual plugin configs from env vars
+        }
+
+        # Parse individual plugin configs (e.g., EASYHAPROXY_PLUGIN_CLOUDFLARE_*)
+        for key, value in os.environ.items():
+            if key.startswith("EASYHAPROXY_PLUGIN_"):
+                parts = key.split("_", 3)  # ['EASYHAPROXY', 'PLUGIN', 'NAME', 'KEY']
+                if len(parts) >= 4:
+                    plugin_name = parts[2].lower()
+                    config_key = "_".join(parts[3:]).lower()
+                    env_vars["plugins"]["config"].setdefault(plugin_name, {})
+                    env_vars["plugins"]["config"][plugin_name][config_key] = value
+
         return env_vars
 
 
