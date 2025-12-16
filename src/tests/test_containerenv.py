@@ -25,7 +25,11 @@ def test_container_env_empty():
                    "abort_on_error": False,
                    "config": {},
                    "enabled": []
-               }
+               },
+               "update_ingress_status": True,
+               "deployment_mode": "auto",
+               "external_hostname": "",
+               "ingress_status_update_interval": 30
            } == ContainerEnv.read()
 
     # os.environ['CERTBOT_LOG_LEVEL'] = 'warn'
@@ -55,7 +59,11 @@ def test_container_env_customerrors():
                        "abort_on_error": False,
                        "config": {},
                        "enabled": []
-                   }
+                   },
+                   "update_ingress_status": True,
+                   "deployment_mode": "auto",
+                   "external_hostname": "",
+                   "ingress_status_update_interval": 30
                } == ContainerEnv.read()
     finally:
         del os.environ['HAPROXY_CUSTOMERRORS']
@@ -85,7 +93,11 @@ def test_container_env_sslmode():
                        "abort_on_error": False,
                        "config": {},
                        "enabled": []
-                   }
+                   },
+                   "update_ingress_status": True,
+                   "deployment_mode": "auto",
+                   "external_hostname": "",
+                   "ingress_status_update_interval": 30
                } == ContainerEnv.read()
     finally:
         del os.environ['EASYHAPROXY_SSL_MODE']
@@ -116,7 +128,11 @@ def test_container_env_stats():
                        "abort_on_error": False,
                        "config": {},
                        "enabled": []
-                   }
+                   },
+                   "update_ingress_status": True,
+                   "deployment_mode": "auto",
+                   "external_hostname": "",
+                   "ingress_status_update_interval": 30
                } == ContainerEnv.read()
     finally:
         del os.environ['HAPROXY_USERNAME']
@@ -153,7 +169,11 @@ def test_container_env_stats_password():
                        "abort_on_error": False,
                        "config": {},
                        "enabled": []
-                   }
+                   },
+                   "update_ingress_status": True,
+                   "deployment_mode": "auto",
+                   "external_hostname": "",
+                   "ingress_status_update_interval": 30
                } == ContainerEnv.read()
     finally:
         del os.environ['HAPROXY_PASSWORD']
@@ -190,7 +210,11 @@ def test_container_env_stats_password_2():
                        "abort_on_error": False,
                        "config": {},
                        "enabled": []
-                   }
+                   },
+                   "update_ingress_status": True,
+                   "deployment_mode": "auto",
+                   "external_hostname": "",
+                   "ingress_status_update_interval": 30
                } == ContainerEnv.read()
     finally:
         del os.environ['HAPROXY_USERNAME']
@@ -224,7 +248,11 @@ def test_container_env_certbot_email():
                        "abort_on_error": False,
                        "config": {},
                        "enabled": []
-                   }
+                   },
+                   "update_ingress_status": True,
+                   "deployment_mode": "auto",
+                   "external_hostname": "",
+                   "ingress_status_update_interval": 30
                } == ContainerEnv.read()
     finally:
         del os.environ['EASYHAPROXY_CERTBOT_EMAIL']
@@ -262,7 +290,11 @@ def test_container_env_certbot_full():
                "abort_on_error": False,
                "config": {},
                "enabled": []
-           }
+           },
+           "update_ingress_status": True,
+           "deployment_mode": "auto",
+           "external_hostname": "",
+           "ingress_status_update_interval": 30
         } == ContainerEnv.read()
     finally:
         del os.environ['EASYHAPROXY_CERTBOT_EMAIL']
@@ -302,7 +334,11 @@ def test_container_log_level():
                "abort_on_error": False,
                "config": {},
                "enabled": []
-           }
+           },
+           "update_ingress_status": True,
+           "deployment_mode": "auto",
+           "external_hostname": "",
+           "ingress_status_update_interval": 30
        } == ContainerEnv.read()
     finally:
         del os.environ['CERTBOT_LOG_LEVEL']
