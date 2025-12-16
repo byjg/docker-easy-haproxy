@@ -38,6 +38,17 @@ ingressClass:
   # Additional annotations for the IngressClass
   annotations: {}
 
+# Ingress status update configuration
+ingressStatus:
+  # Enable updating ingress status with load balancer IPs
+  enabled: true
+  # Deployment mode: auto (detect), daemonset, nodeport, or clusterip
+  deploymentMode: auto
+  # External hostname override (for ClusterIP mode without LoadBalancer)
+  externalHostname: ""
+  # How often to update status (seconds)
+  updateInterval: 30
+
 podAnnotations: {}
 
 podSecurityContext: {}

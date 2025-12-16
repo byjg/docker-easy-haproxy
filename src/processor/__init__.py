@@ -226,7 +226,213 @@ class Kubernetes(ProcessorInterface):
         self.api_instance = client.CoreV1Api()
         self.v1 = client.NetworkingV1Api()
         self.cert_cache = {}
+        self.deployment_mode_cache = None
+        self.ingress_addresses_cache = None
+        self.addresses_cache_time = 0
         super().__init__()
+
+    def _detect_deployment_mode(self):
+        """
+        Detect the deployment mode (daemonset, nodeport, clusterip).
+        Returns: tuple (mode: str, service: V1Service or None)
+        """
+        import os
+        import time
+
+        # Return cached if available
+        if self.deployment_mode_cache:
+            return self.deployment_mode_cache
+
+        env_config = ContainerEnv.read()
+
+        # Check for manual override
+        if env_config['deployment_mode'] != 'auto':
+            loggerEasyHaproxy.info(f"Using manual deployment mode: {env_config['deployment_mode']}")
+            service = self._get_easyhaproxy_service() if env_config['deployment_mode'] in ['nodeport', 'clusterip'] else None
+            self.deployment_mode_cache = (env_config['deployment_mode'], service)
+            return self.deployment_mode_cache
+
+        try:
+            # Get current pod name from hostname
+            pod_name = socket.gethostname()
+            namespace = os.getenv('POD_NAMESPACE', 'easyhaproxy')
+
+            # Read current pod
+            pod = self.api_instance.read_namespaced_pod(pod_name, namespace)
+
+            # Check owner references to determine if DaemonSet or Deployment
+            if pod.metadata.owner_references:
+                owner_kind = pod.metadata.owner_references[0].kind
+
+                if owner_kind == 'DaemonSet':
+                    loggerEasyHaproxy.info("Detected deployment mode: daemonset")
+                    self.deployment_mode_cache = ('daemonset', None)
+                    return self.deployment_mode_cache
+                elif owner_kind in ['ReplicaSet', 'Deployment']:
+                    # Check if Service exists
+                    service = self._get_easyhaproxy_service()
+                    if service:
+                        if service.spec.type == 'NodePort':
+                            loggerEasyHaproxy.info("Detected deployment mode: nodeport")
+                            self.deployment_mode_cache = ('nodeport', service)
+                            return self.deployment_mode_cache
+                        else:
+                            loggerEasyHaproxy.info("Detected deployment mode: clusterip")
+                            self.deployment_mode_cache = ('clusterip', service)
+                            return self.deployment_mode_cache
+        except Exception as e:
+            loggerEasyHaproxy.warn(f"Failed to detect deployment mode: {e}, defaulting to daemonset")
+
+        self.deployment_mode_cache = ('daemonset', None)
+        return self.deployment_mode_cache
+
+    def _get_easyhaproxy_service(self):
+        """Get the EasyHAProxy service if it exists."""
+        import os
+
+        try:
+            namespace = os.getenv('POD_NAMESPACE', 'easyhaproxy')
+            # Try common service names
+            service_names = ['easyhaproxy', 'ingress-easyhaproxy']
+
+            for service_name in service_names:
+                try:
+                    service = self.api_instance.read_namespaced_service(service_name, namespace)
+                    return service
+                except:
+                    continue
+            return None
+        except Exception as e:
+            loggerEasyHaproxy.warn(f"Failed to get EasyHAProxy service: {e}")
+            return None
+
+    def _get_ingress_addresses(self, mode, service):
+        """
+        Get IP addresses or hostnames to report in ingress status.
+
+        Args:
+            mode: Deployment mode (daemonset, nodeport, clusterip)
+            service: V1Service object (for nodeport/clusterip modes)
+
+        Returns:
+            List of dicts: [{"ip": "..."}, {"hostname": "..."}]
+        """
+        import os
+        import time
+
+        env_config = ContainerEnv.read()
+        cache_ttl = env_config.get('ingress_status_update_interval', 30)
+
+        # Return cached if still valid
+        if self.ingress_addresses_cache and (time.time() - self.addresses_cache_time) < cache_ttl:
+            return self.ingress_addresses_cache
+
+        addresses = []
+
+        try:
+            if mode == 'daemonset':
+                # Get nodes where DaemonSet pods are running
+                namespace = os.getenv('POD_NAMESPACE', 'easyhaproxy')
+                label_selector = "app.kubernetes.io/name=easyhaproxy"
+
+                pods = self.api_instance.list_namespaced_pod(namespace, label_selector=label_selector)
+                node_names = set(pod.spec.node_name for pod in pods.items if pod.spec.node_name)
+
+                # Get external IPs from these nodes
+                for node_name in node_names:
+                    node = self.api_instance.read_node(node_name)
+                    for addr in node.status.addresses:
+                        if addr.type == 'ExternalIP':
+                            addresses.append({"ip": addr.address})
+                            break
+                    else:
+                        # Fallback to InternalIP if no ExternalIP
+                        for addr in node.status.addresses:
+                            if addr.type == 'InternalIP':
+                                addresses.append({"ip": addr.address})
+                                break
+
+            elif mode == 'nodeport':
+                # Get all node IPs (traffic can reach any node via NodePort)
+                nodes = self.api_instance.list_node()
+                for node in nodes.items:
+                    for addr in node.status.addresses:
+                        if addr.type == 'ExternalIP':
+                            addresses.append({"ip": addr.address})
+                            break
+                    else:
+                        # Fallback to InternalIP
+                        for addr in node.status.addresses:
+                            if addr.type == 'InternalIP':
+                                addresses.append({"ip": addr.address})
+                                break
+
+            elif mode == 'clusterip':
+                # Check if LoadBalancer status is available
+                if service and service.status and service.status.load_balancer:
+                    lb_ingress = service.status.load_balancer.ingress or []
+                    for ing in lb_ingress:
+                        if ing.ip:
+                            addresses.append({"ip": ing.ip})
+                        if ing.hostname:
+                            addresses.append({"hostname": ing.hostname})
+
+                # If no LoadBalancer, check for external hostname override
+                if not addresses and env_config['external_hostname']:
+                    addresses.append({"hostname": env_config['external_hostname']})
+
+                # Fallback to ClusterIP
+                if not addresses and service:
+                    addresses.append({"ip": service.spec.cluster_ip})
+
+        except Exception as e:
+            loggerEasyHaproxy.warn(f"Failed to get ingress addresses: {e}")
+
+        # Cache the result
+        self.ingress_addresses_cache = addresses
+        self.addresses_cache_time = time.time()
+
+        return addresses
+
+    def _update_ingress_status(self, ingress, addresses):
+        """
+        Update the status of an ingress resource.
+
+        Args:
+            ingress: V1Ingress object
+            addresses: List of address dicts [{"ip": "..."}, {"hostname": "..."}]
+        """
+        if not addresses:
+            return
+
+        try:
+            # Create status patch
+            status_body = {
+                "status": {
+                    "loadBalancer": {
+                        "ingress": addresses
+                    }
+                }
+            }
+
+            # Update status using patch (not replace)
+            self.v1.patch_namespaced_ingress_status(
+                name=ingress.metadata.name,
+                namespace=ingress.metadata.namespace,
+                body=status_body,
+                field_manager="easyhaproxy"
+            )
+
+            loggerEasyHaproxy.debug(
+                f"Updated ingress {ingress.metadata.namespace}/{ingress.metadata.name} "
+                f"status with {len(addresses)} address(es)"
+            )
+
+        except Exception as e:
+            loggerEasyHaproxy.warn(
+                f"Failed to update status for ingress "
+                f"{ingress.metadata.namespace}/{ingress.metadata.name}: {e}"
+            )
 
     def _check_annotation(self, annotations, key, default=None):
         if key not in annotations:
@@ -236,6 +442,14 @@ class Kubernetes(ProcessorInterface):
     def inspect_network(self):
 
         ret = self.v1.list_ingress_for_all_namespaces(watch=False)
+
+        # Detect deployment mode once per cycle for ingress status updates
+        env_config = ContainerEnv.read()
+        if env_config['update_ingress_status']:
+            deployment_mode, service = self._detect_deployment_mode()
+            ingress_addresses = self._get_ingress_addresses(deployment_mode, service)
+        else:
+            ingress_addresses = []
 
         self.parsed_object = {}
         for ingress in ret.items:
@@ -340,3 +554,7 @@ class Kubernetes(ProcessorInterface):
                     if cluster_ip not in self.parsed_object.keys():
                         self.parsed_object[cluster_ip] = data
                     self.parsed_object[cluster_ip].update(rule_data)
+
+            # Update ingress status if enabled
+            if env_config['update_ingress_status'] and ingress_addresses:
+                self._update_ingress_status(ingress, ingress_addresses)

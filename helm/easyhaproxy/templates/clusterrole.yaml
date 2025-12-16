@@ -17,7 +17,7 @@ rules:
   resources:
   # - configmaps
   # - endpoints
-  # - nodes
+  - nodes
   - pods
   - services
   - namespaces
@@ -31,19 +31,18 @@ rules:
   - "networking.k8s.io"
   resources:
   - ingresses
-  # - ingresses/status
+  - ingresses/status
   - ingressclasses
   verbs:
   - get
   - list
   - watch
-# - apiGroups:
-#   - "extensions"
-#   - "networking.k8s.io"
-#   resources:
-#   - ingresses/status
-#   verbs:
-#   - update
+- apiGroups:
+  - "networking.k8s.io"
+  resources:
+  - ingresses/status
+  verbs:
+  - patch
 - apiGroups:
   - ""
   resources:
