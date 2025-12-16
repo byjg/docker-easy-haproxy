@@ -113,7 +113,6 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
-    kubernetes.io/ingress.class: easyhaproxy-ingress
     # Cloudflare IP restoration + deny pages
     easyhaproxy.plugins: "cloudflare,deny_pages"
     easyhaproxy.plugin.deny_pages.paths: "/admin,/wp-admin,/wp-login.php,/.env,/config"
@@ -121,6 +120,9 @@ metadata:
   name: website-ingress
   namespace: default
 spec:
+  # Use ingressClassName instead of the deprecated annotation
+  # For backward compatibility, annotation kubernetes.io/ingress.class is still supported
+  ingressClassName: easyhaproxy-ingress
   rules:
   - host: website.example.local
     http:
@@ -179,7 +181,6 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
-    kubernetes.io/ingress.class: easyhaproxy-ingress
     # JWT validation + block internal endpoints
     easyhaproxy.plugins: "jwt_validator,deny_pages"
     # JWT config
@@ -193,6 +194,9 @@ metadata:
   name: api-ingress
   namespace: default
 spec:
+  # Use ingressClassName instead of the deprecated annotation
+  # For backward compatibility, annotation kubernetes.io/ingress.class is still supported
+  ingressClassName: easyhaproxy-ingress
   rules:
   - host: api.example.local
     http:
@@ -251,7 +255,6 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
-    kubernetes.io/ingress.class: easyhaproxy-ingress
     # IP whitelist only (strictest security)
     easyhaproxy.plugins: "ip_whitelist"
     # UPDATE with your office/VPN IPs!
@@ -260,6 +263,9 @@ metadata:
   name: admin-ingress
   namespace: default
 spec:
+  # Use ingressClassName instead of the deprecated annotation
+  # For backward compatibility, annotation kubernetes.io/ingress.class is still supported
+  ingressClassName: easyhaproxy-ingress
   rules:
   - host: admin.example.local
     http:

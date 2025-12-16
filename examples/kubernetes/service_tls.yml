@@ -57,11 +57,12 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  annotations:
-    kubernetes.io/ingress.class: easyhaproxy-ingress
   name: tls-example
   namespace: default
 spec:
+  # Use ingressClassName instead of the deprecated annotation
+  # For backward compatibility, annotation kubernetes.io/ingress.class is still supported
+  ingressClassName: easyhaproxy-ingress
   tls:
   - hosts:
       - host2.local

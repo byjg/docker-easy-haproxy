@@ -239,9 +239,18 @@ class Kubernetes(ProcessorInterface):
 
         self.parsed_object = {}
         for ingress in ret.items:
-            if 'kubernetes.io/ingress.class' not in ingress.metadata.annotations:
-                continue
-            if ingress.metadata.annotations['kubernetes.io/ingress.class'] != "easyhaproxy-ingress":
+            # Support both new spec.ingressClassName and deprecated annotation for backward compatibility
+            ingress_class = None
+
+            # Check new spec.ingressClassName first (preferred)
+            if hasattr(ingress.spec, 'ingress_class_name') and ingress.spec.ingress_class_name is not None:
+                ingress_class = ingress.spec.ingress_class_name
+            # Fall back to deprecated annotation
+            elif ingress.metadata.annotations and 'kubernetes.io/ingress.class' in ingress.metadata.annotations:
+                ingress_class = ingress.metadata.annotations['kubernetes.io/ingress.class']
+
+            # Skip if no ingress class is defined or it doesn't match
+            if ingress_class != "easyhaproxy-ingress":
                 continue
 
             ssl_hosts = []

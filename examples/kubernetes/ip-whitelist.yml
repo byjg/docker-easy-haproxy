@@ -95,8 +95,6 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
-    kubernetes.io/ingress.class: easyhaproxy-ingress
-
     # Enable IP whitelist plugin
     easyhaproxy.plugins: "ip_whitelist"
 
@@ -109,6 +107,9 @@ metadata:
   name: admin-ingress-whitelist
   namespace: default
 spec:
+  # Use ingressClassName instead of the deprecated annotation
+  # For backward compatibility, annotation kubernetes.io/ingress.class is still supported
+  ingressClassName: easyhaproxy-ingress
   rules:
   - host: admin.example.local
     http:

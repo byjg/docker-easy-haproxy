@@ -7,9 +7,10 @@ sidebar_position: 1
 ## Setup Kubernetes EasyHAProxy
 
 :::info How it works
-EasyHAProxy for Kubernetes operates by querying all ingress definitions with the annotation
-`kubernetes.io/ingress.class: easyhaproxy-ingress`. Upon finding this annotation,
-EasyHAProxy immediately sets up HAProxy and begins serving traffic.
+EasyHAProxy for Kubernetes operates by querying all ingress definitions with either the
+`spec.ingressClassName: easyhaproxy-ingress` field (recommended) or the deprecated annotation
+`kubernetes.io/ingress.class: easyhaproxy-ingress` (for backward compatibility). Upon finding
+a matching ingress class, EasyHAProxy immediately sets up HAProxy and begins serving traffic.
 :::
 
 For Kubernetes installations, there are three available installation modes:
@@ -54,18 +55,18 @@ If necessary, you can configure environment variables. To get a list of the vari
 
 ## Running containers
 
-Your container only requires creating an ingress with the annotation `kubernetes.io/ingress.class: easyhaproxy-ingress` pointing to your service.
+Your container only requires creating an ingress with the `spec.ingressClassName: easyhaproxy-ingress` field pointing to your service.
 
 e.g.
 
 ```yaml
 kind: Ingress
 metadata:
-  annotations:
-    kubernetes.io/ingress.class: easyhaproxy-ingress
   name: example-ingress
   namespace: example
 spec:
+  # Use ingressClassName (recommended)
+  ingressClassName: easyhaproxy-ingress
   rules:
   - host: example.org
     http:
@@ -77,6 +78,10 @@ spec:
               number: 8080
         pathType: ImplementationSpecific
 ```
+
+:::note Backward Compatibility
+The deprecated annotation `kubernetes.io/ingress.class: easyhaproxy-ingress` is still supported for backward compatibility, but `spec.ingressClassName` is the recommended approach for new deployments.
+:::
 
 Once the container is running, EasyHAProxy will detect automatically and start to redirect all traffic from `example.org:80` to your container at port 8080.
 
@@ -92,7 +97,7 @@ You don't need to expose any port in your container.
 
 | annotation                          | Description                                                                         | Default      | Example                    |
 |-------------------------------------|-------------------------------------------------------------------------------------|--------------|----------------------------|
-| kubernetes.io/ingress.class         | (required) Activate EasyHAProxy.                                                    | **required** | easyhaproxy-ingress        |
+| kubernetes.io/ingress.class         | (deprecated) Activate EasyHAProxy. Use `spec.ingressClassName` instead.             | *optional*   | easyhaproxy-ingress        |
 | easyhaproxy.redirect_ssl            | (optional) Boolean. Force redirect all endpoints to HTTPS.                          | false        | true or false              |
 | easyhaproxy.certbot                 | (optional) Boolean. It will request certbot certificates for the ingresses domains. | false        | true or false              |
 | easyhaproxy.redirect                | (optional) JSON. Key pair with a domain and its destination.                        | *empty*      | \{"domain":"redirect_url"} |
@@ -116,11 +121,11 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
-    kubernetes.io/ingress.class: easyhaproxy-ingress
     easyhaproxy.plugins: "cloudflare,deny_pages"
   name: example-ingress
   namespace: example
 spec:
+  ingressClassName: easyhaproxy-ingress
   rules:
   - host: example.org
     http:
@@ -142,13 +147,13 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
-    kubernetes.io/ingress.class: easyhaproxy-ingress
     easyhaproxy.plugins: "deny_pages"
     easyhaproxy.plugin.deny_pages.paths: "/admin,/private,/config"
     easyhaproxy.plugin.deny_pages.status_code: "403"
   name: secure-app-ingress
   namespace: production
 spec:
+  ingressClassName: easyhaproxy-ingress
   rules:
   - host: myapp.example.com
     http:
@@ -168,12 +173,13 @@ spec:
 ```yaml
 metadata:
   annotations:
-    kubernetes.io/ingress.class: easyhaproxy-ingress
     easyhaproxy.plugins: "jwt_validator"
     easyhaproxy.plugin.jwt_validator.algorithm: "RS256"
     easyhaproxy.plugin.jwt_validator.issuer: "https://auth.example.com/"
     easyhaproxy.plugin.jwt_validator.audience: "https://api.example.com"
     easyhaproxy.plugin.jwt_validator.pubkey_path: "/etc/haproxy/jwt_keys/api_pubkey.pem"
+spec:
+  ingressClassName: easyhaproxy-ingress
 ```
 
 **Note:** For JWT validation, you'll need to mount the public key file into the EasyHAProxy pod. See [Using Plugins](plugins.md#protect-api-with-jwt-authentication) for details.
@@ -183,10 +189,11 @@ metadata:
 ```yaml
 metadata:
   annotations:
-    kubernetes.io/ingress.class: easyhaproxy-ingress
     easyhaproxy.plugins: "ip_whitelist"
     easyhaproxy.plugin.ip_whitelist.allowed_ips: "192.168.1.0/24,10.0.0.5"
     easyhaproxy.plugin.ip_whitelist.status_code: "403"
+spec:
+  ingressClassName: easyhaproxy-ingress
 ```
 
 **Restore Cloudflare visitor IPs:**
@@ -194,8 +201,9 @@ metadata:
 ```yaml
 metadata:
   annotations:
-    kubernetes.io/ingress.class: easyhaproxy-ingress
     easyhaproxy.plugins: "cloudflare"
+spec:
+  ingressClassName: easyhaproxy-ingress
 ```
 
 **Multiple plugins together:**
@@ -203,10 +211,11 @@ metadata:
 ```yaml
 metadata:
   annotations:
-    kubernetes.io/ingress.class: easyhaproxy-ingress
     easyhaproxy.plugins: "cloudflare,deny_pages"
     easyhaproxy.plugin.deny_pages.paths: "/wp-admin,/wp-login.php"
     easyhaproxy.plugin.deny_pages.status_code: "404"
+spec:
+  ingressClassName: easyhaproxy-ingress
 ```
 
 ### Global Plugin Configuration
@@ -238,17 +247,17 @@ For more information on plugin types and available plugins, see the [Using Plugi
 
 ## Certbot / ACME / Letsencrypt
 
-It is necessary add the annotation `easyhaproxy.certbot` to the ingress configuration:
+It is necessary to add the annotation `easyhaproxy.certbot` to the ingress configuration:
 
 ```yaml
 kind: Ingress
 metadata:
   annotations:
-    kubernetes.io/ingress.class: easyhaproxy-ingress
     easyhaproxy.certbot: 'true'
   name: example-ingress
   namespace: example
 spec:
+  ingressClassName: easyhaproxy-ingress
   ....
 ```
 
@@ -276,11 +285,10 @@ type: kubernetes.io/tls
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  annotations:
-    kubernetes.io/ingress.class: easyhaproxy-ingress
   name: tls-example
   namespace: default
 spec:
+  ingressClassName: easyhaproxy-ingress
   tls:
   - hosts:
       - host2.local
