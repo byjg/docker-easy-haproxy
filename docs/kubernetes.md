@@ -8,7 +8,7 @@ sidebar_position: 1
 
 :::info How it works
 EasyHAProxy for Kubernetes operates by querying all ingress definitions with either the
-`spec.ingressClassName: easyhaproxy-ingress` field (recommended) or the deprecated annotation
+`spec.ingressClassName: easyhaproxy` field (recommended) or the deprecated annotation
 `kubernetes.io/ingress.class: easyhaproxy-ingress` (for backward compatibility). Upon finding
 a matching ingress class, EasyHAProxy immediately sets up HAProxy and begins serving traffic.
 :::
@@ -55,7 +55,7 @@ If necessary, you can configure environment variables. To get a list of the vari
 
 ## Running containers
 
-Your container only requires creating an ingress with the `spec.ingressClassName: easyhaproxy-ingress` field pointing to your service.
+Your container only requires creating an ingress with the `spec.ingressClassName: easyhaproxy` field pointing to your service.
 
 e.g.
 
@@ -66,7 +66,7 @@ metadata:
   namespace: example
 spec:
   # Use ingressClassName (recommended)
-  ingressClassName: easyhaproxy-ingress
+  ingressClassName: easyhaproxy
   rules:
   - host: example.org
     http:
@@ -125,7 +125,7 @@ metadata:
   name: example-ingress
   namespace: example
 spec:
-  ingressClassName: easyhaproxy-ingress
+  ingressClassName: easyhaproxy
   rules:
   - host: example.org
     http:
@@ -153,7 +153,7 @@ metadata:
   name: secure-app-ingress
   namespace: production
 spec:
-  ingressClassName: easyhaproxy-ingress
+  ingressClassName: easyhaproxy
   rules:
   - host: myapp.example.com
     http:
@@ -179,7 +179,7 @@ metadata:
     easyhaproxy.plugin.jwt_validator.audience: "https://api.example.com"
     easyhaproxy.plugin.jwt_validator.pubkey_path: "/etc/haproxy/jwt_keys/api_pubkey.pem"
 spec:
-  ingressClassName: easyhaproxy-ingress
+  ingressClassName: easyhaproxy
 ```
 
 **Note:** For JWT validation, you'll need to mount the public key file into the EasyHAProxy pod. See [Using Plugins](plugins.md#protect-api-with-jwt-authentication) for details.
@@ -193,7 +193,7 @@ metadata:
     easyhaproxy.plugin.ip_whitelist.allowed_ips: "192.168.1.0/24,10.0.0.5"
     easyhaproxy.plugin.ip_whitelist.status_code: "403"
 spec:
-  ingressClassName: easyhaproxy-ingress
+  ingressClassName: easyhaproxy
 ```
 
 **Restore Cloudflare visitor IPs:**
@@ -203,7 +203,7 @@ metadata:
   annotations:
     easyhaproxy.plugins: "cloudflare"
 spec:
-  ingressClassName: easyhaproxy-ingress
+  ingressClassName: easyhaproxy
 ```
 
 **Multiple plugins together:**
@@ -215,7 +215,7 @@ metadata:
     easyhaproxy.plugin.deny_pages.paths: "/wp-admin,/wp-login.php"
     easyhaproxy.plugin.deny_pages.status_code: "404"
 spec:
-  ingressClassName: easyhaproxy-ingress
+  ingressClassName: easyhaproxy
 ```
 
 ### Global Plugin Configuration
@@ -257,7 +257,7 @@ metadata:
   name: example-ingress
   namespace: example
 spec:
-  ingressClassName: easyhaproxy-ingress
+  ingressClassName: easyhaproxy
   ....
 ```
 
@@ -288,7 +288,7 @@ metadata:
   name: tls-example
   namespace: default
 spec:
-  ingressClassName: easyhaproxy-ingress
+  ingressClassName: easyhaproxy
   tls:
   - hosts:
       - host2.local

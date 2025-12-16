@@ -241,16 +241,21 @@ class Kubernetes(ProcessorInterface):
         for ingress in ret.items:
             # Support both new spec.ingressClassName and deprecated annotation for backward compatibility
             ingress_class = None
+            is_match = False
 
             # Check new spec.ingressClassName first (preferred)
             if hasattr(ingress.spec, 'ingress_class_name') and ingress.spec.ingress_class_name is not None:
                 ingress_class = ingress.spec.ingress_class_name
+                # Modern spec uses 'easyhaproxy'
+                is_match = (ingress_class == "easyhaproxy")
             # Fall back to deprecated annotation
             elif ingress.metadata.annotations and 'kubernetes.io/ingress.class' in ingress.metadata.annotations:
                 ingress_class = ingress.metadata.annotations['kubernetes.io/ingress.class']
+                # Deprecated annotation uses 'easyhaproxy-ingress' for backward compatibility
+                is_match = (ingress_class == "easyhaproxy-ingress")
 
             # Skip if no ingress class is defined or it doesn't match
-            if ingress_class != "easyhaproxy-ingress":
+            if not is_match:
                 continue
 
             ssl_hosts = []

@@ -6,7 +6,7 @@ metadata:
   name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-1.0.1
+    helm.sh/chart: easyhaproxy-1.0.0
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
     app.kubernetes.io/version: "5.0.0"
@@ -19,7 +19,7 @@ metadata:
   name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-1.0.1
+    helm.sh/chart: easyhaproxy-1.0.0
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
     app.kubernetes.io/version: "5.0.0"
@@ -41,12 +41,11 @@ rules:
   - list
   - watch
 - apiGroups:
-  - "extensions"
   - "networking.k8s.io"
   resources:
   - ingresses
   # - ingresses/status
-  # - ingressclasses
+  - ingressclasses
   verbs:
   - get
   - list
@@ -85,7 +84,7 @@ metadata:
   name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-1.0.1
+    helm.sh/chart: easyhaproxy-1.0.0
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
     app.kubernetes.io/version: "5.0.0"
@@ -107,7 +106,7 @@ metadata:
   name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-1.0.1
+    helm.sh/chart: easyhaproxy-1.0.0
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
     app.kubernetes.io/version: "5.0.0"
@@ -139,12 +138,13 @@ metadata:
   name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-1.0.1
+    helm.sh/chart: easyhaproxy-1.0.0
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
     app.kubernetes.io/version: "5.0.0"
     app.kubernetes.io/managed-by: Helm
 spec:
+  replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: easyhaproxy
@@ -155,15 +155,6 @@ spec:
         app.kubernetes.io/name: easyhaproxy
         app.kubernetes.io/instance: ingress
     spec:
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: easyhaproxy/node
-                operator: In
-                values:
-                  - master
       serviceAccountName: ingress-easyhaproxy
       securityContext:
         {}
@@ -184,9 +175,7 @@ spec:
               containerPort: 1936
               
           resources:
-            requests:
-              cpu: 100m
-              memory: 128Mi
+            {}
           env:
             - name: EASYHAPROXY_DISCOVER
               value: kubernetes
@@ -206,3 +195,17 @@ spec:
               value: DEBUG
             - name: CERTBOT_LOG_LEVEL
               value: DEBUG
+---
+# Source: easyhaproxy/templates/ingressclass.yaml
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: easyhaproxy
+  labels:
+    helm.sh/chart: easyhaproxy-1.0.0
+    app.kubernetes.io/name: easyhaproxy
+    app.kubernetes.io/instance: ingress
+    app.kubernetes.io/version: "5.0.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  controller: byjg.com/easyhaproxy

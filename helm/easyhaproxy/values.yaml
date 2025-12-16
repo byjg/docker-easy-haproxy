@@ -31,6 +31,13 @@ serviceAccount:
   annotations: {}
   name: ""
 
+# IngressClass configuration
+ingressClass:
+  # Create IngressClass resource
+  create: true
+  # Additional annotations for the IngressClass
+  annotations: {}
+
 podAnnotations: {}
 
 podSecurityContext: {}

@@ -129,7 +129,7 @@ metadata:
 spec:
   # Use ingressClassName instead of the deprecated annotation
   # For backward compatibility, annotation kubernetes.io/ingress.class is still supported
-  ingressClassName: easyhaproxy-ingress
+  ingressClassName: easyhaproxy
   rules:
   - host: api.example.local
     http:
