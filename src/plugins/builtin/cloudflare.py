@@ -33,7 +33,7 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from functions import loggerEasyHaproxy
+from functions import logger_easyhaproxy
 from plugins import PluginContext, PluginInterface, PluginResult, PluginType
 
 
@@ -127,9 +127,9 @@ class CloudflarePlugin(PluginInterface):
                     for ip_range in self.CLOUDFLARE_IPS:
                         f.write(f"{ip_range}\n")
 
-                loggerEasyHaproxy.info(f"Cloudflare plugin: Written {len(self.CLOUDFLARE_IPS)} IP ranges to {self.ip_list_path}")
+                logger_easyhaproxy.info(f"Cloudflare plugin: Written {len(self.CLOUDFLARE_IPS)} IP ranges to {self.ip_list_path}")
             except Exception as e:
-                loggerEasyHaproxy.warning(f"Cloudflare plugin: Failed to write IP list to {self.ip_list_path}: {e}")
+                logger_easyhaproxy.warning(f"Cloudflare plugin: Failed to write IP list to {self.ip_list_path}: {e}")
 
         # Generate HAProxy config snippet
         haproxy_config = f"""# Cloudflare - Restore original visitor IP

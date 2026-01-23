@@ -74,7 +74,7 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from functions import loggerEasyHaproxy
+from functions import logger_easyhaproxy
 from plugins import PluginContext, PluginInterface, PluginResult, PluginType
 
 
@@ -180,7 +180,7 @@ class JwtValidatorPlugin(PluginInterface):
             domain_safe = context.domain.replace(".", "_").replace(":", "_")
             pubkey_file = f"/etc/haproxy/jwt_keys/{domain_safe}_pubkey.pem"
         else:
-            loggerEasyHaproxy.warning(f"JWT validator plugin for {context.domain}: No pubkey or pubkey_path configured")
+            logger_easyhaproxy.warning(f"JWT validator plugin for {context.domain}: No pubkey or pubkey_path configured")
             return PluginResult()
 
         # Build HAProxy configuration

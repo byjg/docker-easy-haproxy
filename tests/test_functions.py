@@ -4,41 +4,41 @@ import random
 import string
 from io import StringIO
 
-from functions import Functions, loggerCertbot, loggerEasyHaproxy, loggerHaproxy
+from functions import Functions, logger_certbot, logger_easyhaproxy, logger_haproxy
 
 log_stream = StringIO() # Create StringIO object
 log_handler = logging.StreamHandler(log_stream)
 log_formatter = logging.Formatter('%(levelname)s - %(message)s')
 log_handler.setFormatter(log_formatter)
-loggerDebug = logging.getLogger(__name__)
-loggerDebug.setLevel(logging.DEBUG)
-loggerDebug.addHandler(log_handler)
+logger_debug = logging.getLogger(__name__)
+logger_debug.setLevel(logging.DEBUG)
+logger_debug.addHandler(log_handler)
 
 def test_functions_check_local_level():
-    assert Functions.setup_log(loggerCertbot) == logging.INFO
-    assert Functions.setup_log(loggerHaproxy) == logging.INFO
-    assert Functions.setup_log(loggerEasyHaproxy) == logging.INFO
+    assert Functions.setup_log(logger_certbot) == logging.INFO
+    assert Functions.setup_log(logger_haproxy) == logging.INFO
+    assert Functions.setup_log(logger_easyhaproxy) == logging.INFO
 
     os.environ['CERTBOT_LOG_LEVEL'] = 'warn'
-    assert Functions.setup_log(loggerCertbot) == logging.WARNING
+    assert Functions.setup_log(logger_certbot) == logging.WARNING
     del os.environ['CERTBOT_LOG_LEVEL']
 
     os.environ['HAPROXY_LOG_LEVEL'] = 'warn'
-    assert Functions.setup_log(loggerHaproxy) == logging.WARNING
+    assert Functions.setup_log(logger_haproxy) == logging.WARNING
     del os.environ['HAPROXY_LOG_LEVEL']
 
     os.environ['EASYHAPROXY_LOG_LEVEL'] = 'warn'
-    assert Functions.setup_log(loggerEasyHaproxy) == logging.WARNING
+    assert Functions.setup_log(logger_easyhaproxy) == logging.WARNING
     del os.environ['EASYHAPROXY_LOG_LEVEL']
 
 
 def test_function_load_and_save():
     filename = '/tmp/x.txt'
     try:
-        assert os.path.exists(filename) == False
+        assert not os.path.exists(filename)
         text = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(50))
         Functions.save(filename, text)
-        assert os.path.exists(filename) == True
+        assert os.path.exists(filename)
         assert Functions.load(filename) == text
     finally:
         os.unlink(filename)
@@ -46,7 +46,7 @@ def test_function_load_and_save():
 def test_functions_run_bash_log_output():
     print()
     try:
-        return_code, result = Functions.run_bash(loggerDebug, "echo 'test run 1'", log_output=True,
+        return_code, result = Functions.run_bash(logger_debug, "echo 'test run 1'", log_output=True,
                                                  return_result=False)
         assert return_code == 0
         assert result == []
@@ -60,7 +60,7 @@ def test_functions_run_bash_log_output():
 def test_functions_run_bash_no_log_output():
     print()
     try:
-        return_code, result = Functions.run_bash(loggerDebug, "echo 'test run 2'", log_output=False,
+        return_code, result = Functions.run_bash(logger_debug, "echo 'test run 2'", log_output=False,
                                                  return_result=False)
         assert return_code == 0
         assert result == []
@@ -72,7 +72,7 @@ def test_functions_run_bash_no_log_output():
 def test_functions_run_bash_return():
     print()
     try:
-        return_code, result = Functions.run_bash(loggerDebug, "echo 'test run 3'", log_output=False,
+        return_code, result = Functions.run_bash(logger_debug, "echo 'test run 3'", log_output=False,
                                                  return_result=True)
         assert return_code == 0
         assert len(log_stream.getvalue()) == 0
@@ -84,7 +84,7 @@ def test_functions_run_bash_return():
 def test_functions_run_bash_log_and_return_output():
     print()
     try:
-        return_code, result = Functions.run_bash(loggerDebug, "echo 'test run 4'",
+        return_code, result = Functions.run_bash(logger_debug, "echo 'test run 4'",
                                                  log_output=True,
                                                  return_result=True)
         assert return_code == 0
@@ -99,7 +99,7 @@ def test_functions_run_bash_log_and_return_output():
 def test_functions_run_bash_ok():
     print()
     try:
-        return_code, result = Functions.run_bash(loggerDebug, "%s/fixtures/run_bash.sh" % os.path.dirname(__file__),
+        return_code, result = Functions.run_bash(logger_debug, f"{os.path.dirname(__file__)}/fixtures/run_bash.sh",
                                                  log_output=True,
                                                  return_result=False)
         assert return_code == 0
@@ -114,7 +114,7 @@ def test_functions_run_bash_ok():
 def test_functions_run_bash_fail():
     print()
     try:
-        return_code, result = Functions.run_bash(loggerDebug, "%s/fixtures/run_bash.sh 15" % os.path.dirname(__file__),
+        return_code, result = Functions.run_bash(logger_debug, f"{os.path.dirname(__file__)}/fixtures/run_bash.sh 15",
                                                  log_output=True,
                                                  return_result=False)
         assert return_code == 15
@@ -129,7 +129,7 @@ def test_functions_run_bash_fail():
 def test_functions_run_command_not_found():
     print()
     try:
-        return_code, result = Functions.run_bash(loggerDebug, "no_command_here",
+        return_code, result = Functions.run_bash(logger_debug, "no_command_here",
                                                  log_output=True,
                                                  return_result=False)
         assert return_code == -99

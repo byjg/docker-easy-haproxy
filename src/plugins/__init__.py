@@ -4,9 +4,9 @@ import sys
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from functions import loggerEasyHaproxy
+from functions import logger_easyhaproxy
 
 
 class PluginType(Enum):
@@ -89,7 +89,7 @@ class PluginManager:
         self.plugins: dict[str, PluginInterface] = {}
         self.global_plugins: list[PluginInterface] = []
         self.domain_plugins: list[PluginInterface] = []
-        self.logger = loggerEasyHaproxy
+        self.logger = logger_easyhaproxy
 
     def load_plugins(self) -> None:
         """

@@ -86,7 +86,7 @@ class ContainerEnv:
                     env_vars["certbot"]["eab_hmac_key"] = os.environ['EASYHAPROXY_CERTBOT_EAB_HMAC_KEY'] = resp["eab_hmac_key"]
                 else:
                     del os.environ["EASYHAPROXY_CERTBOT_EMAIL"]
-                    loggerCertbot.error("Could not obtain ZeroSSL credentials " + resp["error"]["type"])
+                    logger_certbot.error("Could not obtain ZeroSSL credentials " + resp["error"]["type"])
 
             os.environ['EASYHAPROXY_CERTBOT_SERVER'] = env_vars["certbot"]["server"]
 
@@ -131,7 +131,7 @@ class Functions:
 
     @staticmethod
     def setup_log(source):
-        level = os.getenv("%s_LOG_LEVEL" % (source.name.upper()), "").upper()
+        level = os.getenv(f"{source.name.upper()}_LOG_LEVEL", "").upper()
         level_importance = {
             Functions.TRACE: logging.DEBUG,
             Functions.DEBUG: logging.DEBUG,
@@ -192,7 +192,7 @@ class Functions:
 
             return [return_code, output]
         except Exception as e:
-            log_source.error("%s" % e)
+            log_source.error(f"{e}")
             return [-99, e]
 
 
@@ -226,19 +226,19 @@ class DaemonizeHAProxy:
     def get_haproxy_command(self, action, pid_file="/run/haproxy.pid"):
         custom_config_files = ""
         if len(list(self.get_custom_config_files().keys())) != 0:
-            custom_config_files = "-f %s" % self.custom_config_folder
+            custom_config_files = f"-f {self.custom_config_folder}"
 
         if action == DaemonizeHAProxy.HAPROXY_START or not os.path.exists(pid_file):
-            return "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg %s -p %s -S /var/run/haproxy.sock" % (custom_config_files, pid_file)
+            return f"/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg {custom_config_files} -p {pid_file} -S /var/run/haproxy.sock"
         else:
-            return_code, output = Functions().run_bash(loggerHaproxy, "cat %s" % pid_file, log_output=False)
+            return_code, output = Functions().run_bash(logger_haproxy, f"cat {pid_file}", log_output=False)
             pid = "".join(output).rstrip()
             if psutil.pid_exists(int(pid)):
-                return "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg %s -p %s -x /var/run/haproxy.sock -sf %s" % (custom_config_files, pid_file, pid)
+                return f"/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg {custom_config_files} -p {pid_file} -x /var/run/haproxy.sock -sf {pid}"
             else:
                 os.unlink(pid_file)
-                loggerHaproxy.warning(
-                    "PID file %s does not exist. Restarting haproxy instead of reload." % pid_file
+                logger_haproxy.warning(
+                    f"PID file {pid_file} does not exist. Restarting haproxy instead of reload."
                 )
                 return self.get_haproxy_command(DaemonizeHAProxy.HAPROXY_START, pid_file)
 
@@ -247,7 +247,7 @@ class DaemonizeHAProxy:
             command = shlex.split(command)
 
         try:
-            loggerHaproxy.debug("HAPROXY command: %s" % command)
+            logger_haproxy.debug(f"HAPROXY command: {command}")
             self.process = subprocess.Popen(command,
                                             shell=False,
                                             stdout=subprocess.PIPE,
@@ -256,19 +256,19 @@ class DaemonizeHAProxy:
                                             universal_newlines=True)
 
         except Exception as e:
-            loggerHaproxy.error("%s" % e)
+            logger_haproxy.error(f"{e}")
 
     def __start(self):
         try:
             with self.process.stdout:
                 for line in iter(self.process.stdout.readline, b''):
-                    loggerHaproxy.info(line.rstrip())
+                    logger_haproxy.info(line.rstrip())
 
             return_code = self.process.wait()
-            loggerHaproxy.debug("Return code %s" % return_code)
+            logger_haproxy.debug(f"Return code {return_code}")
 
         except Exception as e:
-            loggerHaproxy.error("%s" % e)
+            logger_haproxy.error(f"{e}")
 
     def is_alive(self):
         return self.thread.is_alive()
@@ -329,14 +329,14 @@ class Certbot:
     @staticmethod
     def set_eab_kid(eab_kid):
         if eab_kid != "":
-            return "--eab-kid \"%s\"" % eab_kid
+            return f'--eab-kid "{eab_kid}"'
         else:
             return ""
 
     @staticmethod
     def set_eab_hmac_key(eab_hmac_key):
         if eab_hmac_key != "":
-            return "--eab-hmac-key \"%s\"" % eab_hmac_key
+            return f'--eab-hmac-key "{eab_hmac_key}"'
         else:
             return ""
 
@@ -349,19 +349,19 @@ class Certbot:
             renew_certs = []
             for host in hosts:
                 cert_status = self.get_certificate_status(host)
-                host_arg = '-d %s' % host
+                host_arg = f'-d {host}'
                 if cert_status == "ok" or cert_status == "error":
                     continue
                 elif host in self.freeze_issue:
                     freeze_count = self.freeze_issue.pop(host, 0)
                     if freeze_count > 0:
-                        loggerCertbot.debug("Waiting freezing period (%d) for %s due previous errors" % (freeze_count, host))
+                        logger_certbot.debug(f"Waiting freezing period ({freeze_count}) for {host} due previous errors")
                         self.freeze_issue[host] = freeze_count-1
                 elif cert_status == "not_found" or cert_status == "expired":
-                    loggerCertbot.debug("[%s] Request new certificate for %s" % (cert_status, host))
+                    logger_certbot.debug(f"[{cert_status}] Request new certificate for {host}")
                     request_certs.append(host_arg)
                 elif cert_status == "expiring":
-                    loggerCertbot.debug("[%s] Renew certificate for %s" % (cert_status, host))
+                    logger_certbot.debug(f"[{cert_status}] Renew certificate for {host}")
                     renew_certs.append(host_arg)
 
             certbot_certonly = ('/usr/bin/certbot certonly {acme_server}'
@@ -388,20 +388,20 @@ class Certbot:
             if self.certbot_manual_auth_hook:
                 certbot_certonly += f'    --manual --manual-auth-hook \'{self.certbot_manual_auth_hook}\''
 
-            if loggerCertbot.level == logging.DEBUG:
+            if logger_certbot.level == logging.DEBUG:
                 certbot_certonly += '    -v'
 
-            loggerCertbot.debug("certbot_certonly: %s" % certbot_certonly)
+            logger_certbot.debug(f"certbot_certonly: {certbot_certonly}")
 
             ret_reload = False
             return_code_issue = 0
             return_code_renew = 0
             if len(request_certs) > 0:
-                return_code_issue, output = Functions.run_bash(loggerCertbot, certbot_certonly, return_result=False)
+                return_code_issue, output = Functions.run_bash(logger_certbot, certbot_certonly, return_result=False)
                 ret_reload = True
 
             if len(renew_certs) > 0:
-                return_code_renew, output = Functions.run_bash(loggerCertbot, "/usr/bin/certbot renew", return_result=False)
+                return_code_renew, output = Functions.run_bash(logger_certbot, "/usr/bin/certbot renew", return_result=False)
                 ret_reload = True
 
             if ret_reload:
@@ -414,7 +414,7 @@ class Certbot:
 
             return ret_reload
         except Exception as e:
-            loggerCertbot.error("%s" % e)
+            logger_certbot.error(f"{e}")
             return False
 
     @staticmethod
@@ -430,12 +430,12 @@ class Certbot:
             if os.path.isdir(path):
                 cert = Functions.load(os.path.join(path, "cert.pem"))
                 key = Functions.load(os.path.join(path, "privkey.pem"))
-                filename = "%s/%s.pem" % (self.certs, item)
+                filename = f"{self.certs}/{item}.pem"
                 self.merge_certificate(cert, key, filename)
 
     def get_certificate_status(self, host):
         current_time = time.time()
-        filename = "%s/%s.pem" % (self.certs, host)
+        filename = f"{self.certs}/{host}.pem"
         if not os.path.exists(filename):
             return "not_found"
 
@@ -449,7 +449,7 @@ class Certbot:
             elif (expiration_after - current_time) // (24 * 3600) <= 15:
                 return "expiring"
         except Exception as e:
-            loggerCertbot.error("Certificate %s error %s" % (host, e))
+            logger_certbot.error(f"Certificate {host} error {e}")
             return "error"
 
         return "ok"
@@ -461,7 +461,7 @@ class Certbot:
             cert_status = self.get_certificate_status(host)
             if cert_status != "ok":
                 self.freeze_issue[host] = self.retry_count
-                loggerCertbot.debug("Freeze issuing ssl for %s due failure. The certificate is %s" % (host, cert_status))
+                logger_certbot.debug(f"Freeze issuing ssl for {host} due failure. The certificate is {cert_status}")
 
 
 
@@ -497,11 +497,11 @@ class SingleLineNonEmptyFilter(logging.Filter):
 
 # ####################################################################################################################
 # Setup Global Log
-loggerInit = logging.getLogger(Functions.INIT_LOG)
-loggerHaproxy = logging.getLogger(Functions.HAPROXY_LOG)
-loggerEasyHaproxy = logging.getLogger(Functions.EASYHAPROXY_LOG)
-loggerCertbot = logging.getLogger(Functions.CERTBOT_LOG)
-Functions.setup_log(loggerInit)
-Functions.setup_log(loggerHaproxy)
-Functions.setup_log(loggerEasyHaproxy)
-Functions.setup_log(loggerCertbot)
+logger_init = logging.getLogger(Functions.INIT_LOG)
+logger_haproxy = logging.getLogger(Functions.HAPROXY_LOG)
+logger_easyhaproxy = logging.getLogger(Functions.EASYHAPROXY_LOG)
+logger_certbot = logging.getLogger(Functions.CERTBOT_LOG)
+Functions.setup_log(logger_init)
+Functions.setup_log(logger_haproxy)
+Functions.setup_log(logger_easyhaproxy)
+Functions.setup_log(logger_certbot)

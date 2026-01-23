@@ -54,4 +54,4 @@ def test_daemonize_haproxy2_check_config():
 def test_daemonize_haproxy2_get_haproxy_command_start():
     daemon = DaemonizeHAProxy(os.path.abspath(os.path.dirname(__file__))  + '/fixtures')
     command = daemon.get_haproxy_command(DaemonizeHAProxy.HAPROXY_START)
-    assert command == "/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -f %s -p /run/haproxy.pid -S /var/run/haproxy.sock" % (os.path.dirname(__file__) + "/fixtures")
+    assert command == f"/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg -f {os.path.dirname(__file__)}/fixtures -p /run/haproxy.pid -S /var/run/haproxy.sock"

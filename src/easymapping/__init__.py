@@ -5,7 +5,7 @@ import re
 
 from jinja2 import Environment, FileSystemLoader
 
-from functions import loggerEasyHaproxy
+from functions import logger_easyhaproxy
 
 
 class DockerLabelHandler:
@@ -40,7 +40,7 @@ class DockerLabelHandler:
             try:
                 return json.loads(value)
             except json.JSONDecodeError as e:
-                loggerEasyHaproxy.error(
+                logger_easyhaproxy.error(
                     f"Invalid JSON in label '{label}': {value}. Error: {e}. Using default value."
                 )
                 return default_value
@@ -78,7 +78,7 @@ class HaproxyConfigGenerator:
             self.global_plugin_configs = []
         except Exception as e:
             # If plugin system fails to initialize, log but continue
-            loggerEasyHaproxy.warning(f"Failed to initialize plugin system: {e}")
+            logger_easyhaproxy.warning(f"Failed to initialize plugin system: {e}")
             self.plugin_manager = None
             self.global_plugin_configs = []
 
@@ -112,7 +112,7 @@ class HaproxyConfigGenerator:
                 global_configs = [r.haproxy_config for r in global_results if r.haproxy_config]
                 self.global_plugin_configs.extend(global_configs)
             except Exception as e:
-                loggerEasyHaproxy.warning(f"Failed to execute global plugins: {e}")
+                logger_easyhaproxy.warning(f"Failed to execute global plugins: {e}")
 
         templates_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'templates')
         file_loader = FileSystemLoader(templates_dir)
@@ -200,7 +200,7 @@ class HaproxyConfigGenerator:
 
                 for hostname in sorted(d[host_label].split(",")):
                     hostname = hostname.strip()
-                    self.serving_hosts.append("%s:%s" % (hostname, port))
+                    self.serving_hosts.append(f"{hostname}:{port}")
                     easymapping[port]["hosts"].setdefault(hostname, {})
                     easymapping[port]["hosts"][hostname].setdefault("containers", [])
                     easymapping[port]["hosts"][hostname].setdefault("certbot", False)
@@ -283,7 +283,7 @@ class HaproxyConfigGenerator:
                                     if result.metadata["fcgi_app_definition"] not in self.global_plugin_configs:
                                         self.global_plugin_configs.append(result.metadata["fcgi_app_definition"])
                         except Exception as e:
-                            loggerEasyHaproxy.warning(f"Failed to execute domain plugins for {hostname}: {e}")
+                            logger_easyhaproxy.warning(f"Failed to execute domain plugins for {hostname}: {e}")
                             easymapping[port]["hosts"][hostname]["plugin_configs"] = []
                     else:
                         easymapping[port]["hosts"][hostname]["plugin_configs"] = []

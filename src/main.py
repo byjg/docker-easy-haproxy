@@ -7,8 +7,8 @@ from functions import (
     Consts,
     DaemonizeHAProxy,
     Functions,
-    loggerEasyHaproxy,
-    loggerInit,
+    logger_easyhaproxy,
+    logger_init,
 )
 from processor import ProcessorInterface
 
@@ -24,8 +24,8 @@ def start():
     processor_obj.save_config(Consts.haproxy_config)
     processor_obj.save_certs(Consts.certs_haproxy)
     certbot_certs_found = processor_obj.get_certbot_hosts()
-    loggerEasyHaproxy.info('Found hosts: %s' % ", ".join(processor_obj.get_hosts()))  # Needs to run after save_config
-    loggerEasyHaproxy.debug('Object Found: %s' % (processor_obj.get_parsed_object()))
+    logger_easyhaproxy.info(f'Found hosts: {", ".join(processor_obj.get_hosts())}')  # Needs to run after save_config
+    logger_easyhaproxy.debug(f'Object Found: {processor_obj.get_parsed_object()}')
 
     old_haproxy = None
     haproxy = DaemonizeHAProxy()
@@ -43,12 +43,12 @@ def start():
             old_parsed = processor_obj.get_parsed_object()
             processor_obj.refresh()
             if certbot.check_certificates(certbot_certs_found) or DeepDiff(old_parsed, processor_obj.get_parsed_object()) != {} or not haproxy.is_alive() or DeepDiff(current_custom_config_files, haproxy.get_custom_config_files()) != {}:
-                loggerEasyHaproxy.info('New configuration found. Reloading...')
-                loggerEasyHaproxy.debug('Object Found: %s' % (processor_obj.get_parsed_object()))
+                logger_easyhaproxy.info('New configuration found. Reloading...')
+                logger_easyhaproxy.debug(f'Object Found: {processor_obj.get_parsed_object()}')
                 processor_obj.save_config(Consts.haproxy_config)
                 processor_obj.save_certs(Consts.certs_haproxy)
                 certbot_certs_found = processor_obj.get_certbot_hosts()
-                loggerEasyHaproxy.info('Found hosts: %s' % ", ".join(processor_obj.get_hosts()))  # Needs to after save_config
+                logger_easyhaproxy.info(f'Found hosts: {", ".join(processor_obj.get_hosts())}')  # Needs to after save_config
                 old_haproxy = haproxy
                 haproxy = DaemonizeHAProxy()
                 current_custom_config_files = haproxy.get_custom_config_files()
@@ -56,26 +56,26 @@ def start():
                 old_haproxy.terminate()
 
         except Exception as e:
-            loggerEasyHaproxy.fatal("Err: %s" % e)
+            logger_easyhaproxy.fatal(f"Err: {e}")
 
-        loggerEasyHaproxy.info('Heartbeat')
+        logger_easyhaproxy.info('Heartbeat')
         haproxy.sleep()
 
 
 def main():
-    Functions.run_bash(loggerInit, '/usr/sbin/haproxy -v')
+    Functions.run_bash(logger_init, '/usr/sbin/haproxy -v')
 
-    loggerInit.info("                      _                               ")
-    loggerInit.info(" ___ __ _ ____  _ ___| |_  __ _ _ __ _ _ _____ ___  _ ")
-    loggerInit.info("/ -_) _` (_-< || |___| ' \\/ _` | '_ \\ '_/ _ \\ \\ / || |")
-    loggerInit.info("\\___\\__,_/__/\\_, |   |_||_\\__,_| .__/_| \\___/_\\_\\_, |")
-    loggerInit.info("             |__/              |_|               |__/ ")
+    logger_init.info("                      _                               ")
+    logger_init.info(" ___ __ _ ____  _ ___| |_  __ _ _ __ _ _ _____ ___  _ ")
+    logger_init.info("/ -_) _` (_-< || |___| ' \\/ _` | '_ \\ '_/ _ \\ \\ / || |")
+    logger_init.info("\\___\\__,_/__/\\_, |   |_||_\\__,_| .__/_| \\___/_\\_\\_, |")
+    logger_init.info("             |__/              |_|               |__/ ")
 
-    loggerInit.info("Release: %s" % (os.getenv("RELEASE_VERSION")))
-    loggerInit.debug('Environment:')
+    logger_init.info(f"Release: {os.getenv('RELEASE_VERSION')}")
+    logger_init.debug('Environment:')
     for name, value in os.environ.items():
         if "HAPROXY" in name:
-            loggerInit.debug(f"- {name}: {value}")
+            logger_init.debug(f"- {name}: {value}")
 
     start()
 

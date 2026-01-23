@@ -8,7 +8,7 @@ from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 
 from easymapping import HaproxyConfigGenerator
-from functions import Consts, ContainerEnv, Functions, loggerEasyHaproxy
+from functions import Consts, ContainerEnv, Functions, logger_easyhaproxy
 
 
 class ProcessorInterface:
@@ -42,7 +42,7 @@ class ProcessorInterface:
         elif mode == ProcessorInterface.KUBERNETES:
             return Kubernetes()
         else:
-            loggerEasyHaproxy.fatal("Expected mode to be 'static', 'docker', 'swarm' or 'kubernetes'. I got '%s'" % mode)
+            logger_easyhaproxy.fatal(f"Expected mode to be 'static', 'docker', 'swarm' or 'kubernetes'. I got '{mode}'")
             return None
 
     def refresh(self):
@@ -110,7 +110,7 @@ class Static(ProcessorInterface):
             if "hosts" not in obj:
                 continue
             for host in obj["hosts"].keys():
-                hosts.append("%s:%s" % (host, obj["port"]))
+                hosts.append(f"{host}:{obj['port']}")
         return hosts
 
     def parse(self):
@@ -152,7 +152,7 @@ class Docker(ProcessorInterface):
         try:
             ha_proxy_network_name = next(
                 iter(self.client.containers.get(socket.gethostname()).attrs["NetworkSettings"]["Networks"]))
-        except:
+        except Exception:
             # HAProxy is not running in a container, get first container network
             if len(self.client.containers.list()) == 0:
                 return
@@ -236,7 +236,6 @@ class Kubernetes(ProcessorInterface):
         Returns: tuple (mode: str, service: V1Service or None)
         """
         import os
-        import time
 
         # Return cached if available
         if self.deployment_mode_cache:
@@ -246,7 +245,7 @@ class Kubernetes(ProcessorInterface):
 
         # Check for manual override
         if env_config['deployment_mode'] != 'auto':
-            loggerEasyHaproxy.info(f"Using manual deployment mode: {env_config['deployment_mode']}")
+            logger_easyhaproxy.info(f"Using manual deployment mode: {env_config['deployment_mode']}")
             service = self._get_easyhaproxy_service() if env_config['deployment_mode'] in ['nodeport', 'clusterip'] else None
             self.deployment_mode_cache = (env_config['deployment_mode'], service)
             return self.deployment_mode_cache
@@ -264,7 +263,7 @@ class Kubernetes(ProcessorInterface):
                 owner_kind = pod.metadata.owner_references[0].kind
 
                 if owner_kind == 'DaemonSet':
-                    loggerEasyHaproxy.info("Detected deployment mode: daemonset")
+                    logger_easyhaproxy.info("Detected deployment mode: daemonset")
                     self.deployment_mode_cache = ('daemonset', None)
                     return self.deployment_mode_cache
                 elif owner_kind in ['ReplicaSet', 'Deployment']:
@@ -272,15 +271,15 @@ class Kubernetes(ProcessorInterface):
                     service = self._get_easyhaproxy_service()
                     if service:
                         if service.spec.type == 'NodePort':
-                            loggerEasyHaproxy.info("Detected deployment mode: nodeport")
+                            logger_easyhaproxy.info("Detected deployment mode: nodeport")
                             self.deployment_mode_cache = ('nodeport', service)
                             return self.deployment_mode_cache
                         else:
-                            loggerEasyHaproxy.info("Detected deployment mode: clusterip")
+                            logger_easyhaproxy.info("Detected deployment mode: clusterip")
                             self.deployment_mode_cache = ('clusterip', service)
                             return self.deployment_mode_cache
         except Exception as e:
-            loggerEasyHaproxy.warn(f"Failed to detect deployment mode: {e}, defaulting to daemonset")
+            logger_easyhaproxy.warn(f"Failed to detect deployment mode: {e}, defaulting to daemonset")
 
         self.deployment_mode_cache = ('daemonset', None)
         return self.deployment_mode_cache
@@ -298,11 +297,11 @@ class Kubernetes(ProcessorInterface):
                 try:
                     service = self.api_instance.read_namespaced_service(service_name, namespace)
                     return service
-                except:
+                except Exception:
                     continue
             return None
         except Exception as e:
-            loggerEasyHaproxy.warn(f"Failed to get EasyHAProxy service: {e}")
+            logger_easyhaproxy.warn(f"Failed to get EasyHAProxy service: {e}")
             return None
 
     def _get_ingress_addresses(self, mode, service):
@@ -385,7 +384,7 @@ class Kubernetes(ProcessorInterface):
                     addresses.append({"ip": service.spec.cluster_ip})
 
         except Exception as e:
-            loggerEasyHaproxy.warn(f"Failed to get ingress addresses: {e}")
+            logger_easyhaproxy.warn(f"Failed to get ingress addresses: {e}")
 
         # Cache the result
         self.ingress_addresses_cache = addresses
@@ -422,13 +421,13 @@ class Kubernetes(ProcessorInterface):
                 field_manager="easyhaproxy"
             )
 
-            loggerEasyHaproxy.debug(
+            logger_easyhaproxy.debug(
                 f"Updated ingress {ingress.metadata.namespace}/{ingress.metadata.name} "
                 f"status with {len(addresses)} address(es)"
             )
 
         except Exception as e:
-            loggerEasyHaproxy.warn(
+            logger_easyhaproxy.warn(
                 f"Failed to update status for ingress "
                 f"{ingress.metadata.namespace}/{ingress.metadata.name}: {e}"
             )
@@ -508,37 +507,37 @@ class Kubernetes(ProcessorInterface):
 
                         ssl_hosts.extend(tls.hosts)
                     except Exception as e:
-                        loggerEasyHaproxy.warn("Ingress %s - Get secret failed: '%s'" % (ingress_name, e))
+                        logger_easyhaproxy.warn(f"Ingress {ingress_name} - Get secret failed: '{e}'")
 
-            loggerEasyHaproxy.debug("Ingress %s - SSL Hosts found '%s'" % (ingress_name, ssl_hosts))
+            logger_easyhaproxy.debug(f"Ingress {ingress_name} - SSL Hosts found '{ssl_hosts}'")
 
             for rule in ingress.spec.rules:
                 rule_data = {}
                 port_number = rule.http.paths[0].backend.service.port.number
-                definition = "easyhaproxy.%s_%s" % (rule.host.replace(".", "-"), port_number)
-                rule_data["%s.host" % definition] = rule.host
-                rule_data["%s.port" % definition] = listen_port
-                rule_data["%s.localport" % definition] = port_number
+                definition = f"easyhaproxy.{rule.host.replace('.', '-')}_{port_number}"
+                rule_data[f"{definition}.host"] = rule.host
+                rule_data[f"{definition}.port"] = listen_port
+                rule_data[f"{definition}.localport"] = port_number
                 if rule.host in ssl_hosts:
-                    rule_data["%s.clone_to_ssl" % definition] = 'true'
+                    rule_data[f"{definition}.clone_to_ssl"] = 'true'
                 if redirect_ssl is not None:
-                    rule_data["%s.redirect_ssl" % definition] = redirect_ssl
+                    rule_data[f"{definition}.redirect_ssl"] = redirect_ssl
                 if certbot is not None:
-                    rule_data["%s.certbot" % definition] = certbot
+                    rule_data[f"{definition}.certbot"] = certbot
                 if redirect is not None:
-                    rule_data["%s.redirect" % definition] = redirect
+                    rule_data[f"{definition}.redirect"] = redirect
                 if mode is not None:
-                    rule_data["%s.mode" % definition] = mode
-                rule_data["%s.balance" % definition] = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.balance", "roundrobin")
+                    rule_data[f"{definition}.mode"] = mode
+                rule_data[f"{definition}.balance"] = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.balance", "roundrobin")
 
                 # Add plugin configuration
                 if plugins is not None:
-                    rule_data["%s.plugins" % definition] = plugins
+                    rule_data[f"{definition}.plugins"] = plugins
 
                 # Add plugin-specific configurations
                 for plugin_key, plugin_value in plugin_annotations.items():
                     # Convert easyhaproxy.plugin.X.Y to easyhaproxy.{definition}.plugin.X.Y
-                    plugin_config_key = plugin_key.replace("easyhaproxy.plugin.", "%s.plugin." % definition)
+                    plugin_config_key = plugin_key.replace("easyhaproxy.plugin.", f"{definition}.plugin.")
                     rule_data[plugin_config_key] = plugin_value
 
                 service_name = rule.http.paths[0].backend.service.name
@@ -547,7 +546,7 @@ class Kubernetes(ProcessorInterface):
                     cluster_ip = api_response.spec.cluster_ip
                 except ApiException as e:
                     cluster_ip = None
-                    loggerEasyHaproxy.warn("Ingress %s - Service %s - Failed: '%s'" % (ingress_name, service_name, e))
+                    logger_easyhaproxy.warn(f"Ingress {ingress_name} - Service {service_name} - Failed: '{e}'")
 
                 if cluster_ip is not None:
                     if cluster_ip not in self.parsed_object.keys():
