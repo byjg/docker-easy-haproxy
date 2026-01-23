@@ -21,16 +21,16 @@ Example Environment Variable:
     EASYHAPROXY_PLUGIN_CLEANUP_MAX_IDLE_TIME=600
 """
 
+import glob
 import os
 import sys
-import glob
 import time
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from plugins import PluginInterface, PluginType, PluginContext, PluginResult
 from functions import loggerEasyHaproxy
+from plugins import PluginContext, PluginInterface, PluginResult, PluginType
 
 
 class CleanupPlugin(PluginInterface):

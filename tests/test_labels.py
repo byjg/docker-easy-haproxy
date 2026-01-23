@@ -22,7 +22,7 @@ def test_label_data():
 
 def test_label_complex_key():
     label = DockerLabelHandler("till")
-    
+
     data = dict()
     data["till.definitions"] = "h2"
     data["till.host.h2"] = "fqdn.example.org"

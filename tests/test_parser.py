@@ -12,7 +12,7 @@ CERTBOT_EMAIL = "some@email.com"
 
 def load_fixture(file):
     path = os.path.dirname(os.path.realpath(__file__))
-    with open(path + "/fixtures/" + file, 'r') as content_file:
+    with open(path + "/fixtures/" + file) as content_file:
         line_list = json.loads("".join(content_file.readlines()))
 
     return line_list
@@ -33,7 +33,7 @@ def test_parser_doesnt_crash():
 
     assert len(haproxy_config) > 0
     path = os.path.dirname(os.path.realpath(__file__))
-    with open(path + "/expected/no-services.txt", 'r') as expected_file:
+    with open(path + "/expected/no-services.txt") as expected_file:
         assert expected_file.read() == haproxy_config
     assert [] == cfg.certbot_hosts
 
@@ -56,7 +56,7 @@ def test_parser_finds_services():
 
     assert len(haproxy_config) > 0
     path = os.path.dirname(os.path.realpath(__file__))
-    with open(path + "/expected/services.txt", 'r') as expected_file:
+    with open(path + "/expected/services.txt") as expected_file:
         assert expected_file.read() == haproxy_config
 
     assert {"www.somehost.com.br.pem": "Some PEM Certificate"} == cfg.certs
@@ -86,7 +86,7 @@ def test_parser_finds_services_changed_label():
 
     assert len(haproxy_config) > 0
     path = os.path.dirname(os.path.realpath(__file__))
-    with open(path + "/expected/services.txt", 'r') as expected_file:
+    with open(path + "/expected/services.txt") as expected_file:
         assert expected_file.read() == haproxy_config
 
     assert {"www.somehost.com.br.pem": "Some PEM Certificate"} == cfg.certs
@@ -232,21 +232,21 @@ def test_parser_finds_services_raw():
 
 def test_parser_static():
     path = os.path.dirname(os.path.realpath(__file__))
-    with open(path + "/fixtures/static.yml", 'r') as content_file:
+    with open(path + "/fixtures/static.yml") as content_file:
         parsed = yaml.load(content_file.read(), Loader=yaml.FullLoader)
 
     cfg = easymapping.HaproxyConfigGenerator(parsed)
     haproxy_config = cfg.generate()
     assert len(haproxy_config) > 0
 
-    with open(path + "/expected/static.txt", 'r') as expected_file:
+    with open(path + "/expected/static.txt") as expected_file:
         assert expected_file.read() == haproxy_config
     assert [] == cfg.certbot_hosts
 
 
 def test_parser_static_raw():
     path = os.path.dirname(os.path.realpath(__file__))
-    with open(path + "/fixtures/static.yml", 'r') as content_file:
+    with open(path + "/fixtures/static.yml") as content_file:
         parsed = yaml.load(content_file.read(), Loader=yaml.FullLoader)
 
     expected = {
@@ -319,7 +319,7 @@ def test_parser_tcp():
 
     assert len(haproxy_config) > 0
     path = os.path.dirname(os.path.realpath(__file__))
-    with open(path + "/expected/services-tcp.txt", 'r') as expected_file:
+    with open(path + "/expected/services-tcp.txt") as expected_file:
         assert expected_file.read() == haproxy_config
     assert [] == cfg.certbot_hosts
 
@@ -339,7 +339,7 @@ def test_parser_multi_containers():
 
     assert len(haproxy_config) > 0
     path = os.path.dirname(os.path.realpath(__file__))
-    with open(path + "/expected/services-multi-containers.txt", 'r') as expected_file:
+    with open(path + "/expected/services-multi-containers.txt") as expected_file:
         assert expected_file.read() == haproxy_config
     assert [] == cfg.certbot_hosts
 
@@ -361,7 +361,7 @@ def test_parser_multiple_hosts():
 
     assert len(haproxy_config) > 0
     path = os.path.dirname(os.path.realpath(__file__))
-    with open(path + "/expected/services-multiple-hosts.txt", 'r') as expected_file:
+    with open(path + "/expected/services-multiple-hosts.txt") as expected_file:
         assert expected_file.read() == haproxy_config
     assert [] == cfg.certbot_hosts
 
@@ -382,7 +382,7 @@ def test_parser_redirect_ssl():
 
     assert len(haproxy_config) > 0
     path = os.path.dirname(os.path.realpath(__file__))
-    with open(path + "/expected/services-redirect-ssl.txt", 'r') as expected_file:
+    with open(path + "/expected/services-redirect-ssl.txt") as expected_file:
         assert expected_file.read() == haproxy_config
     assert [] == cfg.certbot_hosts
 
@@ -403,7 +403,7 @@ def test_parser_ssl_strict():
 
     assert len(haproxy_config) > 0
     path = os.path.dirname(os.path.realpath(__file__))
-    with open(path + "/expected/ssl-strict.txt", 'r') as expected_file:
+    with open(path + "/expected/ssl-strict.txt") as expected_file:
         assert expected_file.read() == haproxy_config
     assert [] == cfg.certbot_hosts
 
@@ -421,7 +421,7 @@ def test_parser_ssl_loose():
 
     assert len(haproxy_config) > 0
     path = os.path.dirname(os.path.realpath(__file__))
-    with open(path + "/expected/ssl-loose.txt", 'r') as expected_file:
+    with open(path + "/expected/ssl-loose.txt") as expected_file:
         assert expected_file.read() == haproxy_config
     assert [] == cfg.certbot_hosts
 
@@ -444,7 +444,7 @@ def test_parser_ssl_letsencrypt():
 
     assert len(haproxy_config) > 0
     path = os.path.dirname(os.path.realpath(__file__))
-    with open(path + "/expected/services-letsencrypt.txt", 'r') as expected_file:
+    with open(path + "/expected/services-letsencrypt.txt") as expected_file:
         assert expected_file.read() == haproxy_config
     assert ["test.example.org"] == cfg.certbot_hosts
 
@@ -561,7 +561,7 @@ def test_parser_fcgi():
     assert "172.17.0.3:9000" in haproxy_config
 
     path = os.path.dirname(os.path.realpath(__file__))
-    with open(path + "/expected/services-fcgi.txt", 'r') as expected_file:
+    with open(path + "/expected/services-fcgi.txt") as expected_file:
         assert expected_file.read() == haproxy_config
     assert [] == cfg.certbot_hosts
 

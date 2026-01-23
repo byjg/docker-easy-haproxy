@@ -2,8 +2,14 @@ import os
 
 from deepdiff import DeepDiff
 
-from functions import Functions, DaemonizeHAProxy, Certbot, Consts, loggerInit, loggerEasyHaproxy, loggerHaproxy, \
-    loggerCertbot
+from functions import (
+    Certbot,
+    Consts,
+    DaemonizeHAProxy,
+    Functions,
+    loggerEasyHaproxy,
+    loggerInit,
+)
 from processor import ProcessorInterface
 
 
@@ -69,7 +75,7 @@ def main():
     loggerInit.debug('Environment:')
     for name, value in os.environ.items():
         if "HAPROXY" in name:
-            loggerInit.debug("- {0}: {1}".format(name, value))
+            loggerInit.debug(f"- {name}: {value}")
 
     start()
 

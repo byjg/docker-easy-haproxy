@@ -1,13 +1,10 @@
 import logging
 import os
 import random
-import re
 import string
-from logging import Logger
-
-from functions import Functions, loggerEasyHaproxy, loggerCertbot, loggerHaproxy
-
 from io import StringIO
+
+from functions import Functions, loggerCertbot, loggerEasyHaproxy, loggerHaproxy
 
 log_stream = StringIO() # Create StringIO object
 log_handler = logging.StreamHandler(log_stream)

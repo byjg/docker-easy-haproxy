@@ -16,6 +16,10 @@ sync:
 lint:
 	uv run ruff check src/ tests/
 
+.PHONY: fix
+fix:
+	uv run ruff check --fix src/ tests/
+
 .PHONY: format
 format:
 	uv run ruff format src/ tests/

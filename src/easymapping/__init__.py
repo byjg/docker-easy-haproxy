@@ -4,6 +4,7 @@ import os
 import re
 
 from jinja2 import Environment, FileSystemLoader
+
 from functions import loggerEasyHaproxy
 
 
@@ -17,7 +18,7 @@ class DockerLabelHandler:
 
     def create(self, key):
         if isinstance(key, str):
-            return "{}.{}".format(self.__label_base, key)
+            return f"{self.__label_base}.{key}"
 
         return "{}.{}".format(self.__label_base, ".".join(key))
 
@@ -140,7 +141,7 @@ class HaproxyConfigGenerator:
 
             self.label.set_data(d)
 
-            # Parse each definition found. 
+            # Parse each definition found.
             for definition in sorted(definitions.keys()):
                 mode = self.label.get(
                     self.label.create([definition, "mode"]),
@@ -209,7 +210,7 @@ class HaproxyConfigGenerator:
                     if socket_path:
                         server_address = socket_path
                     else:
-                        server_address = "{}:{}".format(container, ct_port)
+                        server_address = f"{container}:{ct_port}"
 
                     easymapping[port]["hosts"][hostname]["containers"] += [server_address]
                     easymapping[port]["hosts"][hostname]["certbot"] = certbot
@@ -306,7 +307,7 @@ class HaproxyConfigGenerator:
                     # handle SSL
                     ssl_label = self.label.create([definition, "sslcert"])
                     if self.label.has_label(ssl_label):
-                        filename = "{}.pem".format(d[host_label])
+                        filename = f"{d[host_label]}.pem"
                         easymapping[port]["ssl"] = True if not clone_to_ssl else False
                         self.certs[filename] = base64.b64decode(d[ssl_label]).decode('ascii')
 

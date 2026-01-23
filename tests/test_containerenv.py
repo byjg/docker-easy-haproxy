@@ -1,6 +1,6 @@
 import os
 
-from functions import Functions, ContainerEnv
+from functions import ContainerEnv, Functions
 
 
 def test_container_env_empty():

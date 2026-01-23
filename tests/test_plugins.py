@@ -7,29 +7,29 @@ Tests all builtin plugins:
 - DenyPagesPlugin (domain)
 """
 
+import json
 import os
 import sys
-import json
 import tempfile
 import time
 
 # Add src to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from plugins import PluginManager, PluginContext
-from plugins.builtin.cloudflare import CloudflarePlugin
+import easymapping
+from plugins import PluginContext, PluginManager
 from plugins.builtin.cleanup import CleanupPlugin
+from plugins.builtin.cloudflare import CloudflarePlugin
 from plugins.builtin.deny_pages import DenyPagesPlugin
+from plugins.builtin.fastcgi import FastcgiPlugin
 from plugins.builtin.ip_whitelist import IpWhitelistPlugin
 from plugins.builtin.jwt_validator import JwtValidatorPlugin
-from plugins.builtin.fastcgi import FastcgiPlugin
-import easymapping
 
 
 def load_fixture(file):
     """Load a test fixture"""
     fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", file)
-    with open(fixture_path, 'r') as content_file:
+    with open(fixture_path) as content_file:
         line_list = json.loads("".join(content_file.readlines()))
     return line_list
 
@@ -160,7 +160,7 @@ class TestCloudflarePlugin:
             assert os.path.exists(ip_list_path)
 
             # Verify file contains correct number of IPs
-            with open(ip_list_path, 'r') as f:
+            with open(ip_list_path) as f:
                 lines = [line.strip() for line in f if line.strip()]
                 assert len(lines) == 22
                 # Verify some known Cloudflare IPs are in the file

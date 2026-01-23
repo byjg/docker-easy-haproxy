@@ -74,8 +74,8 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from plugins import PluginInterface, PluginType, PluginContext, PluginResult
 from functions import loggerEasyHaproxy
+from plugins import PluginContext, PluginInterface, PluginResult, PluginType
 
 
 class JwtValidatorPlugin(PluginInterface):

@@ -1,10 +1,11 @@
-import os
 import importlib.util
+import os
 import sys
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
+
 from functions import loggerEasyHaproxy
 
 
@@ -20,17 +21,17 @@ class PluginContext:
     parsed_object: dict              # {IP: labels} from discovery
     easymapping: list               # Current HAProxy mapping structure
     container_env: dict             # Environment configuration
-    domain: Optional[str] = None    # Domain name (for DOMAIN plugins)
-    port: Optional[str] = None      # Port (for DOMAIN plugins)
-    host_config: Optional[dict] = None  # Domain-specific config
+    domain: str | None = None    # Domain name (for DOMAIN plugins)
+    port: str | None = None      # Port (for DOMAIN plugins)
+    host_config: dict | None = None  # Domain-specific config
 
 
 @dataclass
 class PluginResult:
     """Plugin execution result"""
     haproxy_config: str = ""                     # HAProxy config snippet to inject
-    modified_easymapping: Optional[list] = None  # Modified easymapping structure
-    metadata: Dict[str, Any] = field(default_factory=dict)  # Plugin metadata for logging
+    modified_easymapping: list | None = None  # Modified easymapping structure
+    metadata: dict[str, Any] = field(default_factory=dict)  # Plugin metadata for logging
 
 
 class PluginInterface(ABC):
@@ -85,9 +86,9 @@ class PluginManager:
         """
         self.plugins_dir = plugins_dir
         self.abort_on_error = abort_on_error
-        self.plugins: Dict[str, PluginInterface] = {}
-        self.global_plugins: List[PluginInterface] = []
-        self.domain_plugins: List[PluginInterface] = []
+        self.plugins: dict[str, PluginInterface] = {}
+        self.global_plugins: list[PluginInterface] = []
+        self.domain_plugins: list[PluginInterface] = []
         self.logger = loggerEasyHaproxy
 
     def load_plugins(self) -> None:
@@ -174,7 +175,7 @@ class PluginManager:
             except Exception as e:
                 self._handle_error(f"Failed to configure plugin '{plugin_name}': {str(e)}")
 
-    def execute_global_plugins(self, context: PluginContext, enabled_list: Optional[List[str]] = None) -> List[PluginResult]:
+    def execute_global_plugins(self, context: PluginContext, enabled_list: list[str] | None = None) -> list[PluginResult]:
         """
         Execute all global plugins
 
@@ -205,7 +206,7 @@ class PluginManager:
 
         return results
 
-    def execute_domain_plugins(self, context: PluginContext, enabled_list: Optional[List[str]] = None) -> List[PluginResult]:
+    def execute_domain_plugins(self, context: PluginContext, enabled_list: list[str] | None = None) -> list[PluginResult]:
         """
         Execute all domain plugins for a specific domain
 

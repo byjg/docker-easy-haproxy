@@ -1,8 +1,6 @@
 import os
 
-import psutil
-
-from functions import DaemonizeHAProxy, Functions
+from functions import DaemonizeHAProxy
 
 
 def test_daemonize_haproxy():

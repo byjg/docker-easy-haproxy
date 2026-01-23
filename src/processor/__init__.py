@@ -8,8 +8,7 @@ from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 
 from easymapping import HaproxyConfigGenerator
-from functions import Functions, Consts, ContainerEnv
-from functions import loggerEasyHaproxy
+from functions import Consts, ContainerEnv, Functions, loggerEasyHaproxy
 
 
 class ProcessorInterface:
@@ -87,7 +86,7 @@ class ProcessorInterface:
 
     def save_certs(self, path):
         for cert in self.get_certs():
-            Functions.save("{0}/{1}".format(path, cert), self.get_certs(cert))
+            Functions.save(f"{path}/{cert}", self.get_certs(cert))
 
 
 class Static(ProcessorInterface):
@@ -502,7 +501,7 @@ class Kubernetes(ProcessorInterface):
                         if tls.secret_name not in self.cert_cache or self.cert_cache[tls.secret_name] != secret.data:
                             self.cert_cache[tls.secret_name] = secret.data
                             Functions.save(
-                                "{0}/{1}.pem".format(Consts.certs_haproxy, tls.secret_name),
+                                f"{Consts.certs_haproxy}/{tls.secret_name}.pem",
                                 base64.b64decode(secret.data["tls.crt"]).decode('ascii') + "\n" + base64.b64decode(
                                     secret.data["tls.key"]).decode('ascii')
                             )

@@ -1,15 +1,17 @@
+import logging
 import os
 import shlex
 import subprocess
 import sys
-import psutil
 import time
-import logging
 from datetime import datetime
 from multiprocessing import Process
 from typing import Final
+
+import psutil
 import requests
 from OpenSSL import crypto
+
 
 class ContainerEnv:
     @staticmethod
@@ -150,7 +152,7 @@ class Functions:
 
     @staticmethod
     def load(filename):
-        with open(filename, 'r') as content_file:
+        with open(filename) as content_file:
             return content_file.read()
 
     @staticmethod
@@ -384,7 +386,7 @@ class Certbot:
                                     )
 
             if self.certbot_manual_auth_hook:
-                certbot_certonly += '    --manual --manual-auth-hook \'{hook}\''.format(hook=self.certbot_manual_auth_hook)
+                certbot_certonly += f'    --manual --manual-auth-hook \'{self.certbot_manual_auth_hook}\''
 
             if loggerCertbot.level == logging.DEBUG:
                 certbot_certonly += '    -v'

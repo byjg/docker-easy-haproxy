@@ -42,8 +42,7 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from plugins import PluginInterface, PluginType, PluginContext, PluginResult
-from functions import loggerEasyHaproxy
+from plugins import PluginContext, PluginInterface, PluginResult, PluginType
 
 
 class FastcgiPlugin(PluginInterface):
@@ -124,7 +123,7 @@ class FastcgiPlugin(PluginInterface):
 
         # PATH_INFO support
         if self.path_info:
-            fcgi_app_lines.append(f"    path-info ^(/.+\\.php)(/.*)?$")
+            fcgi_app_lines.append("    path-info ^(/.+\\.php)(/.*)?$")
 
         # Set SCRIPT_FILENAME if customized
         if self.script_filename and self.script_filename != "%[path]":
