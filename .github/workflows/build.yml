@@ -26,15 +26,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install requirements
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install dependencies
         run: |
-          cd src/
-          pip install -r requirements.txt
+          export PATH="$HOME/.local/bin:$PATH"
+          uv pip install --system -e ".[dev]"
 
       - name: Run tests
-        run: |
-          cd src/
-          pytest -s tests/ -vv
+        run: pytest -s tests/ -vv
 
   Build:
     runs-on: ubuntu-latest

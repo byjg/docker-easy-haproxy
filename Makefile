@@ -6,4 +6,16 @@ build:
 
 .PHONY: test
 test:
-	cd src/ && pytest tests/ -vv
+	uv run pytest tests/ -vv
+
+.PHONY: sync
+sync:
+	uv sync --dev
+
+.PHONY: lint
+lint:
+	uv run ruff check src/ tests/
+
+.PHONY: format
+format:
+	uv run ruff format src/ tests/
