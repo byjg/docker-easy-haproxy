@@ -65,11 +65,12 @@ def start():
 def main():
     Functions.run_bash(logger_init, '/usr/sbin/haproxy -v')
 
-    logger_init.info("                      _                               ")
-    logger_init.info(" ___ __ _ ____  _ ___| |_  __ _ _ __ _ _ _____ ___  _ ")
-    logger_init.info("/ -_) _` (_-< || |___| ' \\/ _` | '_ \\ '_/ _ \\ \\ / || |")
-    logger_init.info("\\___\\__,_/__/\\_, |   |_||_\\__,_| .__/_| \\___/_\\_\\_, |")
-    logger_init.info("             |__/              |_|               |__/ ")
+    logger_init.info(r".........................__.....................................")
+    logger_init.info(r"..___  ____ ________  __/ /_  ____ _____  _________  _  ____  __")
+    logger_init.info(r"./ _ \/ __ `/ ___/ / / / __ \/ __ `/ __ \/ ___/ __ \| |/_/ / / /")
+    logger_init.info(r"/  __/ /_/ (__  ) /_/ / / / / /_/ / /_/ / /  / /_/ />  </ /_/ /.")
+    logger_init.info(r"\___/\__,_/____/\__, /_/ /_/\__,_/ .___/_/   \____/_/|_|\__, /..")
+    logger_init.info(r".............../____/.........../_/..................../____/...")
 
     logger_init.info(f"Release: {os.getenv('RELEASE_VERSION')}")
     logger_init.debug('Environment:')
