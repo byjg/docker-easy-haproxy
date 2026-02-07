@@ -8,7 +8,6 @@ __pycache__
 .env
 
 # uv
-uv.lock
 .venv/
 
 # Build artifacts

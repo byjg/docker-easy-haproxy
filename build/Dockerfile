@@ -25,6 +25,6 @@ RUN cd /scripts && uv sync --frozen
 
 RUN apk del .build-deps
 
-RUN cd /scripts && uv run pytest -s -vv tests/
+RUN cd /scripts && uv run pytest -s -vv tests/ && uv sync --no-dev
 
 CMD ["uv", "run", "python", "-u", "/scripts/main.py"]
