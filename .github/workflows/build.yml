@@ -32,10 +32,12 @@ jobs:
       - name: Install dependencies
         run: |
           export PATH="$HOME/.local/bin:$PATH"
-          uv pip install --system -e ".[dev]"
+          uv sync --group dev
 
       - name: Run tests
-        run: pytest -s tests/ -vv
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run pytest -s tests/ -vv
 
   Build:
     runs-on: ubuntu-latest
