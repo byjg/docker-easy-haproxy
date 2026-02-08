@@ -329,6 +329,7 @@ helm show chart byjg/easyhaproxy
 
 | Version | Release Date | Type  | Highlights                                                                                                                            |
 |---------|--------------|-------|---------------------------------------------------------------------------------------------------------------------------------------|
+| 5.1.0   | 2026-02-XX   | Minor | IngressClassName support for Kubernetes, modernized build system (uv/pyproject.toml), improved version management and release tooling |
 | 5.0.0   | 2025-12-04   | Major | Plugin framework (builtin plugins: JWT, FastCGI, Cloudflare, IP whitelist, deny pages, cleanup), docs restructure, examples refreshed |
 | 4.6.0   | 2024-11-27   | Minor | FastCGI plugin, JWT enhancements                                                                                                      |
 | 4.5.0   | 2024-XX-XX   | Minor | Previous release                                                                                                                      |
