@@ -27,6 +27,7 @@ def generate_ssl_certificates():
         pytest.skip(f"SSL certificate generation script not found: {script_path}")
 
     # Run from tests_e2e directory (Docker approach - WORKING)
+    print("\n[Setup] Generating SSL certificates and JWT keys...")
     result = subprocess.run(
         ["bash", str(script_path)],
         cwd=BASE_DIR,  # NOT BASE_DIR.parent (K8s bug)
@@ -35,7 +36,11 @@ def generate_ssl_certificates():
     )
 
     if result.returncode != 0:
+        print(f"[Setup] ERROR: Certificate generation failed!")
+        print(f"[Setup] stderr: {result.stderr}")
         pytest.fail(f"Failed to generate SSL certificates:\n{result.stderr}")
+
+    print("[Setup] ✓ SSL certificates and JWT keys generated successfully")
 
     # Return paths for K8s tests to use
     yield {

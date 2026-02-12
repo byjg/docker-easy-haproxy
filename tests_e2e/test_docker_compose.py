@@ -49,23 +49,46 @@ class DockerComposeFixture:
 
     def up(self):
         """Start docker-compose services"""
+        compose_name = Path(self.compose_file).name
+        print(f"\n[Docker] Starting services from {compose_name}...")
+
         cmd = ["docker", "compose", "-f", self.compose_file, "up", "-d"]
         if self.build:
             cmd.append("--build")
-        subprocess.run(
+
+        result = subprocess.run(
             cmd,
-            check=True,
-            capture_output=True
+            capture_output=True,
+            text=True
         )
+
+        if result.returncode != 0:
+            print(f"[Docker] ERROR: Failed to start services!")
+            print(f"[Docker] stdout: {result.stdout}")
+            print(f"[Docker] stderr: {result.stderr}")
+            raise subprocess.CalledProcessError(result.returncode, cmd, result.stdout, result.stderr)
+
+        print(f"[Docker] ✓ Services started, waiting {self.startup_wait}s for initialization...")
         time.sleep(self.startup_wait)
+        print(f"[Docker] ✓ Services ready")
 
     def down(self):
         """Stop and remove docker-compose services"""
-        subprocess.run(
+        compose_name = Path(self.compose_file).name
+        print(f"[Docker] Stopping services from {compose_name}...")
+
+        result = subprocess.run(
             ["docker", "compose", "-f", self.compose_file, "down", "--remove-orphans"],
-            check=True,
-            capture_output=True
+            capture_output=True,
+            text=True
         )
+
+        if result.returncode != 0:
+            print(f"[Docker] WARNING: Failed to stop services cleanly")
+            print(f"[Docker] stderr: {result.stderr}")
+            # Don't raise error on cleanup, just warn
+        else:
+            print(f"[Docker] ✓ Services stopped and cleaned up")
 
 
 @pytest.fixture
