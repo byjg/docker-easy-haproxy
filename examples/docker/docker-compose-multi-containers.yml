@@ -46,7 +46,10 @@
 
 services:
   haproxy:
-    image: byjg/easy-haproxy:5.0.0
+    build:
+      context: ../../
+      dockerfile: build/Dockerfile
+    image: byjg/easy-haproxy:local
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
@@ -56,7 +59,8 @@ services:
       HAPROXY_PASSWORD: password
       HAPROXY_STATS_PORT: 1936
     ports:
-        - 19901:19901
+      - 19901:19901
+      - 1936:1936
 
 
   nginx:

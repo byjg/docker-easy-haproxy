@@ -20,9 +20,6 @@
 # echo "" >> cloudflare_ips.lst
 # curl -s https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
 #
-# # Add to /etc/hosts (idempotent)
-# grep -q "website.local" /etc/hosts || echo "127.0.0.1 website.local api.local admin.local" | sudo tee -a /etc/hosts
-# ```
 #
 # HOW TO START:
 # ```bash
@@ -32,21 +29,21 @@
 # HOW TO VERIFY IT'S WORKING:
 # ```bash
 # # Test public website (Cloudflare + path blocking)
-# curl http://website.local/
+# curl -k -H "Host: website.local"  http://127.0.0.1/
 # # Expected: 200 OK
-# curl http://website.local/admin
+# curl -k -H "Host: website.local"  http://127.0.0.1/admin
 # # Expected: HTTP 404 - Path blocked
 #
 # # Test protected API (JWT required)
-# curl http://api.local/
+# curl -k -H "Host: api.local"  http://127.0.0.1/
 # # Expected: HTTP 403 - Missing Authorization header
 # # Generate JWT at https://jwt.io (see jwt-validator example for details)
 # TOKEN="eyJhbGc..."  # Replace with your token
-# curl -H "Authorization: Bearer $TOKEN" http://api.local/
+# curl -H "Host: api.local" -H "Authorization: Bearer $TOKEN" http://127.0.0.1/
 # # Expected: 200 OK
 #
 # # Test admin panel (IP whitelist)
-# curl http://admin.local/
+# curl -k -H "Host: admin.local"  http://127.0.0.1/
 # # Expected: 200 OK from localhost
 #
 # # View HAProxy stats
@@ -65,7 +62,10 @@
 
 services:
   haproxy:
-    image: byjg/easy-haproxy:5.0.0
+    build:
+      context: ../../
+      dockerfile: build/Dockerfile
+    image: byjg/easy-haproxy:local
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./cloudflare_ips.lst:/etc/haproxy/cloudflare_ips.lst:ro

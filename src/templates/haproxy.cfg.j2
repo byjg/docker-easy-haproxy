@@ -39,6 +39,13 @@ defaults
     errorfile 503 /etc/haproxy/errors-custom/503.http
     errorfile 504 /etc/haproxy/errors-custom/504.http
 {% endif %}
+{% if defaults_plugin_configs %}
+
+    # Defaults Plugin Configurations
+{% for config in defaults_plugin_configs %}
+    {{ config }}
+{% endfor %}
+{% endif %}
 
 {% if global_plugin_configs %}
 # Global Plugin Configurations

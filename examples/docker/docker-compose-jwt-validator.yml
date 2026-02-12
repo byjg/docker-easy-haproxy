@@ -12,9 +12,6 @@
 # ```bash
 # # Generate SSL certificates and JWT keys (from project root)
 # cd ../.. && ./examples/generate-keys.sh && cd examples/docker
-#
-# # Add to /etc/hosts (idempotent)
-# grep -q "api.local" /etc/hosts || echo "127.0.0.1 api.local" | sudo tee -a /etc/hosts
 # ```
 #
 # HOW TO START:
@@ -25,7 +22,7 @@
 # HOW TO VERIFY IT'S WORKING:
 # ```bash
 # # Test without token (should fail)
-# curl http://api.local/
+# curl -k -H "Host: api.local" http://127.0.0.1/
 # # Expected: HTTP 403 - Missing Authorization HTTP header
 #
 # # Generate test JWT at https://jwt.io with:
@@ -35,7 +32,7 @@
 #
 # # Test with valid token
 # TOKEN="eyJhbGc..."  # Replace with your generated token
-# curl -H "Authorization: Bearer $TOKEN" http://api.local/
+# curl -k -H "Host: host1.local" -H "Authorization: Bearer $TOKEN" http://api.local/
 # # Expected: 200 OK with API response
 #
 # # View HAProxy stats
@@ -53,7 +50,10 @@
 
 services:
   haproxy:
-    image: byjg/easy-haproxy:5.0.0
+    build:
+      context: ../..
+      dockerfile: build/Dockerfile
+    image: byjg/easy-haproxy:local
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       # Mount the public key for JWT verification

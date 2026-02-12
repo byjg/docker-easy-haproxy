@@ -65,6 +65,7 @@ class HaproxyConfigGenerator:
         self.certbot_hosts = []
         self.serving_hosts = []
         self.certs = {}
+        self.defaults_plugin_configs = []
 
         # Initialize plugin system
         try:
@@ -111,6 +112,13 @@ class HaproxyConfigGenerator:
                 # Extend instead of replace to preserve fcgi-app definitions from domain plugins
                 global_configs = [r.haproxy_config for r in global_results if r.haproxy_config]
                 self.global_plugin_configs.extend(global_configs)
+
+                # Extract defaults-level configs from global plugins
+                for result in global_results:
+                    if result.metadata and "defaults_config" in result.metadata:
+                        config = result.metadata["defaults_config"]
+                        if config and config not in self.defaults_plugin_configs:
+                            self.defaults_plugin_configs.append(config)
             except Exception as e:
                 logger_easyhaproxy.warning(f"Failed to execute global plugins: {e}")
 
@@ -121,7 +129,11 @@ class HaproxyConfigGenerator:
         env.lstrip_blocks = True
         env.rstrip_blocks = True
         template = env.get_template('haproxy.cfg.j2')
-        return template.render(data=self.mapping, global_plugin_configs=self.global_plugin_configs)
+        return template.render(
+            data=self.mapping,
+            global_plugin_configs=self.global_plugin_configs,
+            defaults_plugin_configs=self.defaults_plugin_configs
+        )
 
     def parse(self, container_metadata):
         easymapping = dict()
@@ -282,6 +294,13 @@ class HaproxyConfigGenerator:
                                 if result.metadata and "fcgi_app_definition" in result.metadata:
                                     if result.metadata["fcgi_app_definition"] not in self.global_plugin_configs:
                                         self.global_plugin_configs.append(result.metadata["fcgi_app_definition"])
+
+                            # Extract defaults-level config from metadata (e.g., log-format from Cloudflare plugin)
+                            for result in domain_results:
+                                if result.metadata and "defaults_config" in result.metadata:
+                                    config = result.metadata["defaults_config"]
+                                    if config and config not in self.defaults_plugin_configs:
+                                        self.defaults_plugin_configs.append(config)
                         except Exception as e:
                             logger_easyhaproxy.warning(f"Failed to execute domain plugins for {hostname}: {e}")
                             easymapping[port]["hosts"][hostname]["plugin_configs"] = []

@@ -8,12 +8,7 @@
 # - Custom HTTP status code for blocked requests
 # - Admin panel or sensitive application protection
 #
-# REQUIREMENTS (run these first):
-# ```bash
-# # Add to /etc/hosts (idempotent)
-# grep -q "admin.local" /etc/hosts || echo "127.0.0.1 admin.local" | sudo tee -a /etc/hosts
-#
-# # IMPORTANT: Update the allowed_ips in this file (line 52) with your actual IPs!
+# # IMPORTANT: Update the easyhaproxy.http.plugin.ip_whitelist.allowed_ips with your actual IPs!
 # # Default allows localhost and private networks for testing
 # ```
 #
@@ -25,7 +20,7 @@
 # HOW TO VERIFY IT'S WORKING:
 # ```bash
 # # Test from localhost (127.0.0.1 is whitelisted)
-# curl http://admin.local/
+# curl -k -H "Host: admin.local" http://127.0.0.1/
 # # Expected: 200 OK - Access granted
 #
 # # Test from non-whitelisted IP
@@ -47,7 +42,10 @@
 
 services:
   haproxy:
-    image: byjg/easy-haproxy:5.0.0
+    build:
+      context: ../../
+      dockerfile: build/Dockerfile
+    image: byjg/easy-haproxy:local
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:

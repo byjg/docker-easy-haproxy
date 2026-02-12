@@ -86,7 +86,8 @@ class TestCloudflarePlugin:
         assert result.haproxy_config is not None
         assert "Cloudflare" in result.haproxy_config
         assert "acl from_cloudflare src -f /etc/haproxy/cloudflare_ips.lst" in result.haproxy_config
-        assert "http-request set-header X-Forwarded-For %[req.hdr(CF-Connecting-IP)]" in result.haproxy_config
+        assert "http-request set-var(txn.real_ip) req.hdr(CF-Connecting-IP)" in result.haproxy_config
+        assert "http-request set-header X-Forwarded-For %[var(txn.real_ip)]" in result.haproxy_config
         assert result.metadata["domain"] == "example.com"
         assert result.metadata["ip_list_path"] == "/etc/haproxy/cloudflare_ips.lst"
 
@@ -123,7 +124,11 @@ class TestCloudflarePlugin:
         # Verify Cloudflare config is in the output
         assert "Cloudflare - Restore original visitor IP" in haproxy_config
         assert "acl from_cloudflare src -f /etc/haproxy/cloudflare_ips.lst" in haproxy_config
-        assert "http-request set-header X-Forwarded-For %[req.hdr(CF-Connecting-IP)]" in haproxy_config
+        assert "http-request set-var(txn.real_ip) req.hdr(CF-Connecting-IP)" in haproxy_config
+        assert "http-request set-header X-Forwarded-For %[var(txn.real_ip)]" in haproxy_config
+        # Verify log-format is in defaults section (from defaults_config)
+        assert "log-format" in haproxy_config
+        assert "%{+Q}[var(txn.real_ip)]" in haproxy_config
 
     def test_cloudflare_plugin_builtin_ips_enabled(self):
         """Test plugin uses built-in Cloudflare IPs and writes to file"""
@@ -1066,13 +1071,20 @@ class TestMultiplePluginsCombined:
         haproxy_config = cfg.generate(line_list)
 
         # Find positions of plugin configs
-        cloudflare_pos = haproxy_config.find("Cloudflare")
+        # Cloudflare has both defaults-level (log-format) and backend-level (IP restoration) configs
+        cloudflare_defaults_pos = haproxy_config.find("# Cloudflare - Enhanced log format")
+        cloudflare_backend_pos = haproxy_config.find("# Cloudflare - Restore original visitor IP")
         deny_pages_pos = haproxy_config.find("Deny Pages")
+        backend_pos = haproxy_config.find("backend srv_")
 
-        # Both should be present
-        assert cloudflare_pos != -1
+        # All should be present
+        assert cloudflare_defaults_pos != -1
+        assert cloudflare_backend_pos != -1
         assert deny_pages_pos != -1
 
-        # They should appear in backend sections (not in global/defaults)
-        assert cloudflare_pos > haproxy_config.find("backend srv_")
-        assert deny_pages_pos > haproxy_config.find("backend srv_")
+        # Cloudflare log-format should be in defaults (before backend)
+        assert cloudflare_defaults_pos < backend_pos
+
+        # Cloudflare IP restoration and Deny Pages should be in backend sections (after backend)
+        assert cloudflare_backend_pos > backend_pos
+        assert deny_pages_pos > backend_pos

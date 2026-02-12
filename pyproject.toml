@@ -39,6 +39,8 @@ dev = [
     "pytest>=9.0.2",
     "pytest-cov>=4.1.0",
     "ruff>=0.1.0",
+    "PyJWT>=2.8.0",
+    "cryptography>=41.0.0",
 ]
 
 [project.scripts]

@@ -9,11 +9,6 @@
 # - PATH_INFO support for RESTful routing
 # - Custom document root and index file configuration
 #
-# REQUIREMENTS (run these first):
-# ```bash
-# # Add to /etc/hosts (idempotent)
-# grep -q "phpapp.local" /etc/hosts || echo "127.0.0.1 phpapp.local" | sudo tee -a /etc/hosts
-# ```
 #
 # HOW TO START:
 # ```bash
@@ -23,15 +18,15 @@
 # HOW TO VERIFY IT'S WORKING:
 # ```bash
 # # Test main page
-# curl http://phpapp.local/
+# curl -k -H "Host: phpapp.local"  http://127.0.0.1/
 # # Expected: 200 OK with PHP environment info
 #
 # # Test PHP info page
-# curl http://phpapp.local/info.php
+# -k -H "Host: phpapp.local"  http://127.0.0.1/info.php
 # # Expected: phpinfo() output
 #
 # # Test PATH_INFO routing
-# curl http://phpapp.local/test-path-info.php/users/123
+# -k -H "Host: phpapp.local"  http://127.0.0.1/test-path-info.php/users/123
 # # Expected: PATH_INFO=/users/123
 #
 # # View HAProxy stats
@@ -49,7 +44,10 @@
 
 services:
   haproxy:
-    image: byjg/easy-haproxy:5.0.0
+    build:
+      context: ../../
+      dockerfile: build/Dockerfile
+    image: byjg/easy-haproxy:local
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:

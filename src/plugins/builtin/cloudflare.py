@@ -10,6 +10,7 @@ updated and written to the IP list file.
 Configuration:
     - ip_list_path: Path to file containing Cloudflare IP ranges (default: /etc/haproxy/cloudflare_ips.lst)
     - use_builtin_ips: Use built-in Cloudflare IP ranges (default: true)
+    - update_log_format: Update HAProxy log format to show real visitor IP (default: true)
 
 Example YAML config:
     plugins:
@@ -17,14 +18,21 @@ Example YAML config:
         enabled: true
         ip_list_path: /etc/haproxy/cloudflare_ips.lst
         use_builtin_ips: true
+        update_log_format: true
 
 Example Container Label:
     easyhaproxy.http.plugins: "cloudflare"
+    easyhaproxy.http.plugin.cloudflare.update_log_format: "true"
 
 HAProxy Config Generated:
     # Cloudflare - Restore original visitor IP
     acl from_cloudflare src -f /etc/haproxy/cloudflare_ips.lst
-    http-request set-header X-Forwarded-For %[req.hdr(CF-Connecting-IP)] if from_cloudflare
+    http-request set-var(txn.real_ip) req.hdr(CF-Connecting-IP) if from_cloudflare
+    http-request set-header X-Forwarded-For %[var(txn.real_ip)] if from_cloudflare
+
+Log Format (when update_log_format=true):
+    Shows real visitor IP alongside connection IP for debugging
+    Format: real_ip/connection_ip [timestamp] request status bytes ...
 """
 
 import os
@@ -73,6 +81,7 @@ class CloudflarePlugin(PluginInterface):
         self.ip_list_path = "/etc/haproxy/cloudflare_ips.lst"
         self.enabled = True
         self.use_builtin_ips = True
+        self.update_log_format = True
 
     @property
     def name(self) -> str:
@@ -91,6 +100,7 @@ class CloudflarePlugin(PluginInterface):
                 - ip_list_path: Path to Cloudflare IP list file
                 - enabled: Whether plugin is enabled
                 - use_builtin_ips: Use built-in Cloudflare IP ranges (default: true)
+                - update_log_format: Update HAProxy log format to show real IP (default: true)
         """
         if "ip_list_path" in config:
             self.ip_list_path = config["ip_list_path"]
@@ -100,6 +110,9 @@ class CloudflarePlugin(PluginInterface):
 
         if "use_builtin_ips" in config:
             self.use_builtin_ips = str(config["use_builtin_ips"]).lower() in ["true", "1", "yes"]
+
+        if "update_log_format" in config:
+            self.update_log_format = str(config["update_log_format"]).lower() in ["true", "1", "yes"]
 
     def process(self, context: PluginContext) -> PluginResult:
         """
@@ -131,10 +144,19 @@ class CloudflarePlugin(PluginInterface):
             except Exception as e:
                 logger_easyhaproxy.warning(f"Cloudflare plugin: Failed to write IP list to {self.ip_list_path}: {e}")
 
-        # Generate HAProxy config snippet
+        # Generate HAProxy config snippet for backend
         haproxy_config = f"""# Cloudflare - Restore original visitor IP
 acl from_cloudflare src -f {self.ip_list_path}
-http-request set-header X-Forwarded-For %[req.hdr(CF-Connecting-IP)] if from_cloudflare"""
+http-request set-var(txn.real_ip) req.hdr(CF-Connecting-IP) if from_cloudflare
+http-request set-header X-Forwarded-For %[var(txn.real_ip)] if from_cloudflare"""
+
+        # Generate log format config (frontend level)
+        # Industry-standard format: real_ip/proxy_ip [time] request status bytes timings
+        # Based on HAProxy HTTP log format with real IP shown first
+        log_format_config = None
+        if self.update_log_format:
+            log_format_config = """# Cloudflare - Enhanced log format showing real visitor IP
+log-format "%{+Q}[var(txn.real_ip)]:-/%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs %{+Q}r\""""
 
         return PluginResult(
             haproxy_config=haproxy_config,
@@ -143,6 +165,8 @@ http-request set-header X-Forwarded-For %[req.hdr(CF-Connecting-IP)] if from_clo
                 "domain": context.domain,
                 "ip_list_path": self.ip_list_path,
                 "use_builtin_ips": self.use_builtin_ips,
+                "update_log_format": self.update_log_format,
+                "defaults_config": log_format_config,
                 "ip_count": len(self.CLOUDFLARE_IPS) if self.use_builtin_ips else None
             }
         )
