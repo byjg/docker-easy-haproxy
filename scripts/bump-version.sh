@@ -94,7 +94,7 @@ if [[ "$MODE" == "verify" ]]; then
   check_contains "easy-haproxy:$NEW_VERSION" deploy/docker/docker-compose.yml "Docker compose image tag"
   check_contains "version = \"$NEW_VERSION\"" pyproject.toml "pyproject.toml version"
 
-  if grep -R "byjg/easy-haproxy:" examples | grep -v "$NEW_VERSION" >/dev/null; then
+  if grep -R "byjg/easy-haproxy:" tests_e2e | grep -v "$NEW_VERSION" >/dev/null; then
     echo "❌ Examples still reference a different tag. Run bump-version.sh to update."
     STATUS=1
   else
@@ -122,9 +122,9 @@ sed -i "s#^version = \"[a-zA-Z0-9\\.-]*\"#version = \"$NEW_VERSION\"#g" pyprojec
 sed -i "s#appVersion: \"[a-zA-Z0-9\\.-]*\"#appVersion: \"$NEW_VERSION\"#g" "$CHART_FILE"
 
 # Update examples
-find examples -type f -name '*.yml' -exec sed -i "s#\\(byjg/easy-haproxy:\\)[a-zA-Z0-9\\.-]*#\\1$NEW_VERSION#g" {} \; -print
+find tests_e2e -type f -name '*.yml' -exec sed -i "s#\\(byjg/easy-haproxy:\\)[a-zA-Z0-9\\.-]*#\\1$NEW_VERSION#g" {} \; -print
 # Update raw GitHub URLs in Kubernetes examples
-find examples/kubernetes -type f -name '*.yml' -exec sed -i "s#raw.githubusercontent.com/byjg/docker-easy-haproxy/[a-zA-Z0-9\\.\\-]*/deploy/kubernetes/easyhaproxy-daemonset.yml#raw.githubusercontent.com/byjg/docker-easy-haproxy/$NEW_VERSION/deploy/kubernetes/easyhaproxy-daemonset.yml#g" {} \;
+find tests_e2e/kubernetes -type f -name '*.yml' -exec sed -i "s#raw.githubusercontent.com/byjg/docker-easy-haproxy/[a-zA-Z0-9\\.\\-]*/deploy/kubernetes/easyhaproxy-daemonset.yml#raw.githubusercontent.com/byjg/docker-easy-haproxy/$NEW_VERSION/deploy/kubernetes/easyhaproxy-daemonset.yml#g" {} \;
 
 # Bump chart version (patch)
 SANITIZED_CHART_VERSION="${CURRENT_CHART_VERSION%\.}"

@@ -31,7 +31,7 @@ Choose one of these pre-made configurations:
 
 ## Prerequisites
 
-- SSL certificates generated (`./examples/generate-keys.sh`)
+- SSL certificates generated (`./tests_e2e/generate-keys.sh`)
 - `/etc/hosts` entry for `host1.local`
 - Backend container running on port 8080
 
@@ -50,7 +50,7 @@ The docker-compose.yml file contains:
 
 ```bash
 # 1. Generate certificates
-cd ../.. && ./examples/generate-keys.sh && cd examples/static
+cd ../.. && ./tests_e2e/generate-keys.sh && cd tests_e2e/static
 
 # 2. Choose a configuration
 cp conf/config-basic.yml conf/config.yml

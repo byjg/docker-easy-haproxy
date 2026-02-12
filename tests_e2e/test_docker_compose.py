@@ -44,16 +44,16 @@ def generate_ssl_certificates():
     Generate SSL certificates once for all tests that require them.
     This runs automatically at the start of the test session.
     """
-    script_path = BASE_DIR.parent / "generate-keys.sh"
+    script_path = BASE_DIR / "generate-keys.sh"
 
     # Check if script exists
     if not script_path.exists():
         pytest.skip(f"SSL certificate generation script not found: {script_path}")
 
-    # Run the script from the examples directory
+    # Run the script from the tests_e2e directory
     result = subprocess.run(
         ["bash", str(script_path)],
-        cwd=BASE_DIR.parent,
+        cwd=BASE_DIR,
         capture_output=True,
         text=True
     )
@@ -69,7 +69,7 @@ class DockerComposeFixture:
     """Helper class to manage docker-compose lifecycle"""
 
     def __init__(self, compose_file: str, startup_wait: int = 3, build: bool = True):
-        self.compose_file = str(BASE_DIR / compose_file)
+        self.compose_file = str(BASE_DIR / "docker" / compose_file)
         self.startup_wait = startup_wait
         self.build = build
 
@@ -152,7 +152,7 @@ def docker_compose_ip_whitelist() -> Generator[None, None, None]:
 def docker_compose_cloudflare() -> Generator[None, None, None]:
     """Fixture for docker-compose-cloudflare.yml"""
     # Set up cloudflare_ips.lst with Docker network for testing
-    cloudflare_ips_path = BASE_DIR / "cloudflare_ips.lst"
+    cloudflare_ips_path = BASE_DIR / "docker" / "cloudflare_ips.lst"
 
     # Download Cloudflare IPs
     subprocess.run(
@@ -184,7 +184,7 @@ def docker_compose_cloudflare() -> Generator[None, None, None]:
 @pytest.fixture
 def jwt_token() -> str:
     """Generate a valid JWT token for testing"""
-    private_key_path = BASE_DIR / "jwt_private.pem"
+    private_key_path = BASE_DIR / "docker" / "jwt_private.pem"
     with open(private_key_path, 'r') as f:
         private_key = f.read()
 

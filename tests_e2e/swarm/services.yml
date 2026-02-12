@@ -14,7 +14,7 @@
 # docker stack deploy -c easyhaproxy.yml easyhaproxy
 #
 # # Generate SSL certificates
-# cd ../.. && ./examples/generate-keys.sh && cd examples/swarm
+# cd ../.. && ./tests_e2e/generate-keys.sh && cd tests_e2e/swarm
 #
 # # Add to /etc/hosts (idempotent)
 # grep -q "host1.local" /etc/hosts || echo "127.0.0.1 host1.local host2.local" | sudo tee -a /etc/hosts

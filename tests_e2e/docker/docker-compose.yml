@@ -11,7 +11,7 @@
 # REQUIREMENTS (run these first):
 #
 # # Generate SSL certificates
-# cd ../.. && ./examples/generate-keys.sh && cd examples/docker
+# cd ../.. && ./tests_e2e/generate-keys.sh && cd tests_e2e/docker
 # ```
 #
 # HOW TO START:

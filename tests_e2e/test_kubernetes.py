@@ -40,7 +40,7 @@ except ImportError:
 
 # Base directory for Kubernetes manifests
 BASE_DIR = Path(__file__).parent.absolute()
-BIN_DIR = BASE_DIR / ".kind"
+BIN_DIR = BASE_DIR / "kubernetes" / ".kind"
 KIND_BIN = BIN_DIR / "kind"
 KUBECTL_BIN = BIN_DIR / "kubectl"
 HELM_BIN = BIN_DIR / "helm"
@@ -468,7 +468,7 @@ class KubernetesFixture:
     """Helper class to manage Kubernetes manifest lifecycle"""
 
     def __init__(self, manifest_file: str, kubectl_cmd: str, namespace: str = "default", wait_time: int = 5):
-        self.manifest_file = str(BASE_DIR / manifest_file)
+        self.manifest_file = str(BASE_DIR / "kubernetes" / manifest_file)
         self.kubectl = kubectl_cmd
         self.namespace = namespace
         self.wait_time = wait_time
@@ -846,7 +846,7 @@ def k8s_cloudflare(kind_cluster, kind_cmd) -> Generator[str, None, None]:
     cluster_name = kind_cluster["name"]
 
     # Build header-echo server image locally
-    header_echo_dir = BASE_DIR.parent / "fixtures" / "header-echo"
+    header_echo_dir = BASE_DIR / "fixtures" / "header-echo"
     print("  → Building header-echo-server:test image...")
     subprocess.run(
         ["docker", "build", "-t", "header-echo-server:test", str(header_echo_dir)],
@@ -877,7 +877,7 @@ def k8s_cloudflare(kind_cluster, kind_cmd) -> Generator[str, None, None]:
     ip_list_base64 = base64.b64encode(ip_list_content.encode('utf-8')).decode('ascii')
 
     # Read the original manifest
-    manifest_path = BASE_DIR / "cloudflare.yml"
+    manifest_path = BASE_DIR / "kubernetes" / "cloudflare.yml"
     with open(manifest_path, 'r') as f:
         manifest_content = f.read()
 
@@ -889,7 +889,7 @@ def k8s_cloudflare(kind_cluster, kind_cmd) -> Generator[str, None, None]:
     )
 
     # Write modified manifest to temp file
-    temp_manifest_path = BASE_DIR / "cloudflare_test.yml"
+    temp_manifest_path = BASE_DIR / "kubernetes" / "cloudflare_test.yml"
     with open(temp_manifest_path, 'w') as f:
         f.write(manifest_modified)
 

@@ -13,7 +13,7 @@
 # REQUIREMENTS (run these first):
 # ```bash
 # # Generate SSL certificates and JWT keys (from project root)
-# cd ../.. && ./examples/generate-keys.sh && cd examples/docker
+# cd ../.. && ./tests_e2e/generate-keys.sh && cd tests_e2e/docker
 #
 # # Download Cloudflare IPs (idempotent - overwrites if exists)
 # curl -s https://www.cloudflare.com/ips-v4 > cloudflare_ips.lst

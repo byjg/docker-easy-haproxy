@@ -60,7 +60,7 @@ curl http://localhost:8080
 
 ## Used By
 
-- `examples/docker/docker-compose-cloudflare.yml`
-- `examples/docker/test_docker_compose.py::TestCloudflare`
-- `examples/kubernetes/cloudflare.yml`
-- `examples/kubernetes/test_kubernetes.py::TestCloudflare`
+- `tests_e2e/docker/docker-compose-cloudflare.yml`
+- `tests_e2e/test_docker_compose.py::TestCloudflare`
+- `tests_e2e/kubernetes/cloudflare.yml`
+- `tests_e2e/test_kubernetes.py::TestCloudflare`

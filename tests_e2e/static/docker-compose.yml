@@ -10,7 +10,7 @@
 # REQUIREMENTS (run these first):
 # ```bash
 # # Generate SSL certificates
-# cd ../.. && ./examples/generate-keys.sh && cd examples/static
+# cd ../.. && ./tests_e2e/generate-keys.sh && cd tests_e2e/static
 #
 # # Add to /etc/hosts (idempotent)
 # grep -q "host1.local" /etc/hosts || echo "127.0.0.1 host1.local" | sudo tee -a /etc/hosts

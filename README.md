@@ -152,7 +152,7 @@ Click on the image to see the videos (use HD for better visualization)
 [![Static Configuration](docs/video-static.png)](https://youtu.be/B_bYZnRTGJM)
 [![TCP Mode](docs/video-tcp-mysql.png)](https://youtu.be/JHqcq9crbDI)
 
-[Here is the code](https://gist.github.com/byjg/e125e478a0562190176d69ea795fd3d4) applied in the examples above.
+[Here is the code](https://gist.github.com/byjg/e125e478a0562190176d69ea795fd3d4) applied in the test examples above.
 
 
 ----
