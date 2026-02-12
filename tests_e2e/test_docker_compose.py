@@ -38,19 +38,78 @@ from utils import extract_backend_block
 # Base directory for docker-compose files
 BASE_DIR = Path(__file__).parent.absolute()
 
+# Track if cloudflare_ips.lst has been created in this test session
+_cloudflare_ips_created = False
+
+# Track if Docker image has been built in this test session
+_docker_image_built = False
+
+
+def create_cloudflare_ips_file():
+    """
+    Create cloudflare_ips.lst file with Cloudflare IP ranges and Docker network.
+
+    This file is required by docker-compose files that use the Cloudflare plugin.
+    Downloads real Cloudflare IPs and adds Docker private network for testing.
+
+    Strategy:
+    - First call: Always create (fresh download)
+    - Subsequent calls: Skip if file exists (reuse from first call)
+    """
+    global _cloudflare_ips_created
+
+    cloudflare_ips_path = BASE_DIR / "docker" / "cloudflare_ips.lst"
+
+    # On subsequent calls, skip if file exists
+    if _cloudflare_ips_created and cloudflare_ips_path.exists() and cloudflare_ips_path.is_file():
+        return
+
+    # Download Cloudflare IPv4 ranges
+    subprocess.run(
+        ["curl", "-s", "https://www.cloudflare.com/ips-v4"],
+        stdout=open(cloudflare_ips_path, 'w'),
+        check=True
+    )
+    with open(cloudflare_ips_path, 'a') as f:
+        f.write("\n")
+
+    # Download Cloudflare IPv6 ranges
+    subprocess.run(
+        ["curl", "-s", "https://www.cloudflare.com/ips-v6"],
+        stdout=open(cloudflare_ips_path, 'a'),
+        check=True
+    )
+
+    # Add Docker private network range so HAProxy treats test requests as from Cloudflare
+    with open(cloudflare_ips_path, 'a') as f:
+        f.write("\n")
+        f.write("172.16.0.0/12\n")  # Docker bridge networks are typically in this range
+
+    # Mark as created for this test session
+    _cloudflare_ips_created = True
+
 
 class DockerComposeFixture:
     """Helper class to manage docker-compose lifecycle"""
 
-    def __init__(self, compose_file: str, startup_wait: int = 3, build: bool = True):
+    def __init__(self, compose_file: str, startup_wait: int = 3, build: bool = None):
         self.compose_file = str(BASE_DIR / "docker" / compose_file)
         self.startup_wait = startup_wait
-        self.build = build
+
+        # Smart build strategy: build on first call, skip on subsequent calls
+        global _docker_image_built
+        if build is None:
+            self.build = not _docker_image_built
+        else:
+            self.build = build
 
     def up(self):
         """Start docker-compose services"""
+        global _docker_image_built
+
         compose_name = Path(self.compose_file).name
-        print(f"\n[Docker] Starting services from {compose_name}...")
+        print()  # Newline for better test output formatting
+        print(f"  → Starting services from {compose_name}...")
 
         cmd = ["docker", "compose", "-f", self.compose_file, "up", "-d"]
         if self.build:
@@ -63,19 +122,23 @@ class DockerComposeFixture:
         )
 
         if result.returncode != 0:
-            print(f"[Docker] ERROR: Failed to start services!")
-            print(f"[Docker] stdout: {result.stdout}")
-            print(f"[Docker] stderr: {result.stderr}")
+            print(f"  ✗ ERROR: Failed to start services!")
+            print(f"    stdout: {result.stdout}")
+            print(f"    stderr: {result.stderr}")
             raise subprocess.CalledProcessError(result.returncode, cmd, result.stdout, result.stderr)
 
-        print(f"[Docker] ✓ Services started, waiting {self.startup_wait}s for initialization...")
+        # Mark image as built for this test session
+        if self.build:
+            _docker_image_built = True
+
+        print(f"  ✓ Services started, waiting {self.startup_wait}s for initialization...")
         time.sleep(self.startup_wait)
-        print(f"[Docker] ✓ Services ready")
+        print(f"  ✓ Services ready")
 
     def down(self):
         """Stop and remove docker-compose services"""
         compose_name = Path(self.compose_file).name
-        print(f"[Docker] Stopping services from {compose_name}...")
+        print(f"  → Stopping services from {compose_name}...")
 
         result = subprocess.run(
             ["docker", "compose", "-f", self.compose_file, "down", "--remove-orphans"],
@@ -84,11 +147,11 @@ class DockerComposeFixture:
         )
 
         if result.returncode != 0:
-            print(f"[Docker] WARNING: Failed to stop services cleanly")
-            print(f"[Docker] stderr: {result.stderr}")
+            print(f"  ⚠ WARNING: Failed to stop services cleanly")
+            print(f"    stderr: {result.stderr}")
             # Don't raise error on cleanup, just warn
         else:
-            print(f"[Docker] ✓ Services stopped and cleaned up")
+            print(f"  ✓ Services stopped and cleaned up")
 
 
 @pytest.fixture
@@ -130,6 +193,9 @@ def docker_compose_php_fpm() -> Generator[None, None, None]:
 @pytest.fixture
 def docker_compose_plugins_combined() -> Generator[None, None, None]:
     """Fixture for docker-compose-plugins-combined.yml"""
+    # Create cloudflare_ips.lst (required by this compose file)
+    create_cloudflare_ips_file()
+
     fixture = DockerComposeFixture("docker-compose-plugins-combined.yml")
     fixture.up()
     yield
@@ -148,29 +214,8 @@ def docker_compose_ip_whitelist() -> Generator[None, None, None]:
 @pytest.fixture
 def docker_compose_cloudflare() -> Generator[None, None, None]:
     """Fixture for docker-compose-cloudflare.yml"""
-    # Set up cloudflare_ips.lst with Docker network for testing
-    cloudflare_ips_path = BASE_DIR / "docker" / "cloudflare_ips.lst"
-
-    # Download Cloudflare IPs
-    subprocess.run(
-        ["curl", "-s", "https://www.cloudflare.com/ips-v4"],
-        stdout=open(cloudflare_ips_path, 'w'),
-        check=True
-    )
-    with open(cloudflare_ips_path, 'a') as f:
-        f.write("\n")
-
-    subprocess.run(
-        ["curl", "-s", "https://www.cloudflare.com/ips-v6"],
-        stdout=open(cloudflare_ips_path, 'a'),
-        check=True
-    )
-
-    # Add Docker private network range so HAProxy treats test requests as from Cloudflare
-    # Docker bridge networks are typically in 172.16.0.0/12 range
-    with open(cloudflare_ips_path, 'a') as f:
-        f.write("\n")
-        f.write("172.16.0.0/12\n")  # Docker private network range
+    # Create cloudflare_ips.lst (required by this compose file)
+    create_cloudflare_ips_file()
 
     fixture = DockerComposeFixture("docker-compose-cloudflare.yml")
     fixture.up()
