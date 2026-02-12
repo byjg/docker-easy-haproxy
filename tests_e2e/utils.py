@@ -109,7 +109,7 @@ def wait_for_pods_ready(
         if all_running:
             if verbose:
                 label_info = f" (label: {label_selector})" if label_selector else ""
-                print(f"✓ All pods running in '{namespace}'{label_info}")
+                print(f"  ✓ All pods running in '{namespace}'{label_info}")
             return True
 
         time.sleep(2)
@@ -159,6 +159,7 @@ def create_tls_secret_from_pem(kubectl_cmd: str, secret_name: str, namespace: st
         namespace: Namespace to create the secret in
         pem_file: Path to the PEM file containing both certificate and key
     """
+    print()  # Newline for better test output formatting
     print(f"  → Creating TLS secret '{secret_name}' from {pem_file.name}...")
 
     # Read the PEM file

@@ -9,6 +9,7 @@ on:
     tags: [ '*.*.*' ]
   pull_request:
     branches: [ master ]
+  workflow_dispatch:  # Allow manual trigger
 
 env:
   # github.repository as <account>/<repo>
@@ -38,6 +39,54 @@ jobs:
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           uv run pytest -s tests/ -vv
+
+  Tests-E2E-Docker:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
+    timeout-minutes: 20
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install dependencies
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv sync --group dev
+
+      - name: Run Docker Compose E2E tests
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run pytest tests_e2e/test_docker_compose.py -v
+
+  Tests-E2E-Kubernetes:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install dependencies
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv sync --group dev
+
+      - name: Run Kubernetes E2E tests
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run pytest tests_e2e/test_kubernetes.py -v
 
   Build:
     runs-on: ubuntu-latest

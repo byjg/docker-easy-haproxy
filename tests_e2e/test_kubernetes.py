@@ -436,6 +436,7 @@ class KubernetesFixture:
 
     def apply(self):
         """Apply Kubernetes manifest"""
+        print()  # Newline for better test output formatting
         # Create namespace if it doesn't exist
         if self.namespace != "default":
             subprocess.run(
@@ -592,6 +593,7 @@ def k8s_jwt_validator_secret(kind_cluster) -> Generator[dict, None, None]:
         jwt_pubkey_content = f.read()
 
     # Create JWT secrets using kubectl
+    print()  # Newline for better test output formatting
     print("  → Creating JWT secret 'jwt-pubkey-secret'...")
     subprocess.run(
         [kubectl_cmd, "delete", "secret", "jwt-pubkey-secret", "-n", "default",
@@ -671,6 +673,7 @@ def k8s_cloudflare(kind_cluster, kind_cmd) -> Generator[str, None, None]:
 
     # Build header-echo server image locally
     header_echo_dir = BASE_DIR / "fixtures" / "header-echo"
+    print()  # Newline for better test output formatting
     print("  → Building header-echo-server:test image...")
     subprocess.run(
         ["docker", "build", "-t", "header-echo-server:test", str(header_echo_dir)],
