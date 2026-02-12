@@ -27,6 +27,7 @@ from typing import Generator
 import urllib.request
 import pytest
 import requests
+from utils import generate_jwt_token, wait_for_pods_ready, create_tls_secret_from_pem, extract_backend_block
 
 # Import JWT libraries for token generation
 try:
@@ -193,48 +194,6 @@ def ensure_helm_installed():
 # =============================================================================
 
 @pytest.fixture(scope="session")
-def generated_certs():
-    """
-    Generate SSL certificates and JWT keys once for the entire test session.
-    This runs the generate-keys.sh script from the examples directory.
-
-    Returns:
-        dict: Paths to generated certificate files
-    """
-    print("\n[Setup] Generating SSL certificates and JWT keys...")
-
-    # Path to generate-keys.sh
-    examples_dir = BASE_DIR.parent
-    generate_keys_script = examples_dir / "generate-keys.sh"
-
-    if not generate_keys_script.exists():
-        raise FileNotFoundError(f"generate-keys.sh not found at {generate_keys_script}")
-
-    # Run the script
-    result = subprocess.run(
-        ["bash", str(generate_keys_script)],
-        cwd=str(examples_dir),
-        capture_output=True,
-        text=True,
-        timeout=30
-    )
-
-    if result.returncode != 0:
-        print(f"✗ Certificate generation failed: {result.stderr}")
-        raise RuntimeError(f"Failed to generate certificates: {result.stderr}")
-
-    print("✓ SSL certificates and JWT keys generated")
-
-    # Return paths to generated files
-    return {
-        "host1_local": examples_dir / "static" / "host1.local.pem",
-        "host2_local": examples_dir / "docker" / "host2.local.pem",
-        "jwt_private": examples_dir / "docker" / "jwt_private.pem",
-        "jwt_pubkey": examples_dir / "docker" / "jwt_pubkey.pem",
-    }
-
-
-@pytest.fixture(scope="session")
 def kubectl_cmd():
     """Ensure kubectl is installed and return the command"""
     return ensure_kubectl_installed()
@@ -253,14 +212,16 @@ def helm_cmd():
 
 
 @pytest.fixture(scope="session")
-def kind_cluster(kind_cmd, kubectl_cmd, helm_cmd, generated_certs, request):
+def kind_cluster(kind_cmd, kubectl_cmd, helm_cmd, generate_ssl_certificates, request):
     """
     Create a kind cluster for the entire test session.
     The cluster is shared across all tests for better performance.
 
     Args:
-        generated_certs: Fixture that ensures certificates are generated before cluster creation
+        generate_ssl_certificates: Fixture that ensures certificates are generated before cluster creation
     """
+    # Store certificate paths for later use
+    generated_certs = generate_ssl_certificates
     cluster_name = "easyhaproxy-test"
 
     # Register cleanup to always run, even on failure
@@ -362,7 +323,7 @@ nodes:
 
     # Build and load local EasyHAProxy image
     print("[4/9] Building local EasyHAProxy image (may take 30-60s)...")
-    project_root = BASE_DIR.parent.parent
+    project_root = BASE_DIR.parent
     subprocess.run(
         ["docker", "build", "-t", "byjg/easy-haproxy:local",
          "-f", str(project_root / "build" / "Dockerfile"),
@@ -493,31 +454,8 @@ class KubernetesFixture:
         time.sleep(self.wait_time)
 
         # Wait for all pods to be running
-        max_wait = 60
-        start_time = time.time()
-        while time.time() - start_time < max_wait:
-            result = subprocess.run(
-                [self.kubectl, "get", "pods", "-n", self.namespace, "-o", "json"],
-                check=True,
-                capture_output=True,
-                text=True
-            )
-            pods = json.loads(result.stdout)
-
-            if not pods['items']:
-                time.sleep(2)
-                continue
-
-            all_running = all(
-                pod['status']['phase'] == 'Running'
-                for pod in pods['items']
-            )
-
-            if all_running:
-                print(f"✓ All pods running in namespace '{self.namespace}'")
-                break
-
-            time.sleep(2)
+        if not wait_for_pods_ready(self.kubectl, self.namespace, timeout=60):
+            raise TimeoutError(f"Pods in namespace '{self.namespace}' did not become ready within 60 seconds")
 
     def delete(self):
         """Delete Kubernetes resources"""
@@ -535,74 +473,6 @@ class KubernetesFixture:
                  "--ignore-not-found=true"],
                 capture_output=True
             )
-
-
-def create_tls_secret_from_pem(kubectl_cmd: str, secret_name: str, namespace: str, pem_file: Path):
-    """
-    Create a Kubernetes TLS secret from a PEM file.
-
-    Args:
-        kubectl_cmd: Path to kubectl command
-        secret_name: Name for the secret
-        namespace: Namespace to create the secret in
-        pem_file: Path to the PEM file containing both certificate and key
-    """
-    print(f"  → Creating TLS secret '{secret_name}' from {pem_file.name}...")
-
-    # Read the PEM file
-    with open(pem_file, 'r') as f:
-        pem_content = f.read()
-
-    # Split certificate and key (PEM file contains both)
-    cert_start = pem_content.find('-----BEGIN CERTIFICATE-----')
-    cert_end = pem_content.find('-----END CERTIFICATE-----') + len('-----END CERTIFICATE-----')
-    key_start = pem_content.find('-----BEGIN PRIVATE KEY-----')
-    key_end = pem_content.find('-----END PRIVATE KEY-----') + len('-----END PRIVATE KEY-----')
-
-    # Handle RSA PRIVATE KEY format (openssl genrsa format)
-    if key_start == -1:
-        key_start = pem_content.find('-----BEGIN RSA PRIVATE KEY-----')
-        key_end = pem_content.find('-----END RSA PRIVATE KEY-----') + len('-----END RSA PRIVATE KEY-----')
-
-    if cert_start == -1 or key_start == -1:
-        raise ValueError(f"Invalid PEM file format in {pem_file}")
-
-    cert = pem_content[cert_start:cert_end]
-    key = pem_content[key_start:key_end]
-
-    # Create temp files for cert and key
-    import tempfile
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.crt', delete=False) as cert_file:
-        cert_file.write(cert)
-        cert_path = cert_file.name
-
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.key', delete=False) as key_file:
-        key_file.write(key)
-        key_path = key_file.name
-
-    try:
-        # Delete secret if it exists
-        subprocess.run(
-            [kubectl_cmd, "delete", "secret", secret_name, "-n", namespace,
-             "--ignore-not-found=true"],
-            capture_output=True
-        )
-
-        # Create secret using kubectl
-        subprocess.run(
-            [kubectl_cmd, "create", "secret", "tls", secret_name,
-             f"--cert={cert_path}",
-             f"--key={key_path}",
-             "-n", namespace],
-            check=True,
-            capture_output=True
-        )
-
-        print(f"  ✓ TLS secret '{secret_name}' created")
-    finally:
-        # Clean up temp files
-        os.unlink(cert_path)
-        os.unlink(key_path)
 
 
 @pytest.fixture
@@ -647,7 +517,7 @@ def k8s_service_tls(kind_cluster) -> Generator[str, None, None]:
 
     # Apply the manifest (without the embedded secret, we'll use ours)
     # We need to filter out the Secret from service_tls.yml
-    manifest_path = BASE_DIR / "service_tls.yml"
+    manifest_path = BASE_DIR / "kubernetes" / "service_tls.yml"
     with open(manifest_path, 'r') as f:
         manifest_content = f.read()
 
@@ -677,31 +547,8 @@ def k8s_service_tls(kind_cluster) -> Generator[str, None, None]:
         time.sleep(5)
 
         # Wait for all pods to be running
-        max_wait = 60
-        start_time = time.time()
-        while time.time() - start_time < max_wait:
-            result = subprocess.run(
-                [kubectl_cmd, "get", "pods", "-n", "default", "-l", "app=tls-example", "-o", "json"],
-                check=True,
-                capture_output=True,
-                text=True
-            )
-            pods = json.loads(result.stdout)
-
-            if not pods['items']:
-                time.sleep(2)
-                continue
-
-            all_running = all(
-                pod['status']['phase'] == 'Running'
-                for pod in pods['items']
-            )
-
-            if all_running:
-                print("✓ All TLS example pods running")
-                break
-
-            time.sleep(2)
+        if not wait_for_pods_ready(kubectl_cmd, "default", label_selector="app=tls-example", timeout=60):
+            raise TimeoutError("TLS example pods did not become ready within 60 seconds")
 
         yield kubectl_cmd
 
@@ -774,7 +621,7 @@ def k8s_jwt_validator_secret(kind_cluster) -> Generator[dict, None, None]:
     )
 
     # Apply manifest
-    manifest_path = BASE_DIR / "jwt-validator-secret-example.yml"
+    manifest_path = BASE_DIR / "kubernetes" / "jwt-validator-secret-example.yml"
     subprocess.run(
         [kubectl_cmd, "apply", "-f", str(manifest_path), "-n", "default"],
         check=True,
@@ -785,31 +632,8 @@ def k8s_jwt_validator_secret(kind_cluster) -> Generator[dict, None, None]:
     time.sleep(5)
 
     # Wait for all pods to be running
-    max_wait = 60
-    start_time = time.time()
-    while time.time() - start_time < max_wait:
-        result = subprocess.run(
-            [kubectl_cmd, "get", "pods", "-n", "default", "-l", "app=api", "-o", "json"],
-            check=True,
-            capture_output=True,
-            text=True
-        )
-        pods = json.loads(result.stdout)
-
-        if not pods['items']:
-            time.sleep(2)
-            continue
-
-        all_running = all(
-            pod['status']['phase'] == 'Running'
-            for pod in pods['items']
-        )
-
-        if all_running:
-            print("✓ All JWT API example pods running")
-            break
-
-        time.sleep(2)
+    if not wait_for_pods_ready(kubectl_cmd, "default", label_selector="app=api", timeout=60):
+        raise TimeoutError("JWT API example pods did not become ready within 60 seconds")
 
     # Return context with paths to JWT keys
     yield {
@@ -905,31 +729,8 @@ def k8s_cloudflare(kind_cluster, kind_cmd) -> Generator[str, None, None]:
         time.sleep(5)
 
         # Wait for all pods to be running
-        max_wait = 60
-        start_time = time.time()
-        while time.time() - start_time < max_wait:
-            result = subprocess.run(
-                [kubectl_cmd, "get", "pods", "-n", "default", "-l", "app=webapp", "-o", "json"],
-                check=True,
-                capture_output=True,
-                text=True
-            )
-            pods = json.loads(result.stdout)
-
-            if not pods['items']:
-                time.sleep(2)
-                continue
-
-            all_running = all(
-                pod['status']['phase'] == 'Running'
-                for pod in pods['items']
-            )
-
-            if all_running:
-                print("✓ All cloudflare webapp pods running")
-                break
-
-            time.sleep(2)
+        if not wait_for_pods_ready(kubectl_cmd, "default", label_selector="app=webapp", timeout=60):
+            raise TimeoutError("Cloudflare webapp pods did not become ready within 60 seconds")
 
         yield kubectl_cmd
 
@@ -995,22 +796,8 @@ def wait_for_easyhaproxy_discovery(kubectl_cmd: str, expected_host: str, timeout
                     break
 
             if ingress_namespace:
-                # Check if pods in that namespace are running
-                result = subprocess.run(
-                    [kubectl_cmd, "get", "pods", "-n", ingress_namespace, "-o", "json"],
-                    capture_output=True,
-                    text=True,
-                    timeout=5,
-                    check=True
-                )
-                pods = json.loads(result.stdout)
-
-                all_running = all(
-                    pod['status']['phase'] == 'Running'
-                    for pod in pods.get('items', [])
-                )
-
-                if all_running and pods.get('items'):
+                # Check if pods in that namespace are running using helper
+                if wait_for_pods_ready(kubectl_cmd, ingress_namespace, timeout=5, verbose=False):
                     print(f"  ✓ Backend pods are Running")
                     break
         except Exception:
@@ -1362,30 +1149,28 @@ class TestIPWhitelist:
         )
         config = result.stdout
 
-        # Find the backend for admin service
-        # The backend name should be something like srv_admin_example_local_80 or similar
-        assert "admin" in config.lower(), "Admin service backend not found in HAProxy config"
+        # Extract the specific backend block for admin service
+        # Backend name format: srv_{hostname_with_underscores}_{port}
+        backend_block = extract_backend_block(config, "srv_admin_example_local_80")
+        assert backend_block, "Backend srv_admin_example_local_80 not found"
 
-        # Verify IP whitelist plugin comment
-        assert "# IP Whitelist - Only allow specific IPs" in config, \
-            "IP Whitelist plugin comment not found"
+        # Verify IP whitelist plugin comment is in this backend
+        assert "# IP Whitelist - Only allow specific IPs" in backend_block, \
+            "IP Whitelist plugin comment not found in admin backend"
 
-        # Verify ACL for whitelisted IPs
-        assert "acl whitelisted_ip src" in config, \
-            "IP whitelist ACL not found"
+        # Verify ACL for whitelisted IPs is in this backend
+        assert "acl whitelisted_ip src" in backend_block, \
+            "IP whitelist ACL not found in admin backend"
 
-        # Verify the IPs are in the configuration
-        assert "127.0.0.1" in config, "Localhost not in allowed IPs"
-        assert "10.0.0.0/8" in config, "10.0.0.0/8 network not in allowed IPs"
-        assert "172.16.0.0/12" in config, "172.16.0.0/12 network not in allowed IPs"
+        # Extract the ACL line to verify IPs
+        acl_line = [line for line in backend_block.split('\n') if 'acl whitelisted_ip src' in line][0]
+        assert "127.0.0.1" in acl_line, "Localhost not in allowed IPs"
+        assert "10.0.0.0/8" in acl_line, "10.0.0.0/8 network not in allowed IPs"
+        assert "172.16.0.0/12" in acl_line, "172.16.0.0/12 network not in allowed IPs"
 
-        # Verify deny rule for non-whitelisted IPs
-        assert "http-request deny" in config and "!whitelisted_ip" in config, \
-            "Deny rule for non-whitelisted IPs not found"
-
-        # Verify status code 403
-        assert "deny_status 403" in config, \
-            "Status code 403 not configured for blocked IPs"
+        # Verify deny rule for non-whitelisted IPs is in this backend
+        assert "http-request deny deny_status 403 if !whitelisted_ip" in backend_block, \
+            "Deny rule for non-whitelisted IPs not found in admin backend"
 
     def test_access_from_localhost(self, k8s_ip_whitelist):
         """Test that access from localhost is allowed"""
@@ -1415,46 +1200,6 @@ class TestIPWhitelist:
 @pytest.mark.kubernetes
 class TestJWTValidatorSecret:
     """Tests for jwt-validator-secret-example.yml - JWT validation using Kubernetes secrets"""
-
-    def _generate_jwt_token(self, private_key_path: Path, issuer: str, audience: str, expired: bool = False) -> str:
-        """
-        Generate a JWT token for testing
-
-        Args:
-            private_key_path: Path to RSA private key
-            issuer: JWT issuer
-            audience: JWT audience
-            expired: If True, generate an expired token
-
-        Returns:
-            JWT token string
-        """
-        # Read private key
-        with open(private_key_path, 'rb') as f:
-            private_key = serialization.load_pem_private_key(
-                f.read(),
-                password=None,
-                backend=default_backend()
-            )
-
-        # Set expiration time
-        if expired:
-            exp = int(time.time()) - 3600  # Expired 1 hour ago
-        else:
-            exp = int(time.time()) + 3600  # Valid for 1 hour
-
-        # Create JWT payload
-        payload = {
-            'iss': issuer,
-            'aud': audience,
-            'exp': exp,
-            'sub': 'test-user',
-            'iat': int(time.time())
-        }
-
-        # Generate token
-        token = jwt.encode(payload, private_key, algorithm='RS256')
-        return token
 
     def test_resources_created(self, k8s_jwt_validator_secret):
         """Test that secrets, service, and ingresses are created"""
@@ -1551,31 +1296,36 @@ class TestJWTValidatorSecret:
         )
         config = result.stdout
 
-        # Verify JWT Validator plugin comments
-        assert "# JWT Validator - Validate JWT tokens" in config, \
-            "JWT Validator plugin comment not found"
+        # Extract the specific backend block for API service
+        # Backend name format: srv_{hostname_with_underscores}_{port}
+        backend_block = extract_backend_block(config, "srv_api_example_local_80")
+        assert backend_block, "Backend srv_api_example_local_80 not found"
 
-        # Verify JWT extraction
-        assert "http_auth_bearer,jwt_header_query" in config, \
-            "JWT header extraction not found"
-        assert "http_auth_bearer,jwt_payload_query" in config, \
-            "JWT payload extraction not found"
+        # Verify JWT Validator plugin comment is in this backend
+        assert "# JWT Validator - Validate JWT tokens" in backend_block, \
+            "JWT Validator plugin comment not found in API backend"
 
-        # Verify JWT validation rules
-        assert "jwt_verify" in config, \
-            "JWT signature verification not found"
+        # Verify JWT extraction is in this backend
+        assert "http_auth_bearer,jwt_header_query" in backend_block, \
+            "JWT header extraction not found in API backend"
+        assert "http_auth_bearer,jwt_payload_query" in backend_block, \
+            "JWT payload extraction not found in API backend"
 
-        # Verify issuer validation
-        assert "https://auth.example.com/" in config, \
-            "JWT issuer validation not found"
+        # Verify JWT validation rules are in this backend
+        assert "jwt_verify" in backend_block, \
+            "JWT signature verification not found in API backend"
 
-        # Verify audience validation
-        assert "https://api.example.com" in config, \
-            "JWT audience validation not found"
+        # Verify issuer validation is in this backend
+        assert "https://auth.example.com/" in backend_block, \
+            "JWT issuer validation not found in API backend"
 
-        # Verify JWT keys directory is used
-        assert "/etc/haproxy/jwt_keys/" in config, \
-            "JWT keys directory not found in config"
+        # Verify audience validation is in this backend
+        assert "https://api.example.com" in backend_block, \
+            "JWT audience validation not found in API backend"
+
+        # Verify JWT keys directory is used in this backend
+        assert "/etc/haproxy/jwt_keys/" in backend_block, \
+            "JWT keys directory not found in API backend"
 
     def test_access_without_token_denied(self, k8s_jwt_validator_secret):
         """Test that access without Authorization header is denied"""
@@ -1614,7 +1364,7 @@ class TestJWTValidatorSecret:
             "EasyHAProxy did not become ready for api.example.local within 30 seconds"
 
         # Generate valid JWT token
-        token = self._generate_jwt_token(
+        token = generate_jwt_token(
             jwt_private_key,
             issuer="https://auth.example.com/",
             audience="https://api.example.com",
@@ -1649,7 +1399,7 @@ class TestJWTValidatorSecret:
             "EasyHAProxy did not become ready for api.example.local within 30 seconds"
 
         # Generate expired JWT token
-        token = self._generate_jwt_token(
+        token = generate_jwt_token(
             jwt_private_key,
             issuer="https://auth.example.com/",
             audience="https://api.example.com",
@@ -1686,7 +1436,7 @@ class TestJWTValidatorSecret:
             "EasyHAProxy did not become ready for api.example.local within 30 seconds"
 
         # Generate JWT token with wrong issuer
-        token = self._generate_jwt_token(
+        token = generate_jwt_token(
             jwt_private_key,
             issuer="https://wrong-issuer.example.com/",  # Wrong issuer
             audience="https://api.example.com",
@@ -1723,7 +1473,7 @@ class TestJWTValidatorSecret:
             "EasyHAProxy did not discover api-custom.example.local within 30 seconds"
 
         # Generate valid JWT token
-        token = self._generate_jwt_token(
+        token = generate_jwt_token(
             jwt_private_key,
             issuer="https://auth.example.com/",
             audience="https://api.example.com",
@@ -1843,21 +1593,26 @@ class TestCloudflare:
         )
         config = result.stdout
 
-        # Verify Cloudflare plugin comment
-        assert "# Cloudflare - Restore original visitor IP" in config, \
-            "Cloudflare plugin comment not found in HAProxy config"
+        # Extract the specific backend block for myapp service
+        # Backend name format: srv_{hostname_with_underscores}_{port}
+        backend_block = extract_backend_block(config, "srv_myapp_example_local_80")
+        assert backend_block, "Backend srv_myapp_example_local_80 not found"
 
-        # Verify ACL for Cloudflare IPs
-        assert "acl from_cloudflare src -f /etc/haproxy/cloudflare_ips.lst" in config, \
-            "Cloudflare IP ACL not found in HAProxy config"
+        # Verify Cloudflare plugin comment is in this backend
+        assert "# Cloudflare - Restore original visitor IP" in backend_block, \
+            "Cloudflare plugin comment not found in myapp backend"
 
-        # Verify real IP extraction from CF-Connecting-IP header
-        assert "http-request set-var(txn.real_ip) req.hdr(CF-Connecting-IP) if from_cloudflare" in config, \
-            "CF-Connecting-IP header extraction not found"
+        # Verify ACL for Cloudflare IPs is in this backend
+        assert "acl from_cloudflare src -f /etc/haproxy/cloudflare_ips.lst" in backend_block, \
+            "Cloudflare IP ACL not found in myapp backend"
 
-        # Verify X-Forwarded-For header update
-        assert "http-request set-header X-Forwarded-For %[var(txn.real_ip)] if from_cloudflare" in config, \
-            "X-Forwarded-For header update not found"
+        # Verify real IP extraction from CF-Connecting-IP header is in this backend
+        assert "http-request set-var(txn.real_ip) req.hdr(CF-Connecting-IP) if from_cloudflare" in backend_block, \
+            "CF-Connecting-IP header extraction not found in myapp backend"
+
+        # Verify X-Forwarded-For header update is in this backend
+        assert "http-request set-header X-Forwarded-For %[var(txn.real_ip)] if from_cloudflare" in backend_block, \
+            "X-Forwarded-For header update not found in myapp backend"
 
     def test_cloudflare_ip_file_contains_custom_ips(self, k8s_cloudflare):
         """Test that custom base64-encoded IP list was written to the IP file"""

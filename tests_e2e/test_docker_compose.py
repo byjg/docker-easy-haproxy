@@ -33,36 +33,10 @@ import pytest
 import requests
 import jwt as jwt_lib
 from typing import Generator
+from utils import extract_backend_block
 
 # Base directory for docker-compose files
 BASE_DIR = Path(__file__).parent.absolute()
-
-
-@pytest.fixture(scope="session", autouse=True)
-def generate_ssl_certificates():
-    """
-    Generate SSL certificates once for all tests that require them.
-    This runs automatically at the start of the test session.
-    """
-    script_path = BASE_DIR / "generate-keys.sh"
-
-    # Check if script exists
-    if not script_path.exists():
-        pytest.skip(f"SSL certificate generation script not found: {script_path}")
-
-    # Run the script from the tests_e2e directory
-    result = subprocess.run(
-        ["bash", str(script_path)],
-        cwd=BASE_DIR,
-        capture_output=True,
-        text=True
-    )
-
-    if result.returncode != 0:
-        pytest.fail(f"Failed to generate SSL certificates:\n{result.stderr}")
-
-    yield
-    # No cleanup needed - certificates can be reused
 
 
 class DockerComposeFixture:
@@ -181,23 +155,6 @@ def docker_compose_cloudflare() -> Generator[None, None, None]:
     fixture.down()
 
 
-@pytest.fixture
-def jwt_token() -> str:
-    """Generate a valid JWT token for testing"""
-    private_key_path = BASE_DIR / "docker" / "jwt_private.pem"
-    with open(private_key_path, 'r') as f:
-        private_key = f.read()
-
-    payload = {
-        'iss': 'https://auth.example.com/',
-        'aud': 'https://api.example.com',
-        'exp': 9999999999
-    }
-
-    token = jwt_lib.encode(payload, private_key, algorithm='RS256')
-    return token
-
-
 # =============================================================================
 # Test: docker-compose.yml - Basic SSL Setup
 # =============================================================================
@@ -273,12 +230,8 @@ class TestBasicSSL:
 
     def test_haproxy_stats(self, docker_compose_basic_ssl):
         """Test HAProxy stats interface"""
-        response = requests.get(
-            "http://localhost:1936",
-            auth=("admin", "password")
-        )
-        assert response.status_code == 200
-        assert "Statistics Report for HAProxy" in response.text
+        from conftest import verify_haproxy_stats
+        verify_haproxy_stats()
 
 
 # =============================================================================
@@ -347,12 +300,8 @@ class TestJWTValidator:
 
     def test_haproxy_stats(self, docker_compose_jwt_validator):
         """Test HAProxy stats interface"""
-        response = requests.get(
-            "http://localhost:1936",
-            auth=("admin", "password")
-        )
-        assert response.status_code == 200
-        assert "Statistics Report for HAProxy" in response.text
+        from conftest import verify_haproxy_stats
+        verify_haproxy_stats()
 
 
 # =============================================================================
@@ -496,12 +445,8 @@ class TestPHPFPM:
 
     def test_haproxy_stats(self, docker_compose_php_fpm):
         """Test HAProxy stats interface"""
-        response = requests.get(
-            "http://localhost:1936",
-            auth=("admin", "password")
-        )
-        assert response.status_code == 200
-        assert "Statistics Report for HAProxy" in response.text
+        from conftest import verify_haproxy_stats
+        verify_haproxy_stats()
 
 
 # =============================================================================
@@ -609,36 +554,13 @@ class TestPluginsCombined:
 
     def test_haproxy_stats(self, docker_compose_plugins_combined):
         """Test HAProxy stats interface"""
-        response = requests.get(
-            "http://localhost:1936",
-            auth=("admin", "password")
-        )
-        assert response.status_code == 200
-        assert "Statistics Report for HAProxy" in response.text
+        from conftest import verify_haproxy_stats
+        verify_haproxy_stats()
 
 
 # =============================================================================
 # Test: docker-compose-ip-whitelist.yml - IP Whitelist Plugin
 # =============================================================================
-
-def extract_backend_block(config: str, backend_name: str) -> str:
-    """Extract a specific backend block from HAProxy configuration"""
-    lines = config.split('\n')
-    backend_lines = []
-    in_backend = False
-
-    for line in lines:
-        if line.startswith(f'backend {backend_name}'):
-            in_backend = True
-            backend_lines.append(line)
-        elif in_backend:
-            # Stop when we hit another backend, frontend, or global section
-            if line.startswith(('backend ', 'frontend ', 'global ', 'defaults ')):
-                break
-            backend_lines.append(line)
-
-    return '\n'.join(backend_lines)
-
 
 @pytest.mark.security
 class TestIPWhitelist:
@@ -685,12 +607,8 @@ class TestIPWhitelist:
 
     def test_haproxy_stats(self, docker_compose_ip_whitelist):
         """Test HAProxy stats interface"""
-        response = requests.get(
-            "http://localhost:1936",
-            auth=("admin", "password")
-        )
-        assert response.status_code == 200
-        assert "Statistics Report for HAProxy" in response.text
+        from conftest import verify_haproxy_stats
+        verify_haproxy_stats()
 
 
 # =============================================================================
@@ -790,12 +708,8 @@ class TestCloudflare:
 
     def test_haproxy_stats(self, docker_compose_cloudflare):
         """Test HAProxy stats interface"""
-        response = requests.get(
-            "http://localhost:1936",
-            auth=("admin", "password")
-        )
-        assert response.status_code == 200
-        assert "Statistics Report for HAProxy" in response.text
+        from conftest import verify_haproxy_stats
+        verify_haproxy_stats()
 
 
 # =============================================================================
@@ -886,12 +800,8 @@ class TestChangedLabel:
 
     def test_haproxy_stats(self, docker_compose_changed_label):
         """Test HAProxy stats interface"""
-        response = requests.get(
-            "http://localhost:1936",
-            auth=("admin", "password")
-        )
-        assert response.status_code == 200
-        assert "Statistics Report for HAProxy" in response.text
+        from conftest import verify_haproxy_stats
+        verify_haproxy_stats()
 
 
 # =============================================================================
