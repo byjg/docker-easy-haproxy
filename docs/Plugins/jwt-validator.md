@@ -31,11 +31,21 @@ Protect APIs and services with JWT authentication without needing application-le
 | `algorithm`       | JWT signing algorithm                                                                        | `RS256`     |
 | `issuer`          | Expected JWT issuer (optional, set to `none`/`null` to skip validation)                      | (optional)  |
 | `audience`        | Expected JWT audience (optional, set to `none`/`null` to skip validation)                    | (optional)  |
-| `pubkey_path`     | Path to public key file (required if `pubkey` not provided)                                  | (required)  |
-| `pubkey`          | Public key content as base64-encoded string (required if `pubkey_path` not provided)         | (optional)  |
+| `pubkey_path`     | Path to public key file (priority 1: explicit file path)                                    | (optional)  |
+| `pubkey`          | Public key content as base64-encoded string (priority 2: inline content)                    | (optional)  |
+| `k8s_secret.pubkey` | Kubernetes secret containing public key (priority 3: Kubernetes only - see below)         | (optional)  |
 | `paths`           | List of paths that require JWT validation (optional)                                         | (all paths) |
 | `only_paths`      | If `true`, only specified paths are accessible; if `false`, only specified paths require JWT | `false`     |
 | `allow_anonymous` | If `true`, allows requests without Authorization header (validates JWT if present)           | `false`     |
+
+### Public Key Configuration Priority
+
+When multiple public key options are configured, they are evaluated in this order:
+1. **`pubkey_path`** - Direct file path (explicit configuration)
+2. **`pubkey`** - Base64-encoded key content (inline configuration)
+3. **`k8s_secret.pubkey`** - Kubernetes secret (recommended for Kubernetes deployments)
+
+The first configured option is used; others are ignored.
 
 ## Path Validation Logic
 
@@ -120,7 +130,70 @@ services:
 # Invalid JWTs are rejected
 ```
 
-### Kubernetes Annotations
+### Kubernetes with Secrets (Recommended)
+
+The recommended way to configure JWT public keys in Kubernetes is using Kubernetes Secrets with the `k8s_secret` pattern:
+
+```yaml
+---
+# Create a secret with your JWT public key
+apiVersion: v1
+kind: Secret
+metadata:
+  name: jwt-pubkey-secret
+  namespace: production
+type: Opaque
+stringData:
+  pubkey: |
+    -----BEGIN PUBLIC KEY-----
+    MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
+    -----END PUBLIC KEY-----
+
+---
+# Reference it in your ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-ingress
+  namespace: production
+  annotations:
+    easyhaproxy.plugins: "jwt_validator"
+    easyhaproxy.plugin.jwt_validator.algorithm: "RS256"
+    easyhaproxy.plugin.jwt_validator.issuer: "https://auth.example.com/"
+    easyhaproxy.plugin.jwt_validator.audience: "https://api.example.com"
+    # Load public key from Kubernetes secret
+    easyhaproxy.plugin.jwt_validator.k8s_secret.pubkey: "jwt-pubkey-secret"
+    easyhaproxy.plugin.jwt_validator.paths: "/api/admin,/api/users"
+    easyhaproxy.plugin.jwt_validator.only_paths: "false"
+spec:
+  ingressClassName: easyhaproxy
+  rules:
+    - host: api.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-service
+                port:
+                  number: 8080
+```
+
+**With explicit secret key name:**
+
+```yaml
+metadata:
+  annotations:
+    # Use custom key name from the secret
+    easyhaproxy.plugin.jwt_validator.k8s_secret.pubkey: "jwt-pubkey-secret/rsa-public-key"
+```
+
+For complete details about the `k8s_secret` pattern, including auto-detect vs explicit key names, troubleshooting, and security considerations, see: [Loading Plugin Configuration from Kubernetes Secrets](../kubernetes.md#loading-plugin-configuration-from-kubernetes-secrets)
+
+### Kubernetes with pubkey_path (Legacy)
+
+You can also mount the public key file using ConfigMaps or volumes:
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -135,17 +208,21 @@ metadata:
     easyhaproxy.plugin.jwt_validator.paths: "/api/admin,/api/users"
     easyhaproxy.plugin.jwt_validator.only_paths: "false"
 spec:
+  ingressClassName: easyhaproxy
   rules:
     - host: api.example.com
       http:
         paths:
           - path: /
+            pathType: Prefix
             backend:
               service:
                 name: api-service
                 port:
                   number: 8080
 ```
+
+**Note:** This requires mounting the public key file into the EasyHAProxy pod using ConfigMaps or volumes. Using `k8s_secret.pubkey` is recommended as it's simpler and more secure.
 
 ### Static YAML Configuration
 

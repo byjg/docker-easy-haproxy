@@ -202,6 +202,7 @@ class Consts:
     custom_config_folder = "/etc/haproxy/conf.d"
     certs_certbot = "/certs/certbot"
     certs_haproxy = "/certs/haproxy"
+    jwt_keys = "/etc/haproxy/jwt_keys"
 
 
 class DaemonizeHAProxy:

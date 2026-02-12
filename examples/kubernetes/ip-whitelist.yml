@@ -100,7 +100,8 @@ metadata:
 
     # Allow specific IPs and networks
     # UPDATE THIS with your actual office/VPN IPs!
-    easyhaproxy.plugin.ip_whitelist.allowed_ips: "203.0.113.0/24,198.51.100.42,10.0.0.0/8"
+    # For testing: includes localhost and Docker/Kubernetes private networks
+    easyhaproxy.plugin.ip_whitelist.allowed_ips: "127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,203.0.113.0/24,198.51.100.42"
 
     # Status code to return for blocked IPs
     easyhaproxy.plugin.ip_whitelist.status_code: "403"
@@ -114,9 +115,10 @@ spec:
   - host: admin.example.local
     http:
       paths:
-      - backend:
+      - path: /
+        pathType: Prefix
+        backend:
           service:
             name: admin-service
             port:
               number: 8080
-        pathType: ImplementationSpecific

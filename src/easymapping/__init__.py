@@ -5,7 +5,7 @@ import re
 
 from jinja2 import Environment, FileSystemLoader
 
-from functions import logger_easyhaproxy
+from functions import Functions, logger_easyhaproxy
 
 
 class DockerLabelHandler:
@@ -288,6 +288,24 @@ class HaproxyConfigGenerator:
                             easymapping[port]["hosts"][hostname]["plugin_configs"] = [
                                 r.haproxy_config for r in domain_results if r.haproxy_config
                             ]
+
+                            # Write JWT public key files from metadata
+                            for result in domain_results:
+                                if result.metadata and "pubkey_content" in result.metadata and "pubkey_file" in result.metadata:
+                                    pubkey_file = result.metadata["pubkey_file"]
+                                    pubkey_content = result.metadata["pubkey_content"]
+
+                                    # Create jwt_keys directory if it doesn't exist (belt and suspenders)
+                                    import os
+                                    jwt_keys_dir = os.path.dirname(pubkey_file)
+                                    if jwt_keys_dir:
+                                        os.makedirs(jwt_keys_dir, exist_ok=True)
+
+                                    # Write the pubkey file
+                                    Functions.save(pubkey_file, pubkey_content)
+                                    logger_easyhaproxy.debug(
+                                        f"Wrote JWT public key to {pubkey_file} for domain {hostname}"
+                                    )
 
                             # Extract fcgi-app definitions from metadata and add to global configs
                             for result in domain_results:

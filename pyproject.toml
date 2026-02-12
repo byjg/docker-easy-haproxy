@@ -56,6 +56,17 @@ packages = ["src/easymapping", "src/functions", "src/processor", "src/plugins", 
 addopts = "-v -p no:warnings"
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+    "kubernetes: marks tests as kubernetes integration tests (deselect with '-m \"not kubernetes\"')",
+    "ssl: marks tests for SSL/TLS functionality",
+    "jwt: marks tests for JWT validator plugin",
+    "loadbalancing: marks tests for load balancing functionality",
+    "php: marks tests for PHP-FPM FastCGI plugin",
+    "plugins: marks tests for combined plugin functionality",
+    "security: marks tests for security features (IP whitelist, etc.)",
+    "cloudflare: marks tests for Cloudflare IP restoration plugin",
+    "custom_label: marks tests for custom label prefix functionality",
+]
 
 [tool.ruff]
 line-length = 120

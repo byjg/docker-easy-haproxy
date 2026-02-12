@@ -71,12 +71,13 @@ spec:
   - host: host2.local
     http:
       paths:
-      - backend:
+      - path: /
+        pathType: Prefix
+        backend:
           service:
             name: tls-example
             port:
               number: 8080
-        pathType: ImplementationSpecific
 
 ---
 apiVersion: v1

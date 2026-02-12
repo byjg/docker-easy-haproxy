@@ -66,21 +66,23 @@ spec:
   - host: example.org
     http:
       paths:
-      - backend:
+      - path: /
+        pathType: Prefix
+        backend:
           service:
             name: container-example
             port:
               number: 8080
-        pathType: ImplementationSpecific
   - host: www.example.org
     http:
       paths:
-      - backend:
+      - path: /
+        pathType: Prefix
+        backend:
           service:
             name: container-example
             port:
               number: 8080
-        pathType: ImplementationSpecific
 
 ---
 apiVersion: v1

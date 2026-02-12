@@ -218,12 +218,17 @@ class Swarm(ProcessorInterface):
 
 
 class Kubernetes(ProcessorInterface):
-    def __init__(self, filename=None):
+    def __init__(self, filename=None, api_instance=None, v1=None):
         self.parsed_object = None
-        config.load_incluster_config()
-        config.verify_ssl = False
-        self.api_instance = client.CoreV1Api()
-        self.v1 = client.NetworkingV1Api()
+
+        # Only load config if API clients are not provided (allows dependency injection for testing)
+        if api_instance is None or v1 is None:
+            config.load_incluster_config()
+            config.verify_ssl = False
+
+        # Use injected clients or create new ones (dependency injection pattern)
+        self.api_instance = api_instance or client.CoreV1Api()
+        self.v1 = v1 or client.NetworkingV1Api()
         self.cert_cache = {}
         self.deployment_mode_cache = None
         self.ingress_addresses_cache = None
@@ -485,10 +490,121 @@ class Kubernetes(ProcessorInterface):
                 if annotation_key.startswith("easyhaproxy.plugin."):
                     plugin_annotations[annotation_key] = annotation_value
 
+            # Get ingress name for logging
+            ingress_name = f"{ingress.metadata.namespace}/{ingress.metadata.name}"
+
+            # Generic k8s_secret annotation processing
+            # Pattern: easyhaproxy.plugin.X.k8s_secret.KEY: "secret_name" or "secret_name/key_name"
+            # Result: easyhaproxy.plugin.X.KEY: "<base64-encoded-content>"
+            k8s_secret_annotations = {}
+            for annotation_key, secret_value in list(plugin_annotations.items()):
+                # Check if this annotation contains k8s_secret pattern
+                if ".k8s_secret." in annotation_key:
+                    try:
+                        # Parse the annotation key
+                        # Example: "easyhaproxy.plugin.jwt_validator.k8s_secret.pubkey" -> "pubkey"
+                        parts = annotation_key.split(".k8s_secret.")
+                        if len(parts) != 2:
+                            logger_easyhaproxy.warn(
+                                f"Ingress {ingress_name} - Malformed k8s_secret annotation: {annotation_key}"
+                            )
+                            continue
+
+                        prefix = parts[0]  # "easyhaproxy.plugin.jwt_validator"
+                        config_key = parts[1]  # "pubkey"
+                        target_annotation = f"{prefix}.{config_key}"  # "easyhaproxy.plugin.jwt_validator.pubkey"
+
+                        # Parse secret_value: can be "secret_name" or "secret_name/key_name"
+                        if "/" in secret_value:
+                            secret_name, explicit_key_name = secret_value.split("/", 1)
+                            use_explicit_key = True
+                        else:
+                            secret_name = secret_value
+                            explicit_key_name = None
+                            use_explicit_key = False
+
+                        # Read the secret
+                        secret = self.api_instance.read_namespaced_secret(
+                            secret_name,
+                            ingress.metadata.namespace
+                        )
+
+                        # Try to find the key in the secret data
+                        secret_data = None
+                        tried_keys = []
+
+                        if use_explicit_key:
+                            # User specified exact key name - only try that one
+                            tried_keys = [explicit_key_name]
+                            if explicit_key_name in secret.data:
+                                secret_data = secret.data[explicit_key_name]
+                                logger_easyhaproxy.debug(
+                                    f"Ingress {ingress_name} - Found explicit secret key '{explicit_key_name}' "
+                                    f"in secret '{secret_name}'"
+                                )
+                        else:
+                            # No explicit key - try config_key and common variations
+                            tried_keys = [config_key]
+                            if config_key in secret.data:
+                                secret_data = secret.data[config_key]
+                            else:
+                                # Try common variations for the requested key
+                                variations = []
+                                if config_key == "pubkey":
+                                    variations = ["public-key", "jwt.pub", "tls.crt"]
+                                elif config_key == "password":
+                                    variations = ["pass", "pwd"]
+                                elif config_key == "api_key":
+                                    variations = ["apikey", "api-key", "key"]
+
+                                for variation in variations:
+                                    tried_keys.append(variation)
+                                    if variation in secret.data:
+                                        secret_data = secret.data[variation]
+                                        logger_easyhaproxy.debug(
+                                            f"Ingress {ingress_name} - Found secret key '{variation}' "
+                                            f"for requested key '{config_key}'"
+                                        )
+                                        break
+
+                        if secret_data:
+                            # Decode from base64 (Kubernetes secrets are base64-encoded)
+                            # Then re-encode to base64 for plugin (plugin expects base64-encoded)
+                            decoded = base64.b64decode(secret_data).decode('ascii')
+                            reencoded = base64.b64encode(decoded.encode('ascii')).decode('ascii')
+
+                            # Store the processed annotation
+                            k8s_secret_annotations[target_annotation] = reencoded
+
+                            logger_easyhaproxy.info(
+                                f"Ingress {ingress_name} - Loaded '{config_key}' from secret "
+                                f"'{secret_name}' for annotation '{target_annotation}'"
+                            )
+                        else:
+                            logger_easyhaproxy.warn(
+                                f"Ingress {ingress_name} - Secret '{secret_name}' found but "
+                                f"no matching key (tried: {', '.join(tried_keys)})"
+                            )
+
+                    except Exception as e:
+                        logger_easyhaproxy.warn(
+                            f"Ingress {ingress_name} - Failed to process k8s_secret annotation "
+                            f"'{annotation_key}' with value '{secret_value}': {e}"
+                        )
+
+            # Merge k8s_secret annotations into plugin_annotations
+            # k8s_secret annotations will NOT override existing explicit annotations (lower priority)
+            for key, value in k8s_secret_annotations.items():
+                if key not in plugin_annotations:
+                    plugin_annotations[key] = value
+                else:
+                    logger_easyhaproxy.debug(
+                        f"Ingress {ingress_name} - Skipping k8s_secret annotation '{key}' "
+                        f"because explicit annotation already exists"
+                    )
+
             data = {"creation_timestamp": ingress.metadata.creation_timestamp.strftime("%x %X"),
                     "resource_version": ingress.metadata.resource_version, "namespace": ingress.metadata.namespace}
-
-            ingress_name = ingress.metadata.namespace
 
             if ingress.spec.tls is not None:
                 for tls in ingress.spec.tls:

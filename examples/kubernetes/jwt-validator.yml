@@ -2,6 +2,24 @@
 # EXAMPLE: JWT Validator Plugin for Kubernetes
 # ==============================================================================
 #
+# JWT PUBLIC KEY CONFIGURATION OPTIONS:
+# There are three ways to provide the JWT public key:
+#
+# 1. pubkey_path - Mount a file and reference the path (requires ConfigMap or Volume)
+#    easyhaproxy.plugin.jwt_validator.pubkey_path: "/etc/haproxy/jwt_keys/api_pubkey.pem"
+#
+# 2. k8s_secret.pubkey - Reference a Kubernetes secret (RECOMMENDED)
+#    Auto-detect key (tries common variations):
+#      easyhaproxy.plugin.jwt_validator.k8s_secret.pubkey: "my-jwt-secret"
+#    Explicit key (no variations):
+#      easyhaproxy.plugin.jwt_validator.k8s_secret.pubkey: "my-jwt-secret/custom-key-name"
+#    See jwt-validator-secret-example.yml for full example
+#
+# 3. pubkey - Inline base64-encoded key (for testing only, not recommended for production)
+#    easyhaproxy.plugin.jwt_validator.pubkey: "LS0tLS1CRUdJTi..."
+#
+# This example shows option #1 (pubkey_path) for backward compatibility
+#
 # WHAT THIS DEMONSTRATES:
 # - JWT token validation for API protection in Kubernetes
 # - RS256 algorithm signature verification

@@ -1,0 +1,9 @@
+# kind installation directory
+.kind/
+
+# kubectl config
+kubeconfig
+
+# Test artifacts
+*.log
+service_tls_generated.yml
