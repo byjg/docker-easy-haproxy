@@ -66,7 +66,7 @@ services:
 
   # Web application behind Cloudflare (header-echo server for testing)
   webapp:
-    build: ./python-app
+    build: ../fixtures/header-echo
     labels:
       easyhaproxy.http.host: myapp.local
       easyhaproxy.http.port: 80

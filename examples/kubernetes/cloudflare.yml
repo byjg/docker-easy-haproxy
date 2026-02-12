@@ -48,10 +48,11 @@
 # # Test via port-forward
 # kubectl port-forward -n easyhaproxy deployment/easyhaproxy 8080:80
 # curl -H "Host: myapp.example.local" http://localhost:8080
-# # Expected: 200 OK with "App Behind Cloudflare"
+# # Expected: 200 OK with JSON response containing headers, client_ip, and x_forwarded_for
 #
-# # In production behind Cloudflare, the plugin will restore real client IPs
-# # from the CF-Connecting-IP header
+# # Test IP translation with CF-Connecting-IP header
+# curl -H "Host: myapp.example.local" -H "CF-Connecting-IP: 1.2.3.4" http://localhost:8080
+# # Expected: x_forwarded_for should be "1.2.3.4"
 # ```
 #
 # CLEAN UP:
@@ -93,12 +94,10 @@ spec:
     spec:
       containers:
       - name: webapp
-        image: byjg/static-httpserver
+        image: header-echo-server:test
+        imagePullPolicy: Never
         ports:
         - containerPort: 8080
-        env:
-        - name: TITLE
-          value: "App Behind Cloudflare"
         resources:
           limits:
             cpu: '0.1'

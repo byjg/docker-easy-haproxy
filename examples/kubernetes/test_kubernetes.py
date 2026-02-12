@@ -840,9 +840,28 @@ def k8s_jwt_validator_secret(kind_cluster) -> Generator[dict, None, None]:
 
 
 @pytest.fixture
-def k8s_cloudflare(kind_cluster) -> Generator[str, None, None]:
+def k8s_cloudflare(kind_cluster, kind_cmd) -> Generator[str, None, None]:
     """Fixture for cloudflare.yml with base64-encoded IP list"""
     kubectl_cmd = kind_cluster["kubectl"]
+    cluster_name = kind_cluster["name"]
+
+    # Build header-echo server image locally
+    header_echo_dir = BASE_DIR.parent / "fixtures" / "header-echo"
+    print("  → Building header-echo-server:test image...")
+    subprocess.run(
+        ["docker", "build", "-t", "header-echo-server:test", str(header_echo_dir)],
+        check=True,
+        capture_output=True
+    )
+
+    # Load image into kind cluster
+    print("  → Loading header-echo-server:test into kind cluster...")
+    subprocess.run(
+        [kind_cmd, "load", "docker-image", "header-echo-server:test",
+         "--name", cluster_name],
+        check=True,
+        capture_output=True
+    )
 
     # Create a modified cloudflare manifest with base64-encoded test IPs
     # Include 127.0.0.1 and Docker/kind network ranges so test requests work
@@ -1881,7 +1900,7 @@ class TestCloudflare:
             "Built-in Cloudflare IP found (ip_list should take precedence)"
 
     def test_access_to_webapp(self, k8s_cloudflare):
-        """Test that the webapp is accessible via the Cloudflare ingress"""
+        """Test that the webapp is accessible and returns JSON"""
         kubectl = k8s_cloudflare
 
         # Wait for EasyHAProxy to discover and configure the ingress
@@ -1898,8 +1917,49 @@ class TestCloudflare:
         )
 
         assert result.returncode == 0, f"Curl failed with return code {result.returncode}"
-        assert "App Behind Cloudflare" in result.stdout, \
-            f"Expected 'App Behind Cloudflare' in response, got: {result.stdout}"
+
+        # Parse JSON response
+        data = json.loads(result.stdout)
+
+        # Verify JSON structure
+        assert "headers" in data, "Response should contain 'headers' field"
+        assert "client_ip" in data, "Response should contain 'client_ip' field"
+        assert "x_forwarded_for" in data, "Response should contain 'x_forwarded_for' field"
+
+    def test_cloudflare_ip_translation_works(self, k8s_cloudflare):
+        """Test that Cloudflare plugin actually translates CF-Connecting-IP to X-Forwarded-For"""
+        kubectl = k8s_cloudflare
+
+        # Wait for EasyHAProxy to be ready
+        assert wait_for_easyhaproxy_discovery(kubectl, "myapp.example.local", timeout=30), \
+            "EasyHAProxy did not become ready within 30 seconds"
+
+        # Send request with CF-Connecting-IP header
+        test_ip = "203.0.113.50"
+        result = subprocess.run(
+            ["curl", "-s",
+             "-H", "Host: myapp.example.local",
+             "-H", f"CF-Connecting-IP: {test_ip}",
+             f"http://localhost:{HTTP_PORT}"],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+
+        assert result.returncode == 0, f"Curl failed"
+
+        # Parse JSON response from header-echo server
+        data = json.loads(result.stdout)
+
+        # VERIFY: X-Forwarded-For was set to the CF-Connecting-IP value
+        # This proves the Cloudflare plugin actually works, not just that config exists
+        assert data['x_forwarded_for'] == test_ip, \
+            f"Expected X-Forwarded-For to be '{test_ip}' (from CF-Connecting-IP), " \
+            f"got '{data['x_forwarded_for']}'. Cloudflare IP translation NOT working!"
+
+        # Verify client_ip is still the HAProxy/ingress IP (connection doesn't change)
+        assert data['client_ip'] != test_ip, \
+            f"client_ip should be HAProxy pod IP, not the translated IP"
 
 
 # =============================================================================
