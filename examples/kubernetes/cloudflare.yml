@@ -112,10 +112,16 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
-    # Enable Cloudflare plugin
+    # Enable Cloudflare plugin with built-in IPs
     easyhaproxy.plugins: "cloudflare"
 
-    # Optional: Specify custom IP list path
+    # Optional: Provide custom IP list as base64-encoded text (takes precedence over built-in IPs)
+    # This is more Kubernetes-native than mounting ConfigMaps/files
+    # Example IPs: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.1
+    # How to create: printf "10.0.0.0/8\n172.16.0.0/12\n192.168.0.0/16\n127.0.0.1" | base64 -w 0
+    # easyhaproxy.plugin.cloudflare.ip_list: "MTAuMC4wLjAvOAoxNzIuMTYuMC4wLzEyCjE5Mi4xNjguMC4wLzE2CjEyNy4wLjAuMQ=="
+
+    # Optional: Specify custom IP list file path (only used if ip_list is not provided)
     # easyhaproxy.plugin.cloudflare.ip_list_path: "/etc/haproxy/cloudflare_ips.lst"
   name: webapp-ingress-cloudflare
   namespace: default

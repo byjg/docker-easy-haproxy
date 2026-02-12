@@ -839,6 +839,94 @@ def k8s_jwt_validator_secret(kind_cluster) -> Generator[dict, None, None]:
     )
 
 
+@pytest.fixture
+def k8s_cloudflare(kind_cluster) -> Generator[str, None, None]:
+    """Fixture for cloudflare.yml with base64-encoded IP list"""
+    kubectl_cmd = kind_cluster["kubectl"]
+
+    # Create a modified cloudflare manifest with base64-encoded test IPs
+    # Include 127.0.0.1 and Docker/kind network ranges so test requests work
+    test_ips = [
+        "127.0.0.1",           # localhost for testing
+        "10.0.0.0/8",          # Private network
+        "172.16.0.0/12",       # Docker default network
+        "192.168.0.0/16",      # Private network
+    ]
+
+    # Base64 encode the IP list
+    ip_list_content = "\n".join(test_ips)
+    ip_list_base64 = base64.b64encode(ip_list_content.encode('utf-8')).decode('ascii')
+
+    # Read the original manifest
+    manifest_path = BASE_DIR / "cloudflare.yml"
+    with open(manifest_path, 'r') as f:
+        manifest_content = f.read()
+
+    # Add the ip_list annotation
+    # Find the annotations section and add our base64 IP list
+    manifest_modified = manifest_content.replace(
+        'easyhaproxy.plugins: "cloudflare"',
+        f'easyhaproxy.plugins: "cloudflare"\n    easyhaproxy.plugin.cloudflare.ip_list: "{ip_list_base64}"'
+    )
+
+    # Write modified manifest to temp file
+    temp_manifest_path = BASE_DIR / "cloudflare_test.yml"
+    with open(temp_manifest_path, 'w') as f:
+        f.write(manifest_modified)
+
+    try:
+        # Apply manifest
+        subprocess.run(
+            [kubectl_cmd, "apply", "-f", str(temp_manifest_path), "-n", "default"],
+            check=True,
+            capture_output=True
+        )
+
+        # Wait for pods to be ready
+        time.sleep(5)
+
+        # Wait for all pods to be running
+        max_wait = 60
+        start_time = time.time()
+        while time.time() - start_time < max_wait:
+            result = subprocess.run(
+                [kubectl_cmd, "get", "pods", "-n", "default", "-l", "app=webapp", "-o", "json"],
+                check=True,
+                capture_output=True,
+                text=True
+            )
+            pods = json.loads(result.stdout)
+
+            if not pods['items']:
+                time.sleep(2)
+                continue
+
+            all_running = all(
+                pod['status']['phase'] == 'Running'
+                for pod in pods['items']
+            )
+
+            if all_running:
+                print("✓ All cloudflare webapp pods running")
+                break
+
+            time.sleep(2)
+
+        yield kubectl_cmd
+
+        # Cleanup
+        subprocess.run(
+            [kubectl_cmd, "delete", "-f", str(temp_manifest_path), "-n", "default",
+             "--ignore-not-found=true"],
+            check=True,
+            capture_output=True
+        )
+    finally:
+        # Clean up temp manifest
+        if temp_manifest_path.exists():
+            os.unlink(temp_manifest_path)
+
+
 # =============================================================================
 # Helper Functions for Tests
 # =============================================================================
@@ -1640,6 +1728,178 @@ class TestJWTValidatorSecret:
         assert result.returncode == 0, f"Curl failed with return code {result.returncode}"
         assert http_code == "200", \
             f"Expected HTTP 200 for valid JWT token on explicit key ingress, got: {http_code}\nResponse: {result.stdout}"
+
+
+# =============================================================================
+# Test: cloudflare.yml - Cloudflare IP Restoration Plugin
+# =============================================================================
+
+@pytest.mark.kubernetes
+class TestCloudflare:
+    """Tests for cloudflare.yml - Cloudflare IP restoration from CDN"""
+
+    def test_resources_created(self, k8s_cloudflare):
+        """Test that deployment, service, and ingress are created"""
+        kubectl = k8s_cloudflare
+
+        # Check deployment exists
+        result = subprocess.run(
+            [kubectl, "get", "deployment", "webapp", "-n", "default"],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        assert "webapp" in result.stdout
+
+        # Check service exists
+        result = subprocess.run(
+            [kubectl, "get", "service", "webapp-service", "-n", "default"],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        assert "webapp-service" in result.stdout
+
+        # Check ingress exists
+        result = subprocess.run(
+            [kubectl, "get", "ingress", "webapp-ingress-cloudflare", "-n", "default"],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        assert "webapp-ingress-cloudflare" in result.stdout
+
+    def test_pods_running(self, k8s_cloudflare):
+        """Test that all webapp pods are running"""
+        kubectl = k8s_cloudflare
+
+        # Wait for deployment to be ready
+        subprocess.run(
+            [kubectl, "wait", "--for=condition=Available", "deployment/webapp",
+             "-n", "default", "--timeout=30s"],
+            check=True
+        )
+
+        result = subprocess.run(
+            [kubectl, "get", "pods", "-n", "default", "-l", "app=webapp", "-o", "json"],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        pods = json.loads(result.stdout)
+
+        assert len(pods['items']) > 0, "No webapp pods found"
+
+        for pod in pods['items']:
+            assert pod['status']['phase'] == 'Running', \
+                f"Pod {pod['metadata']['name']} is not running: {pod['status']['phase']}"
+
+    def test_haproxy_config_has_cloudflare_plugin(self, k8s_cloudflare):
+        """Test that HAProxy configuration contains Cloudflare plugin rules"""
+        kubectl = k8s_cloudflare
+
+        # Wait for EasyHAProxy to discover the ingress
+        assert wait_for_easyhaproxy_discovery(kubectl, "myapp.example.local", timeout=30), \
+            "EasyHAProxy did not discover myapp.example.local within 30 seconds"
+
+        # Get the EasyHAProxy pod name
+        result = subprocess.run(
+            [kubectl, "get", "pods", "-n", "easyhaproxy",
+             "-l", "app.kubernetes.io/name=easyhaproxy",
+             "-o", "jsonpath={.items[0].metadata.name}"],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        pod_name = result.stdout.strip()
+        assert pod_name, "EasyHAProxy pod not found"
+
+        # Get HAProxy configuration
+        result = subprocess.run(
+            [kubectl, "exec", "-n", "easyhaproxy", pod_name,
+             "--", "cat", "/etc/haproxy/haproxy.cfg"],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        config = result.stdout
+
+        # Verify Cloudflare plugin comment
+        assert "# Cloudflare - Restore original visitor IP" in config, \
+            "Cloudflare plugin comment not found in HAProxy config"
+
+        # Verify ACL for Cloudflare IPs
+        assert "acl from_cloudflare src -f /etc/haproxy/cloudflare_ips.lst" in config, \
+            "Cloudflare IP ACL not found in HAProxy config"
+
+        # Verify real IP extraction from CF-Connecting-IP header
+        assert "http-request set-var(txn.real_ip) req.hdr(CF-Connecting-IP) if from_cloudflare" in config, \
+            "CF-Connecting-IP header extraction not found"
+
+        # Verify X-Forwarded-For header update
+        assert "http-request set-header X-Forwarded-For %[var(txn.real_ip)] if from_cloudflare" in config, \
+            "X-Forwarded-For header update not found"
+
+    def test_cloudflare_ip_file_contains_custom_ips(self, k8s_cloudflare):
+        """Test that custom base64-encoded IP list was written to the IP file"""
+        kubectl = k8s_cloudflare
+
+        # Wait for EasyHAProxy to discover the ingress
+        assert wait_for_easyhaproxy_discovery(kubectl, "myapp.example.local", timeout=30), \
+            "EasyHAProxy did not discover myapp.example.local within 30 seconds"
+
+        # Get the EasyHAProxy pod name
+        result = subprocess.run(
+            [kubectl, "get", "pods", "-n", "easyhaproxy",
+             "-l", "app.kubernetes.io/name=easyhaproxy",
+             "-o", "jsonpath={.items[0].metadata.name}"],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        pod_name = result.stdout.strip()
+
+        # Read the Cloudflare IP list file
+        result = subprocess.run(
+            [kubectl, "exec", "-n", "easyhaproxy", pod_name,
+             "--", "cat", "/etc/haproxy/cloudflare_ips.lst"],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        ip_file_content = result.stdout
+
+        # Verify our custom IPs are in the file (from fixture)
+        assert "127.0.0.1" in ip_file_content, "127.0.0.1 not found in IP list"
+        assert "10.0.0.0/8" in ip_file_content, "10.0.0.0/8 not found in IP list"
+        assert "172.16.0.0/12" in ip_file_content, "172.16.0.0/12 not found in IP list"
+        assert "192.168.0.0/16" in ip_file_content, "192.168.0.0/16 not found in IP list"
+
+        # Verify it DOESN'T contain built-in Cloudflare IPs
+        # (proves that ip_list took precedence over use_builtin_ips)
+        assert "173.245.48.0/20" not in ip_file_content, \
+            "Built-in Cloudflare IP found (ip_list should take precedence)"
+
+    def test_access_to_webapp(self, k8s_cloudflare):
+        """Test that the webapp is accessible via the Cloudflare ingress"""
+        kubectl = k8s_cloudflare
+
+        # Wait for EasyHAProxy to discover and configure the ingress
+        assert wait_for_easyhaproxy_discovery(kubectl, "myapp.example.local", timeout=30), \
+            "EasyHAProxy did not become ready for myapp.example.local within 30 seconds"
+
+        # Test HTTP request
+        result = subprocess.run(
+            ["curl", "-s", "-H", "Host: myapp.example.local",
+             f"http://localhost:{HTTP_PORT}"],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+
+        assert result.returncode == 0, f"Curl failed with return code {result.returncode}"
+        assert "App Behind Cloudflare" in result.stdout, \
+            f"Expected 'App Behind Cloudflare' in response, got: {result.stdout}"
 
 
 # =============================================================================

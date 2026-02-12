@@ -199,6 +199,131 @@ class TestCloudflarePlugin:
         assert result.metadata["use_builtin_ips"] is False
         assert result.metadata["ip_count"] is None
 
+    def test_cloudflare_plugin_with_base64_ip_list(self):
+        """Test Cloudflare plugin with base64-encoded IP list"""
+        import base64
+        import os
+
+        plugin = CloudflarePlugin()
+
+        # Create test IP list
+        test_ips = "10.0.0.0/8\n172.16.0.0/12\n192.168.0.0/16"
+        ip_list_base64 = base64.b64encode(test_ips.encode('utf-8')).decode('ascii')
+
+        # Configure with base64 IP list
+        plugin.configure({
+            "ip_list": ip_list_base64,
+            "ip_list_path": "/tmp/test_cloudflare_ips.lst"
+        })
+
+        # Verify it was decoded
+        assert plugin.ip_list == test_ips
+
+        # Process and verify file creation
+        context = PluginContext(
+            parsed_object={},
+            easymapping=[],
+            container_env={},
+            domain="test.example.com",
+            port="80",
+            host_config={}
+        )
+        result = plugin.process(context)
+
+        # Verify file was written with our IPs
+        assert os.path.exists("/tmp/test_cloudflare_ips.lst")
+        with open("/tmp/test_cloudflare_ips.lst", 'r') as f:
+            content = f.read()
+
+        assert "10.0.0.0/8" in content
+        assert "172.16.0.0/12" in content
+        assert "192.168.0.0/16" in content
+
+        # Verify built-in IPs were NOT written
+        assert "173.245.48.0/20" not in content
+
+        # Cleanup
+        os.unlink("/tmp/test_cloudflare_ips.lst")
+
+    def test_cloudflare_plugin_ip_list_precedence(self):
+        """Test that ip_list takes precedence over use_builtin_ips"""
+        import base64
+        import os
+
+        plugin = CloudflarePlugin()
+
+        test_ips = "127.0.0.1"
+        ip_list_base64 = base64.b64encode(test_ips.encode('utf-8')).decode('ascii')
+
+        # Configure with BOTH ip_list and use_builtin_ips
+        plugin.configure({
+            "ip_list": ip_list_base64,
+            "use_builtin_ips": "true",
+            "ip_list_path": "/tmp/test_precedence.lst"
+        })
+
+        # Process
+        context = PluginContext(
+            parsed_object={},
+            easymapping=[],
+            container_env={},
+            domain="test.example.com",
+            port="80",
+            host_config={}
+        )
+        result = plugin.process(context)
+
+        # Verify file contains ONLY our IP, not built-in IPs
+        with open("/tmp/test_precedence.lst", 'r') as f:
+            content = f.read()
+
+        assert "127.0.0.1" in content
+        assert "173.245.48.0/20" not in content  # Built-in IP should NOT be there
+
+        # Verify metadata shows ip_list was provided
+        assert result.metadata["ip_list_provided"] is True
+        assert result.metadata["ip_source"] == "base64 ip_list"
+
+        # Cleanup
+        os.unlink("/tmp/test_precedence.lst")
+
+    def test_cloudflare_plugin_invalid_base64(self):
+        """Test Cloudflare plugin handles invalid base64 gracefully"""
+        import os
+
+        plugin = CloudflarePlugin()
+
+        # Configure with invalid base64
+        plugin.configure({
+            "ip_list": "not-valid-base64!!!",
+            "use_builtin_ips": "true",
+            "ip_list_path": "/tmp/test_invalid.lst"
+        })
+
+        # Should fall back to use_builtin_ips
+        assert plugin.ip_list is None
+
+        # Process should still work with built-in IPs
+        context = PluginContext(
+            parsed_object={},
+            easymapping=[],
+            container_env={},
+            domain="test.example.com",
+            port="80",
+            host_config={}
+        )
+        result = plugin.process(context)
+
+        # Verify fallback to built-in IPs
+        assert os.path.exists("/tmp/test_invalid.lst")
+        with open("/tmp/test_invalid.lst", 'r') as f:
+            content = f.read()
+
+        assert "173.245.48.0/20" in content  # Built-in IP
+
+        # Cleanup
+        os.unlink("/tmp/test_invalid.lst")
+
 
 class TestCleanupPlugin:
     """Test cases for CleanupPlugin (GLOBAL plugin)"""
