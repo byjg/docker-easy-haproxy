@@ -86,9 +86,32 @@ jobs:
           export PATH="$HOME/.local/bin:$PATH"
           uv run pytest tests_e2e/test_kubernetes.py -sv --tb=short
 
+  Tests-E2E-Static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install dependencies
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv sync --group dev
+
+      - name: Run Docker Compose E2E tests
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run pytest tests_e2e/test_static.py -sv --tb=short
+
   Build:
     runs-on: ubuntu-latest
-    needs: [Test, Tests-E2E-Docker, Tests-E2E-Kubernetes]
+    needs: [Test, Tests-E2E-Docker, Tests-E2E-Kubernetes, Tests-E2E-Static]
     permissions:
       contents: read
       packages: write

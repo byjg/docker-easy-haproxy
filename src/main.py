@@ -20,7 +20,6 @@ def start():
 
     os.makedirs(Consts.certs_certbot, exist_ok=True)
     os.makedirs(Consts.certs_haproxy, exist_ok=True)
-    os.makedirs(Consts.jwt_keys, exist_ok=True)
 
     processor_obj.save_config(Consts.haproxy_config)
     processor_obj.save_certs(Consts.certs_haproxy)

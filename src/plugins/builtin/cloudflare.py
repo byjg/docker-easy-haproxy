@@ -49,7 +49,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from functions import logger_easyhaproxy
-from plugins import PluginContext, PluginInterface, PluginResult, PluginType
+from plugins import InitializationResult, PluginContext, PluginInterface, PluginResult, PluginType, ResourceRequest
 
 
 class CloudflarePlugin(PluginInterface):
@@ -131,6 +131,23 @@ class CloudflarePlugin(PluginInterface):
         if "update_log_format" in config:
             self.update_log_format = str(config["update_log_format"]).lower() in ["true", "1", "yes"]
 
+    def initialize(self) -> InitializationResult:
+        """
+        Initialize plugin resources - create IP list directory
+
+        Returns:
+            InitializationResult with directory creation request
+        """
+        # Create directory for IP list file
+        ip_list_dir = os.path.dirname(self.ip_list_path)
+        if ip_list_dir:
+            return InitializationResult(
+                resources=[
+                    ResourceRequest(resource_type="directory", path=ip_list_dir)
+                ]
+            )
+        return InitializationResult()
+
     def process(self, context: PluginContext) -> PluginResult:
         """
         Generate HAProxy config to restore original IP from Cloudflare
@@ -161,12 +178,7 @@ class CloudflarePlugin(PluginInterface):
         # Write IPs to file if we have any
         if ips_to_write:
             try:
-                # Create directory if needed
-                ip_list_dir = os.path.dirname(self.ip_list_path)
-                if ip_list_dir and not os.path.exists(ip_list_dir):
-                    os.makedirs(ip_list_dir, exist_ok=True)
-
-                # Write IPs to file
+                # Write IPs to file (directory created by initialize())
                 with open(self.ip_list_path, 'w') as f:
                     for ip_range in ips_to_write:
                         f.write(f"{ip_range}\n")
@@ -203,8 +215,8 @@ log-format "%{+Q}[var(txn.real_ip)]:-/%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%T
                 "ip_list_provided": self.ip_list is not None,
                 "use_builtin_ips": self.use_builtin_ips,
                 "update_log_format": self.update_log_format,
-                "defaults_config": log_format_config,
                 "ip_count": len(ips_to_write) if ips_to_write else None,
                 "ip_source": ip_source if ips_to_write else "existing file"
-            }
+            },
+            defaults_configs=[log_format_config] if log_format_config else []
         )

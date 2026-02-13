@@ -136,11 +136,10 @@ class FastcgiPlugin(PluginInterface):
 
         fcgi_app_definition = "\n".join(fcgi_app_lines)
 
-        # Build metadata - store fcgi_app_definition to be extracted and added to global configs
+        # Build metadata
         metadata = {
             "domain": context.domain,
             "fcgi_app_name": fcgi_app_name,
-            "fcgi_app_definition": fcgi_app_definition,  # For top-level injection
             "document_root": self.document_root,
             "index_file": self.index_file,
             "path_info": self.path_info,
@@ -150,5 +149,6 @@ class FastcgiPlugin(PluginInterface):
         return PluginResult(
             haproxy_config=backend_config,  # use-fcgi-app directive for the backend
             modified_easymapping=None,
-            metadata=metadata
+            metadata=metadata,
+            global_configs=[fcgi_app_definition]  # For top-level injection
         )

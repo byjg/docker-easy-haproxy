@@ -27,11 +27,29 @@ class PluginContext:
 
 
 @dataclass
+class ResourceRequest:
+    """Request for file system resources"""
+    resource_type: str  # "directory" or "file"
+    path: str
+    content: str | None = None
+    overwrite: bool = False
+
+
+@dataclass
+class InitializationResult:
+    """Plugin initialization result with resource requests"""
+    resources: list[ResourceRequest] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
 class PluginResult:
     """Plugin execution result"""
     haproxy_config: str = ""                     # HAProxy config snippet to inject
     modified_easymapping: list | None = None  # Modified easymapping structure
     metadata: dict[str, Any] = field(default_factory=dict)  # Plugin metadata for logging
+    global_configs: list[str] = field(default_factory=list)  # HAProxy global-level configs
+    defaults_configs: list[str] = field(default_factory=list)  # HAProxy defaults-level configs
 
 
 class PluginInterface(ABC):
@@ -72,19 +90,31 @@ class PluginInterface(ABC):
         """
         pass
 
+    def initialize(self) -> InitializationResult:
+        """
+        Initialize plugin resources. Default: no-op for backward compatibility
+
+        Returns:
+            InitializationResult with resource requests
+        """
+        return InitializationResult()
+
 
 class PluginManager:
     """Manages plugin loading, configuration, and execution"""
 
-    def __init__(self, plugins_dir: str = "/etc/haproxy/plugins", abort_on_error: bool = False):
+    def __init__(self, plugins_dir: str | None = None, abort_on_error: bool = False):
         """
         Initialize the plugin manager
 
         Args:
-            plugins_dir: Directory containing plugin files
+            plugins_dir: Directory containing plugin files (defaults to EASYHAPROXY_PLUGINS_DIR env var or /etc/haproxy/plugins)
             abort_on_error: If True, abort on plugin errors; if False, log and continue
         """
-        self.plugins_dir = plugins_dir
+        self.plugins_dir = plugins_dir or os.getenv(
+            "EASYHAPROXY_PLUGINS_DIR",
+            "/etc/haproxy/plugins"
+        )
         self.abort_on_error = abort_on_error
         self.plugins: dict[str, PluginInterface] = {}
         self.global_plugins: list[PluginInterface] = []
@@ -104,7 +134,7 @@ class PluginManager:
         if os.path.exists(self.plugins_dir):
             self._load_plugins_from_directory(self.plugins_dir, "external")
         else:
-            self.logger.info(f"Plugin directory {self.plugins_dir} does not exist, skipping external plugins")
+            self.logger.debug(f"Plugin directory {self.plugins_dir} does not exist, skipping external plugins")
 
     def _load_plugins_from_directory(self, directory: str, source: str) -> None:
         """
@@ -174,6 +204,33 @@ class PluginManager:
 
             except Exception as e:
                 self._handle_error(f"Failed to configure plugin '{plugin_name}': {str(e)}")
+
+    def initialize_plugins(self) -> None:
+        """Initialize all plugins and process their resource requests"""
+        for plugin_name, plugin in self.plugins.items():
+            try:
+                result = plugin.initialize()
+                self._process_initialization_result(plugin_name, result)
+            except Exception as e:
+                self._handle_error(f"Plugin '{plugin_name}' initialization failed: {e}")
+
+    def _process_initialization_result(self, plugin_name: str, result: InitializationResult) -> None:
+        """
+        Process plugin initialization requests
+
+        Args:
+            plugin_name: Name of the plugin
+            result: InitializationResult with resource requests
+        """
+        for resource in result.resources:
+            if resource.resource_type == "directory":
+                os.makedirs(resource.path, exist_ok=True)
+                self.logger.debug(f"Plugin '{plugin_name}' created directory: {resource.path}")
+            elif resource.resource_type == "file":
+                if resource.overwrite or not os.path.exists(resource.path):
+                    with open(resource.path, 'w') as f:
+                        f.write(resource.content or "")
+                    self.logger.debug(f"Plugin '{plugin_name}' created file: {resource.path}")
 
     def execute_global_plugins(self, context: PluginContext, enabled_list: list[str] | None = None) -> list[PluginResult]:
         """

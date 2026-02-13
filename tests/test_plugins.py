@@ -126,7 +126,7 @@ class TestCloudflarePlugin:
         assert "acl from_cloudflare src -f /etc/haproxy/cloudflare_ips.lst" in haproxy_config
         assert "http-request set-var(txn.real_ip) req.hdr(CF-Connecting-IP)" in haproxy_config
         assert "http-request set-header X-Forwarded-For %[var(txn.real_ip)]" in haproxy_config
-        # Verify log-format is in defaults section (from defaults_config)
+        # Verify log-format is in defaults section (from defaults_configs)
         assert "log-format" in haproxy_config
         assert "%{+Q}[var(txn.real_ip)]" in haproxy_config
 
@@ -987,9 +987,9 @@ class TestFastcgiPlugin:
         assert result.haproxy_config is not None
         assert "use-fcgi-app fcgi_phpapp_local" in result.haproxy_config
 
-        # Check fcgi-app definition in metadata
-        assert "fcgi_app_definition" in result.metadata
-        fcgi_app_def = result.metadata["fcgi_app_definition"]
+        # Check fcgi-app definition in global_configs
+        assert len(result.global_configs) == 1
+        fcgi_app_def = result.global_configs[0]
         assert "fcgi-app fcgi_phpapp_local" in fcgi_app_def
         assert "docroot /var/www/html" in fcgi_app_def
         assert "index index.php" in fcgi_app_def
@@ -1020,9 +1020,9 @@ class TestFastcgiPlugin:
         assert result.haproxy_config is not None
         assert "use-fcgi-app fcgi_phpapp_local" in result.haproxy_config
 
-        # Check custom params in fcgi-app definition in metadata
-        assert "fcgi_app_definition" in result.metadata
-        fcgi_app_def = result.metadata["fcgi_app_definition"]
+        # Check custom params in fcgi-app definition in global_configs
+        assert len(result.global_configs) == 1
+        fcgi_app_def = result.global_configs[0]
         assert "set-param CUSTOM_VAR custom_value" in fcgi_app_def
         assert "set-param APP_ENV production" in fcgi_app_def
         assert result.metadata["custom_params_count"] == 2

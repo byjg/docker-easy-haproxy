@@ -73,11 +73,11 @@ class HaproxyConfigGenerator:
         try:
             from plugins import PluginManager
             self.plugin_manager = PluginManager(
-                plugins_dir="/etc/haproxy/plugins",
                 abort_on_error=self.mapping.get("plugins", {}).get("abort_on_error", False)
             )
             self.plugin_manager.load_plugins()
             self.plugin_manager.configure_plugins(self.mapping.get("plugins", {}))
+            self.plugin_manager.initialize_plugins()
             self.global_plugin_configs = []
         except Exception as e:
             # If plugin system fails to initialize, log but continue
@@ -111,14 +111,20 @@ class HaproxyConfigGenerator:
                     enabled_list = []
 
                 global_results = self.plugin_manager.execute_global_plugins(global_context, enabled_list)
-                # Extend instead of replace to preserve fcgi-app definitions from domain plugins
-                global_configs = [r.haproxy_config for r in global_results if r.haproxy_config]
-                self.global_plugin_configs.extend(global_configs)
 
-                # Extract defaults-level configs from global plugins
+                # Extract all plugin configs in a single loop
                 for result in global_results:
-                    if result.metadata and "defaults_config" in result.metadata:
-                        config = result.metadata["defaults_config"]
+                    # HAProxy config snippets
+                    if result.haproxy_config:
+                        self.global_plugin_configs.append(result.haproxy_config)
+
+                    # Global-level configs (e.g., fcgi-app definitions)
+                    for config in result.global_configs:
+                        if config and config not in self.global_plugin_configs:
+                            self.global_plugin_configs.append(config)
+
+                    # Defaults-level configs (e.g., log-format)
+                    for config in result.defaults_configs:
                         if config and config not in self.defaults_plugin_configs:
                             self.defaults_plugin_configs.append(config)
             except Exception as e:
@@ -298,41 +304,25 @@ class HaproxyConfigGenerator:
                                 enabled_list=enabled_plugins
                             )
 
-                            # Store domain plugin configs for this host
-                            easymapping[port]["hosts"][hostname]["plugin_configs"] = [
-                                r.haproxy_config for r in domain_results if r.haproxy_config
-                            ]
-
-                            # Write JWT public key files from metadata
+                            # Extract all plugin configs in a single loop
+                            plugin_configs_for_host = []
                             for result in domain_results:
-                                if result.metadata and "pubkey_content" in result.metadata and "pubkey_file" in result.metadata:
-                                    pubkey_file = result.metadata["pubkey_file"]
-                                    pubkey_content = result.metadata["pubkey_content"]
+                                # HAProxy config snippets for this domain
+                                if result.haproxy_config:
+                                    plugin_configs_for_host.append(result.haproxy_config)
 
-                                    # Create jwt_keys directory if it doesn't exist (belt and suspenders)
-                                    import os
-                                    jwt_keys_dir = os.path.dirname(pubkey_file)
-                                    if jwt_keys_dir:
-                                        os.makedirs(jwt_keys_dir, exist_ok=True)
+                                # Global-level configs (e.g., fcgi-app definitions)
+                                for config in result.global_configs:
+                                    if config and config not in self.global_plugin_configs:
+                                        self.global_plugin_configs.append(config)
 
-                                    # Write the pubkey file
-                                    Functions.save(pubkey_file, pubkey_content)
-                                    logger_easyhaproxy.debug(
-                                        f"Wrote JWT public key to {pubkey_file} for domain {hostname}"
-                                    )
-
-                            # Extract fcgi-app definitions from metadata and add to global configs
-                            for result in domain_results:
-                                if result.metadata and "fcgi_app_definition" in result.metadata:
-                                    if result.metadata["fcgi_app_definition"] not in self.global_plugin_configs:
-                                        self.global_plugin_configs.append(result.metadata["fcgi_app_definition"])
-
-                            # Extract defaults-level config from metadata (e.g., log-format from Cloudflare plugin)
-                            for result in domain_results:
-                                if result.metadata and "defaults_config" in result.metadata:
-                                    config = result.metadata["defaults_config"]
+                                # Defaults-level configs (e.g., log-format)
+                                for config in result.defaults_configs:
                                     if config and config not in self.defaults_plugin_configs:
                                         self.defaults_plugin_configs.append(config)
+
+                            # Store domain plugin configs for this host
+                            easymapping[port]["hosts"][hostname]["plugin_configs"] = plugin_configs_for_host
                         except Exception as e:
                             logger_easyhaproxy.warning(f"Failed to execute domain plugins for {hostname}: {e}")
                             easymapping[port]["hosts"][hostname]["plugin_configs"] = []
