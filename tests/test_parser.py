@@ -233,15 +233,25 @@ def test_parser_finds_services_raw():
 def test_parser_static():
     path = os.path.dirname(os.path.realpath(__file__))
     with open(path + "/fixtures/static.yml") as content_file:
-        parsed = yaml.load(content_file.read(), Loader=yaml.FullLoader)
+        parsed_yaml = yaml.load(content_file.read(), Loader=yaml.FullLoader)
 
-    cfg = easymapping.HaproxyConfigGenerator(parsed)
-    haproxy_config = cfg.generate()
+    # Use ContainerEnv.read() to convert containers format to env vars
+    from functions import ContainerEnv
+    env_config = ContainerEnv.read(parsed_yaml)
+
+    cfg = easymapping.HaproxyConfigGenerator(env_config)
+
+    # Simulate static processor's conversion of containers to labels
+    from processor import Static
+    static = Static(path + "/fixtures/static.yml")
+    parsed_labels = static.parsed_object
+
+    haproxy_config = cfg.generate(parsed_labels)
     assert len(haproxy_config) > 0
 
     with open(path + "/expected/static.txt") as expected_file:
         assert expected_file.read() == haproxy_config
-    assert [] == cfg.certbot_hosts
+    assert ['host1.com.br'] == cfg.certbot_hosts
 
 
 def test_parser_static_raw():
@@ -249,6 +259,7 @@ def test_parser_static_raw():
     with open(path + "/fixtures/static.yml") as content_file:
         parsed = yaml.load(content_file.read(), Loader=yaml.FullLoader)
 
+    # Updated to new containers format
     expected = {
         "stats": {
             "username": "admin",
@@ -256,48 +267,36 @@ def test_parser_static_raw():
             "port": 1936
         },
         "customerrors": True,
-        "easymapping": [
-            {
-                "port": 80,
-                "hosts": {
-                    "host1.com.br": {
-                        "containers": [
-                            "container:5000"
-                        ],
-                        "certbot": True
-                    },
-                    "host2.com.br": {
-                        "containers": [
-                            "other:3000"
-                        ]
-                    }
-                },
-                "redirect": {
-                    "www.host1.com.br": "http://host1.com.br"
-                }
+        "certbot": {
+            "email": "test@example.com"
+        },
+        "containers": {
+            "host1.com.br:80": {
+                "ip": [
+                    "container:5000"
+                ],
+                "certbot": True
             },
-            {
-                "port": 443,
-                "ssl": True,
-                "hosts": {
-                    "host1.com.br": {
-                        "containers": [
-                            "container:80"
-                        ]
-                    }
-                }
+            "host2.com.br:80": {
+                "ip": [
+                    "other:3000"
+                ]
             },
-            {
-                "port": 8080,
-                "hosts": {
-                    "host3.com.br": {
-                        "containers": [
-                            "domain:8181"
-                        ]
-                    }
-                }
+            "www.host1.com.br:80": {
+                "redirect": "http://host1.com.br"
+            },
+            "host1.com.br:443": {
+                "ip": [
+                    "container:80"
+                ],
+                "ssl": True
+            },
+            "host3.com.br:8080": {
+                "ip": [
+                    "domain:8181"
+                ]
             }
-        ]
+        }
     }
 
     assert expected == parsed

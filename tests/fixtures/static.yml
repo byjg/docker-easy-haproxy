@@ -5,27 +5,23 @@ stats:
 
 customerrors: true   # Optional (default false)
 
-easymapping:
-  - port: 80
-    hosts:                                     
-      host1.com.br:
-        containers:
-          - container:5000
-        certbot: true
-      host2.com.br:
-        containers: 
-          - other:3000
-    redirect:
-      www.host1.com.br: http://host1.com.br
-      
-  - port: 443
-    ssl: True
-    hosts:
-      host1.com.br: 
-        containers: 
-          - container:80
+certbot:
+  email: test@example.com
 
-  - port: 8080
-    hosts:
-      host3.com.br: 
-        containers: [ "domain:8181" ]
+containers:
+  "host1.com.br:80":
+    ip: ["container:5000"]
+    certbot: true
+
+  "host2.com.br:80":
+    ip: ["other:3000"]
+
+  "www.host1.com.br:80":
+    redirect: "http://host1.com.br"
+
+  "host1.com.br:443":
+    ip: ["container:80"]
+    ssl: true
+
+  "host3.com.br:8080":
+    ip: ["domain:8181"]

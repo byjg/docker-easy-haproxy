@@ -60,17 +60,70 @@
 
 services:
   haproxy:
-    image: byjg/easy-haproxy:5.0.0
+    image: byjg/easy-haproxy:local
+    build:
+      context: ../..
+      dockerfile: build/Dockerfile
     volumes:
       - ./conf/:/etc/haproxy/static/
-      - ./host1.local.pem:/certs/haproxy/host1.local.pem
+      - ../static/host1.local.pem:/certs/haproxy/host1.local.pem:ro
+      - ../docker/jwt_pubkey.pem:/etc/haproxy/jwt_keys/api_pubkey.pem:ro
+      - ../docker/jwt_pubkey.pem:/etc/haproxy/jwt_keys/admin_pubkey.pem:ro
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       EASYHAPROXY_DISCOVER: static
+      HAPROXY_USERNAME: admin
+      HAPROXY_PASSWORD: password
     ports:
       - "80:80/tcp"
       - "443:443/tcp"
       - "1936:1936/tcp"
 
+  # Main container for basic tests
   container:
     image: byjg/static-httpserver
+    container_name: container
+
+  # Containers for deny-pages tests
+  webapp1:
+    image: byjg/static-httpserver
+    container_name: webapp1
+    environment:
+      TITLE: "WebApp 1"
+
+  wordpress:
+    image: byjg/static-httpserver
+    container_name: wordpress
+    environment:
+      TITLE: "WordPress Site"
+
+  publicsite:
+    image: byjg/static-httpserver
+    container_name: publicsite
+    environment:
+      TITLE: "Public Site"
+
+  # Containers for JWT validator tests
+  api-server:
+    image: byjg/static-httpserver
+    container_name: api-server
+    environment:
+      TITLE: "Protected API"
+
+  internal-api:
+    image: byjg/static-httpserver
+    container_name: internal-api
+    environment:
+      TITLE: "Internal API"
+
+  admin-api:
+    image: byjg/static-httpserver
+    container_name: admin-api
+    environment:
+      TITLE: "Admin API"
+
+  website:
+    image: byjg/static-httpserver
+    container_name: website
+    environment:
+      TITLE: "Public Website"

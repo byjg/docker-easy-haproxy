@@ -74,15 +74,13 @@ spec:
 
 ```yaml
 # /etc/haproxy/static/config.yaml
-easymapping:
-  - host: example.com
-    port: 80
-    container: webapp:80
-    plugins:
-      - deny_pages
-    plugin_config:
+containers:
+  "example.com:80":
+    ip: ["webapp:80"]
+    plugins: [deny_pages]
+    plugin:
       deny_pages:
-        paths: /admin,/private,/debug
+        paths: [/admin, /private, /debug]
         status_code: 403
 ```
 

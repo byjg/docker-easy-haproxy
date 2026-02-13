@@ -33,16 +33,14 @@ import pytest
 import requests
 import jwt as jwt_lib
 from typing import Generator
-from utils import extract_backend_block
+from utils import extract_backend_block, DockerComposeFixture
 
 # Base directory for docker-compose files
 BASE_DIR = Path(__file__).parent.absolute()
+DOCKER_DIR = BASE_DIR / "docker"
 
 # Track if cloudflare_ips.lst has been created in this test session
 _cloudflare_ips_created = False
-
-# Track if Docker image has been built in this test session
-_docker_image_built = False
 
 
 def create_cloudflare_ips_file():
@@ -89,75 +87,10 @@ def create_cloudflare_ips_file():
     _cloudflare_ips_created = True
 
 
-class DockerComposeFixture:
-    """Helper class to manage docker-compose lifecycle"""
-
-    def __init__(self, compose_file: str, startup_wait: int = 3, build: bool = None):
-        self.compose_file = str(BASE_DIR / "docker" / compose_file)
-        self.startup_wait = startup_wait
-
-        # Smart build strategy: build on first call, skip on subsequent calls
-        global _docker_image_built
-        if build is None:
-            self.build = not _docker_image_built
-        else:
-            self.build = build
-
-    def up(self):
-        """Start docker-compose services"""
-        global _docker_image_built
-
-        compose_name = Path(self.compose_file).name
-        print()  # Newline for better test output formatting
-        print(f"  → Starting services from {compose_name}...")
-
-        cmd = ["docker", "compose", "-f", self.compose_file, "up", "-d"]
-        if self.build:
-            cmd.append("--build")
-
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True
-        )
-
-        if result.returncode != 0:
-            print(f"  ✗ ERROR: Failed to start services!")
-            print(f"    stdout: {result.stdout}")
-            print(f"    stderr: {result.stderr}")
-            raise subprocess.CalledProcessError(result.returncode, cmd, result.stdout, result.stderr)
-
-        # Mark image as built for this test session
-        if self.build:
-            _docker_image_built = True
-
-        print(f"  ✓ Services started, waiting {self.startup_wait}s for initialization...")
-        time.sleep(self.startup_wait)
-        print(f"  ✓ Services ready")
-
-    def down(self):
-        """Stop and remove docker-compose services"""
-        compose_name = Path(self.compose_file).name
-        print(f"  → Stopping services from {compose_name}...")
-
-        result = subprocess.run(
-            ["docker", "compose", "-f", self.compose_file, "down", "--remove-orphans"],
-            capture_output=True,
-            text=True
-        )
-
-        if result.returncode != 0:
-            print(f"  ⚠ WARNING: Failed to stop services cleanly")
-            print(f"    stderr: {result.stderr}")
-            # Don't raise error on cleanup, just warn
-        else:
-            print(f"  ✓ Services stopped and cleaned up")
-
-
 @pytest.fixture
 def docker_compose_basic_ssl() -> Generator[None, None, None]:
     """Fixture for docker-compose.yml (Basic SSL)"""
-    fixture = DockerComposeFixture("docker-compose.yml")
+    fixture = DockerComposeFixture(str(DOCKER_DIR / "docker-compose.yml"))
     fixture.up()
     yield
     fixture.down()
@@ -166,7 +99,7 @@ def docker_compose_basic_ssl() -> Generator[None, None, None]:
 @pytest.fixture
 def docker_compose_jwt_validator() -> Generator[None, None, None]:
     """Fixture for docker-compose-jwt-validator.yml"""
-    fixture = DockerComposeFixture("docker-compose-jwt-validator.yml")
+    fixture = DockerComposeFixture(str(DOCKER_DIR / "docker-compose-jwt-validator.yml"))
     fixture.up()
     yield
     fixture.down()
@@ -175,7 +108,7 @@ def docker_compose_jwt_validator() -> Generator[None, None, None]:
 @pytest.fixture
 def docker_compose_multi_containers() -> Generator[None, None, None]:
     """Fixture for docker-compose-multi-containers.yml"""
-    fixture = DockerComposeFixture("docker-compose-multi-containers.yml")
+    fixture = DockerComposeFixture(str(DOCKER_DIR / "docker-compose-multi-containers.yml"))
     fixture.up()
     yield
     fixture.down()
@@ -184,7 +117,7 @@ def docker_compose_multi_containers() -> Generator[None, None, None]:
 @pytest.fixture
 def docker_compose_php_fpm() -> Generator[None, None, None]:
     """Fixture for docker-compose-php-fpm.yml"""
-    fixture = DockerComposeFixture("docker-compose-php-fpm.yml")
+    fixture = DockerComposeFixture(str(DOCKER_DIR / "docker-compose-php-fpm.yml"))
     fixture.up()
     yield
     fixture.down()
@@ -196,7 +129,7 @@ def docker_compose_plugins_combined() -> Generator[None, None, None]:
     # Create cloudflare_ips.lst (required by this compose file)
     create_cloudflare_ips_file()
 
-    fixture = DockerComposeFixture("docker-compose-plugins-combined.yml")
+    fixture = DockerComposeFixture(str(DOCKER_DIR / "docker-compose-plugins-combined.yml"))
     fixture.up()
     yield
     fixture.down()
@@ -205,7 +138,7 @@ def docker_compose_plugins_combined() -> Generator[None, None, None]:
 @pytest.fixture
 def docker_compose_ip_whitelist() -> Generator[None, None, None]:
     """Fixture for docker-compose-ip-whitelist.yml"""
-    fixture = DockerComposeFixture("docker-compose-ip-whitelist.yml")
+    fixture = DockerComposeFixture(str(DOCKER_DIR / "docker-compose-ip-whitelist.yml"))
     fixture.up()
     yield
     fixture.down()
@@ -217,7 +150,7 @@ def docker_compose_cloudflare() -> Generator[None, None, None]:
     # Create cloudflare_ips.lst (required by this compose file)
     create_cloudflare_ips_file()
 
-    fixture = DockerComposeFixture("docker-compose-cloudflare.yml")
+    fixture = DockerComposeFixture(str(DOCKER_DIR / "docker-compose-cloudflare.yml"))
     fixture.up()
     yield
     fixture.down()
@@ -787,7 +720,7 @@ class TestCloudflare:
 @pytest.fixture
 def docker_compose_changed_label() -> Generator[None, None, None]:
     """Fixture for docker-compose-changed-label.yml"""
-    fixture = DockerComposeFixture("docker-compose-changed-label.yml")
+    fixture = DockerComposeFixture(str(DOCKER_DIR / "docker-compose-changed-label.yml"))
     fixture.up()
     yield
     fixture.down()

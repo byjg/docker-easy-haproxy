@@ -32,55 +32,45 @@ stats:
 
 customerrors: true
 
-easymapping:
-  - port: 80
-    hosts:
-      # Public API with full JWT validation
-      api.local:
-        containers:
-          - api-server:8080
-        plugins:
-          - jwt_validator
-        plugin_config:
-          jwt_validator:
-            algorithm: RS256
-            issuer: https://auth.example.com/
-            audience: https://api.example.com
-            pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+containers:
+  # Public API with full JWT validation
+  "api.local:80":
+    ip: ["api-server:8080"]
+    plugins: [jwt_validator]
+    plugin:
+      jwt_validator:
+        algorithm: RS256
+        issuer: https://auth.example.com/
+        audience: https://api.example.com
+        pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
 
-      # Internal API - validate signature only (no issuer/audience check)
-      internal-api.local:
-        containers:
-          - internal-api:3000
-        plugins:
-          - jwt_validator
-        plugin_config:
-          jwt_validator:
-            algorithm: RS256
-            # No issuer/audience = skip those validations
-            pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+  # Internal API - validate signature only (no issuer/audience check)
+  "internal-api.local:80":
+    ip: ["internal-api:3000"]
+    plugins: [jwt_validator]
+    plugin:
+      jwt_validator:
+        algorithm: RS256
+        # No issuer/audience = skip those validations
+        pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
 
-      # Admin API - different issuer and key
-      admin-api.local:
-        containers:
-          - admin-api:4000
-        plugins:
-          - jwt_validator
-          - deny_pages  # Also block internal paths
-        plugin_config:
-          jwt_validator:
-            algorithm: RS256
-            issuer: https://admin-auth.example.com/
-            audience: https://admin.example.com
-            pubkey_path: /etc/haproxy/jwt_keys/admin_pubkey.pem
-          deny_pages:
-            paths:
-              - /internal
-              - /debug
-            status_code: 403
+  # Admin API - different issuer and key
+  "admin-api.local:80":
+    ip: ["admin-api:4000"]
+    plugins: [jwt_validator, deny_pages]  # Also block internal paths
+    plugin:
+      jwt_validator:
+        algorithm: RS256
+        issuer: https://admin-auth.example.com/
+        audience: https://admin.example.com
+        pubkey_path: /etc/haproxy/jwt_keys/admin_pubkey.pem
+      deny_pages:
+        paths:
+          - /internal
+          - /debug
+        status_code: 403
 
-      # Public website - no JWT required
-      website.local:
-        containers:
-          - website:8080
-        # No plugins = public access
+  # Public website - no JWT required
+  "website.local:80":
+    ip: ["website:8080"]
+    # No plugins = public access

@@ -79,13 +79,10 @@ stats:
   password: password
   port: 1936
 
-easymapping:
-  - port: 443
+containers:
+  "host1.local:443":
+    ip: ["container:8080"]  # Can also be IP:PORT for external backends
     ssl: true
-    hosts:
-      host1.local:
-        containers:
-          - container:8080  # Can also be IP:PORT for external backends
 ```
 
 See `conf/` directory for complete examples.

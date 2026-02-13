@@ -32,7 +32,9 @@ class DockerLabelHandler:
             return self.__data[label].lower() in ["true", "1", "yes"]
         return default_value
 
-    def get_json(self, label, default_value={}):
+    def get_json(self, label, default_value=None):
+        if default_value is None:
+            default_value = {}
         if self.has_label(label):
             value = self.__data[label]
             if not value:  # Handle empty strings
@@ -178,6 +180,12 @@ class HaproxyConfigGenerator:
                     self.label.create([definition, "clone_to_ssl"])
                 )
 
+                # Check if this is a redirect-only entry (no backend)
+                redirect_only = self.label.get_bool(
+                    self.label.create([definition, "redirect_only"]),
+                    False
+                )
+
                 if port not in easymapping:
                     easymapping[port] = {
                         "mode": mode,
@@ -186,6 +194,12 @@ class HaproxyConfigGenerator:
                         "hosts": dict(),
                         "redirect": dict(),
                     }
+
+                if redirect_only:
+                    easymapping[port]["redirect"].update(self.label.get_json(
+                        self.label.create([definition, "redirect"])
+                    ))
+                    continue
 
                 # TODO: this could use `EXPOSE` from `Dockerfile`?
                 ct_port = self.label.get(

@@ -344,3 +344,110 @@ def test_container_log_level():
         del os.environ['CERTBOT_LOG_LEVEL']
         del os.environ['EASYHAPROXY_LOG_LEVEL']
         del os.environ['HAPROXY_LOG_LEVEL']
+
+
+def test_yaml_to_env_loglevel():
+    """Test that YAML logLevel config is properly converted to environment variables"""
+    yaml_config = {
+        "logLevel": {
+            "easyhaproxy": Functions.ERROR,
+            "haproxy": Functions.FATAL,
+            "certbot": Functions.TRACE,
+        }
+    }
+    try:
+        result = ContainerEnv.read(yaml_config)
+        assert result["logLevel"]["easyhaproxy"] == Functions.ERROR
+        assert result["logLevel"]["haproxy"] == Functions.FATAL
+        assert result["logLevel"]["certbot"] == Functions.TRACE
+        # Verify environment variables were set
+        assert os.environ.get('EASYHAPROXY_LOG_LEVEL') == Functions.ERROR
+        assert os.environ.get('HAPROXY_LOG_LEVEL') == Functions.FATAL
+        assert os.environ.get('CERTBOT_LOG_LEVEL') == Functions.TRACE
+    finally:
+        # Cleanup
+        for key in ['EASYHAPROXY_LOG_LEVEL', 'HAPROXY_LOG_LEVEL', 'CERTBOT_LOG_LEVEL']:
+            if key in os.environ:
+                del os.environ[key]
+
+
+def test_yaml_to_env_certbot():
+    """Test that YAML certbot config is properly converted to environment variables"""
+    yaml_config = {
+        "certbot": {
+            "email": "test@example.com",
+            "autoconfig": "letsencrypt",
+            "server": "https://acme-v02.api.letsencrypt.org/directory",
+            "eab_kid": "test_kid",
+            "eab_hmac_key": "test_hmac",
+            "retry_count": 10,
+            "preferred_challenges": "dns",
+            "manual_auth_hook": "test_hook"
+        }
+    }
+    try:
+        result = ContainerEnv.read(yaml_config)
+        assert result["certbot"]["email"] == "test@example.com"
+        assert result["certbot"]["autoconfig"] == "letsencrypt"
+        assert result["certbot"]["server"] == "https://acme-v02.api.letsencrypt.org/directory"
+        assert result["certbot"]["eab_kid"] == "test_kid"
+        assert result["certbot"]["eab_hmac_key"] == "test_hmac"
+        assert result["certbot"]["retry_count"] == 10
+        assert result["certbot"]["preferred_challenges"] == "dns"
+        assert result["certbot"]["manual_auth_hook"] == "test_hook"
+        # Verify environment variables were set
+        assert os.environ.get('EASYHAPROXY_CERTBOT_EMAIL') == "test@example.com"
+        assert os.environ.get('EASYHAPROXY_CERTBOT_AUTOCONFIG') == "letsencrypt"
+        assert os.environ.get('EASYHAPROXY_CERTBOT_SERVER') == "https://acme-v02.api.letsencrypt.org/directory"
+        assert os.environ.get('EASYHAPROXY_CERTBOT_EAB_KID') == "test_kid"
+        assert os.environ.get('EASYHAPROXY_CERTBOT_EAB_HMAC_KEY') == "test_hmac"
+        assert os.environ.get('EASYHAPROXY_CERTBOT_RETRY_COUNT') == "10"
+        assert os.environ.get('EASYHAPROXY_CERTBOT_PREFERRED_CHALLENGES') == "dns"
+        assert os.environ.get('EASYHAPROXY_CERTBOT_MANUAL_AUTH_HOOK') == "test_hook"
+    finally:
+        # Cleanup
+        for key in ['EASYHAPROXY_CERTBOT_EMAIL', 'EASYHAPROXY_CERTBOT_AUTOCONFIG',
+                    'EASYHAPROXY_CERTBOT_SERVER', 'EASYHAPROXY_CERTBOT_EAB_KID',
+                    'EASYHAPROXY_CERTBOT_EAB_HMAC_KEY', 'EASYHAPROXY_CERTBOT_RETRY_COUNT',
+                    'EASYHAPROXY_CERTBOT_PREFERRED_CHALLENGES', 'EASYHAPROXY_CERTBOT_MANUAL_AUTH_HOOK']:
+            if key in os.environ:
+                del os.environ[key]
+
+
+def test_yaml_to_env_combined():
+    """Test that combined YAML config (logLevel + certbot) works correctly"""
+    yaml_config = {
+        "customerrors": True,
+        "ssl_mode": "strict",
+        "logLevel": {
+            "easyhaproxy": Functions.WARN,
+            "haproxy": Functions.ERROR,
+        },
+        "certbot": {
+            "email": "combined@example.com",
+            "retry_count": 5
+        }
+    }
+    try:
+        result = ContainerEnv.read(yaml_config)
+        # Check the result
+        assert result["customerrors"] == True
+        assert result["ssl_mode"] == "strict"
+        assert result["logLevel"]["easyhaproxy"] == Functions.WARN
+        assert result["logLevel"]["haproxy"] == Functions.ERROR
+        assert result["certbot"]["email"] == "combined@example.com"
+        assert result["certbot"]["retry_count"] == 5
+        # Verify environment variables
+        assert os.environ.get('HAPROXY_CUSTOMERRORS') == "true"
+        assert os.environ.get('EASYHAPROXY_SSL_MODE') == "strict"
+        assert os.environ.get('EASYHAPROXY_LOG_LEVEL') == Functions.WARN
+        assert os.environ.get('HAPROXY_LOG_LEVEL') == Functions.ERROR
+        assert os.environ.get('EASYHAPROXY_CERTBOT_EMAIL') == "combined@example.com"
+        assert os.environ.get('EASYHAPROXY_CERTBOT_RETRY_COUNT') == "5"
+    finally:
+        # Cleanup
+        for key in ['HAPROXY_CUSTOMERRORS', 'EASYHAPROXY_SSL_MODE',
+                    'EASYHAPROXY_LOG_LEVEL', 'HAPROXY_LOG_LEVEL',
+                    'EASYHAPROXY_CERTBOT_EMAIL', 'EASYHAPROXY_CERTBOT_RETRY_COUNT']:
+            if key in os.environ:
+                del os.environ[key]

@@ -15,17 +15,17 @@ stats:
 
 customerrors: true   # Optional (default false)
 
-easymapping:
-  # HTTP - Redirect to HTTPS
-  - port: 80
-    redirect:
-      host1.local: https://host1.local
-      www.host1.local: https://host1.local
+containers:
+  # HTTP - Redirect to HTTPS using redirect_ssl
+  "host1.local:80":
+    ip: ["container:8080"]
+    redirect_ssl: true
+
+  "www.host1.local:80":
+    ip: ["container:8080"]
+    redirect_ssl: true
 
   # HTTPS - Serve application
-  - port: 443
+  "host1.local:443":
+    ip: ["container:8080"]
     ssl: true
-    hosts:
-      host1.local:
-        containers:
-          - container:8080

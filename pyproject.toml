@@ -66,6 +66,7 @@ markers = [
     "security: marks tests for security features (IP whitelist, etc.)",
     "cloudflare: marks tests for Cloudflare IP restoration plugin",
     "custom_label: marks tests for custom label prefix functionality",
+    "static: marks tests for static configuration mode",
 ]
 
 [tool.ruff]

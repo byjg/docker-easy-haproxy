@@ -29,38 +29,42 @@ ssl_mode: default
 logLevel:
   haproxy: INFO
 
-certbot: {
-  "email": "acme@example.org"
-}
+certbot:
+  email: "acme@example.org"
 
-easymapping:
-  - port: 80
-    hosts:
-      host1.com.br: 
-        containers:
-          - container:5000
-        certbot: true
-        redirect_ssl: true
-      host2.com.br: 
-        containers:
-          - other:3000
-    redirect:
-      www.host1.com.br: http://host1.com.br
+containers:
+  # HTTP with certbot + redirect to HTTPS
+  "host1.com.br:80":
+    ip: ["container:5000"]
+    certbot: true
+    redirect_ssl: true
 
-  - port: 443
-    hosts:
-      host1.com.br: 
-        containers:
-          - container:80
-        redirect_ssl: false
-      ssl: true
+  # Additional HTTP host
+  "host2.com.br:80":
+    ip: ["other:3000"]
 
-  - port: 8080
-    hosts:
-      host3.com.br: 
-        containers: 
-          - domain:8181
+  # Redirect www → main domain
+  "www.host1.com.br:80":
+    ip: ["container:5000"]
+    redirect_ssl: true
+
+  # HTTPS version
+  "host1.com.br:443":
+    ip: ["container:80"]
+    ssl: true
+
+  # Different host on different port
+  "host3.com.br:8080":
+    ip: ["domain:8181"]
 ```
+
+:::info New Configuration Format
+The `containers` format simplifies static configuration:
+- **Flatter structure**: `"hostname:port"` keys instead of nested `easymapping` → `ports` → `hosts`
+- **Better readability**: Port and localport embedded in keys (`"host:port"` and `"container:localport"`)
+- **Plugin support**: Global and per-host plugin configuration
+- **Clearer mapping**: Format mirrors internal Docker label structure
+:::
 
 Then map this file to `/etc/haproxy/static/config.yml` in your EasyHAProxy container:
 
@@ -109,19 +113,23 @@ certbot:
   retry_count: 60            # If the certificate reaches the Rate Limit, try again after 'n' iterations.
 }
 
-easymapping:
-  - port: 80                 # Listen port
+containers:
+  # Format: "hostname:port"
+  "host1.com.br:80":
+    ip: ["container:5000"]   # Endpoints (ip, dns, container, etc) with format "address:localport"
+    certbot: true            # Optional. Request a certbot certificate. Requires certbot.email set.
+    redirect_ssl: true       # Optional. Redirect HTTP to HTTPS for this host.
     mode: http               # Optional. Default `http`. Can be http or tcp
-    hosts:
-      host1.com.br:          # Hostname
-        containers:
-          - container:5000   # Endpoints of the hostname above (ip, dns, container, etc)
-        certbot: true        # Optional. it will request a certbot certificate. Needs certbot.email set.
-        redirect_ssl: true   # Optional. It will redirect this site to it SSL.
-    ssl: true                # Optional. Inform this port will listen to SSL, instead of HTTP
-    clone_to_ssl: true       # Optional. Default False. You clone these hosts to its equivalent SSL. 
-    redirect:
-      www.host1.com.br: http://host1.com.br
+
+  # HTTPS version (SSL)
+  "host1.com.br:443":
+    ip: ["container:80"]
+    ssl: true                # Enable SSL for this port
+
+  # Redirect www → main domain (using redirect_ssl with backend)
+  "www.host1.com.br:80":
+    ip: ["container:5000"]
+    redirect_ssl: true
 ```
 
 :::note SSL Certificates in Static Mode

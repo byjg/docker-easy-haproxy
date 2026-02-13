@@ -228,13 +228,12 @@ spec:
 
 ```yaml
 # /etc/haproxy/static/config.yaml
-easymapping:
-  - host: api.example.com
-    port: 443
-    container: api-service:8080
-    plugins:
-      - jwt_validator
-    plugin_config:
+containers:
+  "api.example.com:443":
+    ip: ["api-service:8080"]
+    ssl: true
+    plugins: [jwt_validator]
+    plugin:
       jwt_validator:
         algorithm: RS256
         issuer: https://auth.example.com/

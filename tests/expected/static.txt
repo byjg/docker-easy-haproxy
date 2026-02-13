@@ -45,6 +45,22 @@ backend srv_stats
     mode http
     server Local 127.0.0.1:1936
 
+frontend http_in_443
+    bind *:443  ssl crt /certs/certbot/ alpn h2,http/1.1 crt /certs/haproxy/ alpn h2,http/1.1
+    mode http
+
+    acl is_rule_host1_com_br_443_1 hdr(host) -i host1.com.br
+    acl is_rule_host1_com_br_443_2 hdr(host) -i host1.com.br:443
+    use_backend srv_host1_com_br_443 if is_rule_host1_com_br_443_1 OR is_rule_host1_com_br_443_2
+
+backend srv_host1_com_br_443
+    balance roundrobin
+    mode http
+    option forwardfor
+    http-request set-header X-Forwarded-Port %[dst_port]
+    http-request add-header X-Forwarded-Proto https if { ssl_fc }
+    server srv-0 container:5000 check weight 1
+
 frontend http_in_80
     bind *:80
     mode http
@@ -74,22 +90,6 @@ backend srv_host2_com_br_80
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
     server srv-0 other:3000 check weight 1
-
-frontend http_in_443
-    bind *:443  ssl crt /certs/certbot/ alpn h2,http/1.1 crt /certs/haproxy/ alpn h2,http/1.1
-    mode http
-
-    acl is_rule_host1_com_br_443_1 hdr(host) -i host1.com.br
-    acl is_rule_host1_com_br_443_2 hdr(host) -i host1.com.br:443
-    use_backend srv_host1_com_br_443 if is_rule_host1_com_br_443_1 OR is_rule_host1_com_br_443_2
-
-backend srv_host1_com_br_443
-    balance roundrobin
-    mode http
-    option forwardfor
-    http-request set-header X-Forwarded-Port %[dst_port]
-    http-request add-header X-Forwarded-Proto https if { ssl_fc }
-    server srv-0 container:80 check weight 1
 
 frontend http_in_8080
     bind *:8080

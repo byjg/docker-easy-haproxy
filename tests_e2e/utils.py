@@ -14,6 +14,74 @@ import jwt as jwt_lib
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
 
+# Track if Docker image has been built in this test session
+_docker_image_built = False
+
+
+class DockerComposeFixture:
+    """Helper class to manage docker-compose lifecycle"""
+
+    def __init__(self, compose_file: str, startup_wait: int = 3, build: bool = None):
+        self.compose_file = compose_file
+        self.startup_wait = startup_wait
+
+        # Smart build strategy: build on first call, skip on subsequent calls
+        global _docker_image_built
+        if build is None:
+            self.build = not _docker_image_built
+        else:
+            self.build = build
+
+    def up(self):
+        """Start docker-compose services"""
+        global _docker_image_built
+
+        compose_name = Path(self.compose_file).name
+        print()  # Newline for better test output formatting
+        print(f"  → Starting services from {compose_name}...")
+
+        cmd = ["docker", "compose", "-f", self.compose_file, "up", "-d"]
+        if self.build:
+            cmd.append("--build")
+
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode != 0:
+            print(f"  ✗ ERROR: Failed to start services!")
+            print(f"    stdout: {result.stdout}")
+            print(f"    stderr: {result.stderr}")
+            raise subprocess.CalledProcessError(result.returncode, cmd, result.stdout, result.stderr)
+
+        # Mark image as built for this test session
+        if self.build:
+            _docker_image_built = True
+
+        print(f"  ✓ Services started, waiting {self.startup_wait}s for initialization...")
+        time.sleep(self.startup_wait)
+        print(f"  ✓ Services ready")
+
+    def down(self):
+        """Stop and remove docker-compose services"""
+        compose_name = Path(self.compose_file).name
+        print(f"  → Stopping services from {compose_name}...")
+
+        result = subprocess.run(
+            ["docker", "compose", "-f", self.compose_file, "down", "--remove-orphans"],
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode != 0:
+            print(f"  ⚠ WARNING: Failed to stop services cleanly")
+            print(f"    stderr: {result.stderr}")
+            # Don't raise error on cleanup, just warn
+        else:
+            print(f"  ✓ Services stopped and cleaned up")
+
 
 def generate_jwt_token(
     private_key_path: Path,
