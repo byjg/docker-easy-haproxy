@@ -41,6 +41,40 @@ DOCKER_DIR = BASE_DIR / "docker"
 
 # Track if cloudflare_ips.lst has been created in this test session
 _cloudflare_ips_created = False
+# Track if pebble CA cert has been downloaded in this test session
+_pebble_ca_downloaded = False
+
+
+def create_pebble_ca_file():
+    """
+    Download Pebble's test CA certificate.
+
+    This file is required for docker-compose-acme-e2e.yml to trust Pebble's HTTPS endpoint.
+    Downloads from Pebble's GitHub repository.
+
+    Strategy:
+    - First call: Always download (fresh certificate)
+    - Subsequent calls: Skip if file exists (reuse from first call)
+    """
+    global _pebble_ca_downloaded
+
+    pebble_ca_path = DOCKER_DIR / "pebble-ca.pem"
+
+    # On subsequent calls, skip if file exists
+    if _pebble_ca_downloaded and pebble_ca_path.exists() and pebble_ca_path.is_file():
+        return
+
+    # Download Pebble's test CA certificate
+    subprocess.run(
+        [
+            "curl", "-sL", "-o", str(pebble_ca_path),
+            "https://raw.githubusercontent.com/letsencrypt/pebble/main/test/certs/pebble.minica.pem"
+        ],
+        check=True
+    )
+
+    # Mark as downloaded for this test session
+    _pebble_ca_downloaded = True
 
 
 def create_cloudflare_ips_file():
@@ -806,6 +840,179 @@ class TestChangedLabel:
 
 
 # =============================================================================
+# Test: docker-compose-acme-e2e.yml - ACME/Certbot with Pebble
+# =============================================================================
+
+@pytest.fixture
+def docker_compose_acme() -> Generator[None, None, None]:
+    """Fixture for docker-compose-acme-e2e.yml - ACME/Certbot E2E test"""
+    volume_name = "docker_certbot-certs"
+
+    # Download Pebble CA certificate (only once per test session)
+    create_pebble_ca_file()
+
+    # Clean up volume from previous test runs (ensures fresh start)
+    subprocess.run(
+        ["docker", "volume", "rm", volume_name],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL  # Ignore error if volume doesn't exist
+    )
+
+    fixture = DockerComposeFixture(str(DOCKER_DIR / "docker-compose-acme-e2e.yml"), startup_wait=15)
+    fixture.up()
+    yield
+    fixture.down()
+
+    # Clean up volume after test
+    subprocess.run(
+        ["docker", "volume", "rm", volume_name],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+
+
+@pytest.mark.acme
+class TestACME:
+    """Tests for docker-compose-acme-e2e.yml - ACME/Certbot with Pebble test server"""
+
+    def test_haproxy_config(self, docker_compose_acme):
+        """Test HAProxy configuration has ACME challenge routing"""
+        result = subprocess.run(
+            ["docker", "exec", "docker-haproxy-1", "cat", "/etc/haproxy/haproxy.cfg"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        config = result.stdout
+
+        # Verify ACME challenge ACL exists
+        assert 'acl is_certbot_test_local_80 path_beg /.well-known/acme-challenge/' in config, \
+            "ACME challenge ACL not found in HAProxy config"
+
+        # Verify routing to certbot_backend
+        assert 'use_backend certbot_backend if is_certbot_test_local_80' in config, \
+            "ACME challenge routing rule not found"
+
+        # Verify certbot_backend definition
+        assert 'backend certbot_backend' in config, \
+            "certbot_backend not defined"
+        assert 'server certbot 127.0.0.1:2080' in config, \
+            "certbot backend server not configured correctly"
+
+        # Verify SSL redirect bypasses ACME challenges
+        # Find redirect rule and verify it excludes certbot ACL
+        lines = config.split('\n')
+        for line in lines:
+            if 'http-request redirect scheme https' in line and 'test_local' in line:
+                assert '!is_certbot_test_local_80' in line, \
+                    "SSL redirect should bypass ACME challenges"
+                break
+
+    def test_acme_challenge_routing(self, docker_compose_acme):
+        """Test that HTTP requests to /.well-known/acme-challenge/ route to certbot backend"""
+        # Request to ACME challenge path
+        # We expect a 404 from certbot standalone server (no actual challenge file)
+        # This confirms routing works - backend server would return different response
+        response = requests.get(
+            'http://localhost/.well-known/acme-challenge/test-token-12345',
+            headers={'Host': 'test.local'},
+            allow_redirects=False
+        )
+
+        # Should NOT redirect to HTTPS (ACME challenges must be HTTP)
+        assert response.status_code != 301 and response.status_code != 302, \
+            "ACME challenge path should not redirect to HTTPS"
+
+        # Expected: 404 or connection error from certbot (not running during challenge)
+        # What we're verifying is that it doesn't return backend's response
+        assert response.status_code in [404, 502, 503], \
+            f"Expected 404/502/503 from certbot backend, got {response.status_code}"
+
+    def test_certificate_issuance(self, docker_compose_acme):
+        """Test that Pebble successfully issues a certificate"""
+        # Check HAProxy logs for certificate issuance
+        result = subprocess.run(
+            ["docker", "logs", "docker-haproxy-1"],
+            capture_output=True,
+            text=True
+        )
+        logs = result.stdout + result.stderr
+
+        # Look for certbot success messages
+        # Certbot outputs: "Successfully received certificate"
+        has_success = "Successfully received certificate" in logs or \
+                     "Certificate not yet due for renewal" in logs or \
+                     "Cert not yet due for renewal" in logs
+
+        # If not successful, check for Pebble connection
+        if not has_success:
+            # Check if we can at least connect to Pebble
+            has_pebble_connection = "pebble:14000/dir" in logs or "pebble:14000" in logs
+            assert has_pebble_connection, \
+                f"HAProxy cannot connect to Pebble ACME server. Check docker network.\nLogs:\n{logs[-2000:]}"
+
+        # Verify merged certificate file exists
+        # EasyHAProxy merges cert+key from /etc/letsencrypt/live/ to /certs/certbot/{domain}.pem
+        merged_cert_path = "/certs/certbot/test.local.pem"
+        result = subprocess.run(
+            ["docker", "exec", "docker-haproxy-1", "test", "-f", merged_cert_path],
+            capture_output=True
+        )
+        assert result.returncode == 0, \
+            f"Merged certificate file not found at {merged_cert_path}. " \
+            f"Certificate issuance or merging may have failed. Check logs: docker logs docker-haproxy-1"
+
+        # Verify merged certificate is valid (contains both cert and key)
+        result = subprocess.run(
+            ["docker", "exec", "docker-haproxy-1", "cat", merged_cert_path],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        cert_content = result.stdout
+        assert '-----BEGIN CERTIFICATE-----' in cert_content, \
+            f"{merged_cert_path} does not contain a certificate"
+        assert '-----END CERTIFICATE-----' in cert_content, \
+            f"{merged_cert_path} certificate is incomplete"
+        assert '-----BEGIN PRIVATE KEY-----' in cert_content or '-----BEGIN RSA PRIVATE KEY-----' in cert_content, \
+            f"{merged_cert_path} does not contain a private key"
+
+    def test_https_with_issued_cert(self, docker_compose_acme):
+        """Test HTTPS works with Pebble-issued certificate"""
+        # Pebble issues real certificates, but from a test CA
+        # Browsers won't trust them, but the TLS handshake should work
+        response = requests.get(
+            'https://localhost/',
+            headers={'Host': 'test.local'},
+            verify=False  # Pebble uses test CA not trusted by system
+        )
+
+        # Should get 200 from backend server
+        assert response.status_code == 200, \
+            f"Expected 200 OK, got {response.status_code}"
+
+        # Verify it's the backend server responding (static-httpserver)
+        assert "soon" in response.text.lower() or "coming" in response.text.lower(), \
+            "Response doesn't match expected backend server content"
+
+    def test_http_to_https_redirect_with_acme_bypass(self, docker_compose_acme):
+        """Test HTTP redirects to HTTPS but ACME challenges bypass redirect"""
+        # Regular HTTP request (not ACME challenge) should redirect
+        response = requests.get(
+            'http://localhost/',
+            headers={'Host': 'test.local'},
+            allow_redirects=False
+        )
+
+        assert response.status_code == 301, \
+            f"Expected HTTP 301 redirect, got {response.status_code}"
+        assert response.headers['Location'].startswith('https://'), \
+            f"Expected redirect to HTTPS, got {response.headers['Location']}"
+
+        # ACME challenge path should NOT redirect (tested in test_acme_challenge_routing)
+
+
+# =============================================================================
 # Helper functions for manual testing
 # =============================================================================
 
@@ -842,3 +1049,4 @@ if __name__ == "__main__":
     print("  - TestIPWhitelist: IP whitelist plugin tests")
     print("  - TestCloudflare: Cloudflare IP restoration plugin tests")
     print("  - TestChangedLabel: Custom label prefix tests")
+    print("  - TestACME: ACME/Certbot certificate issuance with Pebble test server")
