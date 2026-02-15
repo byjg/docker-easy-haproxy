@@ -201,7 +201,7 @@ class TestBasicSSL:
     def test_haproxy_config(self, docker_compose_basic_ssl):
         """Test HAProxy configuration has SSL and redirect configurations"""
         result = subprocess.run(
-            ["docker", "exec", "docker-haproxy-1", "cat", "/etc/haproxy/haproxy.cfg"],
+            ["docker", "exec", "docker-haproxy-1", "cat", "/etc/easyhaproxy/haproxy/haproxy.cfg"],
             capture_output=True,
             text=True,
             check=True
@@ -280,7 +280,7 @@ class TestJWTValidator:
     def test_haproxy_config(self, docker_compose_jwt_validator):
         """Test HAProxy configuration has JWT validator rules in the correct backend"""
         result = subprocess.run(
-            ["docker", "exec", "docker-haproxy-1", "cat", "/etc/haproxy/haproxy.cfg"],
+            ["docker", "exec", "docker-haproxy-1", "cat", "/etc/easyhaproxy/haproxy/haproxy.cfg"],
             capture_output=True,
             text=True,
             check=True
@@ -308,7 +308,7 @@ class TestJWTValidator:
         assert "var(txn.aud) -m str https://api.example.com" in backend_block
 
         # Verify JWT signature verification
-        assert 'jwt_verify(txn.alg,"/etc/haproxy/jwt_keys/api_pubkey.pem")' in backend_block
+        assert 'jwt_verify(txn.alg,"/etc/easyhaproxy/jwt_keys/api_pubkey.pem")' in backend_block
 
         # Verify expiration check
         assert "JWT has expired" in backend_block
@@ -350,7 +350,7 @@ class TestMultiContainers:
     def test_haproxy_config(self, docker_compose_multi_containers):
         """Test HAProxy configuration has multiple backend servers for load balancing"""
         result = subprocess.run(
-            ["docker", "exec", "docker-haproxy-1", "cat", "/etc/haproxy/haproxy.cfg"],
+            ["docker", "exec", "docker-haproxy-1", "cat", "/etc/easyhaproxy/haproxy/haproxy.cfg"],
             capture_output=True,
             text=True,
             check=True
@@ -409,7 +409,7 @@ class TestPHPFPM:
     def test_haproxy_config(self, docker_compose_php_fpm):
         """Test HAProxy configuration has FastCGI plugin configuration"""
         result = subprocess.run(
-            ["docker", "exec", "docker-haproxy-1", "cat", "/etc/haproxy/haproxy.cfg"],
+            ["docker", "exec", "docker-haproxy-1", "cat", "/etc/easyhaproxy/haproxy/haproxy.cfg"],
             capture_output=True,
             text=True,
             check=True
@@ -495,7 +495,7 @@ class TestPluginsCombined:
     def test_haproxy_config(self, docker_compose_plugins_combined):
         """Test HAProxy configuration has all plugin configurations in correct backends"""
         result = subprocess.run(
-            ["docker", "exec", "docker-haproxy-1", "cat", "/etc/haproxy/haproxy.cfg"],
+            ["docker", "exec", "docker-haproxy-1", "cat", "/etc/easyhaproxy/haproxy/haproxy.cfg"],
             capture_output=True,
             text=True,
             check=True
@@ -506,7 +506,7 @@ class TestPluginsCombined:
         website_block = extract_backend_block(config, "srv_website_local_80")
         assert website_block, "Backend srv_website_local_80 not found"
         assert "# Cloudflare - Restore original visitor IP" in website_block
-        assert "acl from_cloudflare src -f /etc/haproxy/cloudflare_ips.lst" in website_block
+        assert "acl from_cloudflare src -f /etc/easyhaproxy/cloudflare_ips.lst" in website_block
         assert "# Deny Pages - Block specific paths" in website_block
         assert "acl denied_path path_beg /admin /wp-admin /wp-login.php /.env /config" in website_block
         assert "http-request deny deny_status 404 if denied_path" in website_block
@@ -604,7 +604,7 @@ class TestIPWhitelist:
     def test_haproxy_config(self, docker_compose_ip_whitelist):
         """Test HAProxy configuration has IP whitelist rules in the correct backend"""
         result = subprocess.run(
-            ["docker", "exec", "docker-haproxy-1", "cat", "/etc/haproxy/haproxy.cfg"],
+            ["docker", "exec", "docker-haproxy-1", "cat", "/etc/easyhaproxy/haproxy/haproxy.cfg"],
             capture_output=True,
             text=True,
             check=True
@@ -657,7 +657,7 @@ class TestCloudflare:
     def test_haproxy_config(self, docker_compose_cloudflare):
         """Test HAProxy configuration has Cloudflare plugin rules in the correct backend"""
         result = subprocess.run(
-            ["docker", "exec", "docker-haproxy-1", "cat", "/etc/haproxy/haproxy.cfg"],
+            ["docker", "exec", "docker-haproxy-1", "cat", "/etc/easyhaproxy/haproxy/haproxy.cfg"],
             capture_output=True,
             text=True,
             check=True
@@ -672,7 +672,7 @@ class TestCloudflare:
         assert "# Cloudflare - Restore original visitor IP" in backend_block
 
         # Verify ACL for Cloudflare IPs
-        assert "acl from_cloudflare src -f /etc/haproxy/cloudflare_ips.lst" in backend_block
+        assert "acl from_cloudflare src -f /etc/easyhaproxy/cloudflare_ips.lst" in backend_block
 
         # Verify transaction variable for real IP
         assert "http-request set-var(txn.real_ip) req.hdr(CF-Connecting-IP) if from_cloudflare" in backend_block
@@ -767,7 +767,7 @@ class TestChangedLabel:
     def test_haproxy_config(self, docker_compose_changed_label):
         """Test HAProxy configuration with custom label prefix"""
         result = subprocess.run(
-            ["docker", "exec", "docker-haproxy-1", "cat", "/etc/haproxy/haproxy.cfg"],
+            ["docker", "exec", "docker-haproxy-1", "cat", "/etc/easyhaproxy/haproxy/haproxy.cfg"],
             capture_output=True,
             text=True,
             check=True
@@ -878,7 +878,7 @@ class TestACME:
     def test_haproxy_config(self, docker_compose_acme):
         """Test HAProxy configuration has ACME challenge routing"""
         result = subprocess.run(
-            ["docker", "exec", "docker-haproxy-1", "cat", "/etc/haproxy/haproxy.cfg"],
+            ["docker", "exec", "docker-haproxy-1", "cat", "/etc/easyhaproxy/haproxy/haproxy.cfg"],
             capture_output=True,
             text=True,
             check=True
@@ -952,8 +952,8 @@ class TestACME:
                 f"HAProxy cannot connect to Pebble ACME server. Check docker network.\nLogs:\n{logs[-2000:]}"
 
         # Verify merged certificate file exists
-        # EasyHAProxy merges cert+key from /etc/letsencrypt/live/ to /certs/certbot/{domain}.pem
-        merged_cert_path = "/certs/certbot/test.local.pem"
+        # EasyHAProxy merges cert+key from /etc/easyhaproxy/certs/live/ to /etc/easyhaproxy/certs/certbot/{domain}.pem
+        merged_cert_path = "/etc/easyhaproxy/certs/certbot/test.local.pem"
         result = subprocess.run(
             ["docker", "exec", "docker-haproxy-1", "test", "-f", merged_cert_path],
             capture_output=True

@@ -1,5 +1,5 @@
     {% if "ssl" in o %}
-    bind *:{{ o["port"] }}  ssl crt /certs/certbot/ alpn h2,http/1.1 crt /certs/haproxy/ alpn h2,http/1.1
+    bind *:{{ o["port"] }}  ssl crt /etc/easyhaproxy/certs/certbot/ alpn h2,http/1.1 crt /etc/easyhaproxy/certs/haproxy/ alpn h2,http/1.1
     {% elif "h2" in o and o["h2"] %}
     bind *:{{ o["port"] }} proto h2
     option http-use-htx

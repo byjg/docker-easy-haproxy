@@ -271,12 +271,55 @@ class Functions:
             return [-99, e]
 
 
+class classproperty:
+    """Decorator for class-level properties."""
+    def __init__(self, func):
+        self.func = func
+
+    def __get__(self, obj, owner):
+        return self.func(owner)
+
+
 class Consts:
-    easyhaproxy_config = "/etc/haproxy/static/config.yml"
-    haproxy_config = "/etc/haproxy/haproxy.cfg"
-    custom_config_folder = "/etc/haproxy/conf.d"
-    certs_certbot = "/certs/certbot"
-    certs_haproxy = "/certs/haproxy"
+    """Configuration constants with dynamic path resolution based on EASYHAPROXY_BASE_PATH."""
+    _base_path = None
+
+    @classproperty
+    def base_path(cls):
+        """Base directory for all EasyHAProxy files."""
+        if cls._base_path is None:
+            cls._base_path = os.getenv("EASYHAPROXY_BASE_PATH", "/etc/easyhaproxy")
+        return cls._base_path
+
+    @classmethod
+    def reset(cls):
+        """Reset cached base path to pick up environment variable changes."""
+        cls._base_path = None
+
+    @classproperty
+    def easyhaproxy_config(cls):
+        """Path to static configuration file."""
+        return f"{cls.base_path}/static/config.yml"
+
+    @classproperty
+    def haproxy_config(cls):
+        """Path to generated HAProxy configuration file."""
+        return f"{cls.base_path}/haproxy/haproxy.cfg"
+
+    @classproperty
+    def custom_config_folder(cls):
+        """Path to custom HAProxy config snippets directory."""
+        return f"{cls.base_path}/haproxy/conf.d"
+
+    @classproperty
+    def certs_certbot(cls):
+        """Path to Certbot/ACME certificates directory."""
+        return f"{cls.base_path}/certs/certbot"
+
+    @classproperty
+    def certs_haproxy(cls):
+        """Path to user-provided certificates directory."""
+        return f"{cls.base_path}/certs/haproxy"
 
 
 class DaemonizeHAProxy:
@@ -304,12 +347,12 @@ class DaemonizeHAProxy:
             custom_config_files = f"-f {self.custom_config_folder}"
 
         if action == DaemonizeHAProxy.HAPROXY_START or not os.path.exists(pid_file):
-            return f"/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg {custom_config_files} -p {pid_file} -S /var/run/haproxy.sock"
+            return f"/usr/sbin/haproxy -W -f {Consts.haproxy_config} {custom_config_files} -p {pid_file} -S /var/run/haproxy.sock"
         else:
             return_code, output = Functions().run_bash(logger_haproxy, f"cat {pid_file}", log_output=False)
             pid = "".join(output).rstrip()
             if psutil.pid_exists(int(pid)):
-                return f"/usr/sbin/haproxy -W -f /etc/haproxy/haproxy.cfg {custom_config_files} -p {pid_file} -x /var/run/haproxy.sock -sf {pid}"
+                return f"/usr/sbin/haproxy -W -f {Consts.haproxy_config} {custom_config_files} -p {pid_file} -x /var/run/haproxy.sock -sf {pid}"
             else:
                 os.unlink(pid_file)
                 logger_haproxy.warning(
@@ -440,6 +483,9 @@ class Certbot:
                     renew_certs.append(host_arg)
 
             certbot_certonly = ('/usr/bin/certbot certonly {acme_server}'
+                                '    --config-dir {base_path}/certs'
+                                '    --work-dir {base_path}/certs/work'
+                                '    --logs-dir {base_path}/certs/logs'
                                 '    --preferred-challenges {challenge}'
                                 '    --agree-tos'
                                 '    --issuance-timeout 90'
@@ -452,7 +498,8 @@ class Certbot:
                                                                      certs=' '.join(request_certs),
                                                                      email=self.email,
                                                                      challenge=self.certbot_preferred_challenges,
-                                                                     acme_server=self.acme_server)
+                                                                     acme_server=self.acme_server,
+                                                                     base_path=Consts.base_path)
                                 )
 
             if 'http' in self.certbot_preferred_challenges:
@@ -476,7 +523,8 @@ class Certbot:
                 ret_reload = True
 
             if len(renew_certs) > 0:
-                return_code_renew, output = Functions.run_bash(logger_certbot, "/usr/bin/certbot renew", return_result=False)
+                certbot_renew = f"/usr/bin/certbot renew --config-dir {Consts.base_path}/certs --work-dir {Consts.base_path}/certs/work --logs-dir {Consts.base_path}/certs/logs"
+                return_code_renew, output = Functions.run_bash(logger_certbot, certbot_renew, return_result=False)
                 ret_reload = True
 
             if ret_reload:
@@ -497,7 +545,7 @@ class Certbot:
         Functions.save(filename, cert + key)
 
     def find_live_certificates(self):
-        certbot_certs = "/etc/letsencrypt/live/"
+        certbot_certs = f"{Consts.base_path}/certs/live/"
         if not os.path.exists(certbot_certs):
             return
         for item in os.listdir(certbot_certs):

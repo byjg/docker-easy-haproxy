@@ -5,8 +5,8 @@
 #
 # To use:
 # 1. Update the container name and ports to match your setup
-# 2. Place SSL certificate at /certs/haproxy/host1.local.pem
-# 3. Mount this config: -v ./conf/config-basic.yml:/etc/haproxy/static/config.yml
+# 2. Place SSL certificate at /etc/easyhaproxy/certs/haproxy/host1.local.pem
+# 3. Mount this config: -v ./conf/config-basic.yml:/etc/easyhaproxy/static/config.yml
 
 stats:
   username: admin

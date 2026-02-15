@@ -8,7 +8,7 @@ The plugin includes built-in Cloudflare IP ranges that are automatically
 updated and written to the IP list file.
 
 Configuration:
-    - ip_list_path: Path to file containing Cloudflare IP ranges (default: /etc/haproxy/cloudflare_ips.lst)
+    - ip_list_path: Path to file containing Cloudflare IP ranges (default: /etc/easyhaproxy/cloudflare_ips.lst)
     - ip_list: Base64-encoded list of IP ranges (one per line), takes precedence over ip_list_path
     - use_builtin_ips: Use built-in Cloudflare IP ranges (default: true)
     - update_log_format: Update HAProxy log format to show real visitor IP (default: true)
@@ -17,7 +17,7 @@ Example YAML config:
     plugins:
       cloudflare:
         enabled: true
-        ip_list_path: /etc/haproxy/cloudflare_ips.lst
+        ip_list_path: /etc/easyhaproxy/cloudflare_ips.lst
         use_builtin_ips: true
         update_log_format: true
 
@@ -32,7 +32,7 @@ Example Container Label:
 
 HAProxy Config Generated:
     # Cloudflare - Restore original visitor IP
-    acl from_cloudflare src -f /etc/haproxy/cloudflare_ips.lst
+    acl from_cloudflare src -f /etc/easyhaproxy/cloudflare_ips.lst
     http-request set-var(txn.real_ip) req.hdr(CF-Connecting-IP) if from_cloudflare
     http-request set-header X-Forwarded-For %[var(txn.real_ip)] if from_cloudflare
 
@@ -48,7 +48,7 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from functions import logger_easyhaproxy
+from functions import logger_easyhaproxy, Consts
 from plugins import InitializationResult, PluginContext, PluginInterface, PluginResult, PluginType, ResourceRequest
 
 
@@ -85,7 +85,7 @@ class CloudflarePlugin(PluginInterface):
     ]
 
     def __init__(self):
-        self.ip_list_path = "/etc/haproxy/cloudflare_ips.lst"
+        self.ip_list_path = Consts.base_path + "/cloudflare_ips.lst"
         self.enabled = True
         self.use_builtin_ips = True
         self.update_log_format = True

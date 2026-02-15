@@ -11,11 +11,11 @@
 #    openssl rsa -in jwt_private.pem -pubout -out jwt_pubkey.pem
 #
 # 2. Mount public keys:
-#    -v ./jwt_pubkey.pem:/etc/haproxy/jwt_keys/api_pubkey.pem:ro
-#    -v ./jwt_pubkey2.pem:/etc/haproxy/jwt_keys/admin_pubkey.pem:ro
+#    -v ./jwt_pubkey.pem:/etc/easyhaproxy/jwt_keys/api_pubkey.pem:ro
+#    -v ./jwt_pubkey2.pem:/etc/easyhaproxy/jwt_keys/admin_pubkey.pem:ro
 #
 # 3. Mount this config:
-#    -v ./conf/config-jwt-validator.yml:/etc/haproxy/static/config.yml
+#    -v ./conf/config-jwt-validator.yml:/etc/easyhaproxy/static/config.yml
 #
 # 4. Test:
 #    # Without token - should fail
@@ -42,7 +42,7 @@ containers:
         algorithm: RS256
         issuer: https://auth.example.com/
         audience: https://api.example.com
-        pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+        pubkey_path: /etc/easyhaproxy/jwt_keys/api_pubkey.pem
 
   # Internal API - validate signature only (no issuer/audience check)
   "internal-api.local:80":
@@ -52,7 +52,7 @@ containers:
       jwt_validator:
         algorithm: RS256
         # No issuer/audience = skip those validations
-        pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+        pubkey_path: /etc/easyhaproxy/jwt_keys/api_pubkey.pem
 
   # Admin API - different issuer and key
   "admin-api.local:80":
@@ -63,7 +63,7 @@ containers:
         algorithm: RS256
         issuer: https://admin-auth.example.com/
         audience: https://admin.example.com
-        pubkey_path: /etc/haproxy/jwt_keys/admin_pubkey.pem
+        pubkey_path: /etc/easyhaproxy/jwt_keys/admin_pubkey.pem
       deny_pages:
         paths:
           - /internal

@@ -10,8 +10,17 @@ RUN apk add --no-cache haproxy bash python3 certbot openssl curl \
     && curl -LsSf https://astral.sh/uv/install.sh | sh \
     && ln -s /root/.local/bin/uv /usr/local/bin/uv
 
-RUN openssl dhparam -out /etc/haproxy/dhparam 2048 \
-    && openssl dhparam -out /etc/haproxy/dhparam-1024 1024
+RUN mkdir -p /etc/easyhaproxy/haproxy \
+    && openssl dhparam -out /etc/easyhaproxy/haproxy/dhparam 2048 \
+    && openssl dhparam -out /etc/easyhaproxy/haproxy/dhparam-1024 1024 \
+    && mkdir -p /etc/easyhaproxy/certs/certbot /etc/easyhaproxy/certs/haproxy \
+    && openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
+        -keyout /tmp/placeholder.key \
+        -out /tmp/placeholder.crt \
+        -subj "/CN=placeholder" \
+    && cat /tmp/placeholder.crt /tmp/placeholder.key > /etc/easyhaproxy/certs/certbot/placeholder.pem \
+    && cat /tmp/placeholder.crt /tmp/placeholder.key > /etc/easyhaproxy/certs/haproxy/placeholder.pem \
+    && rm /tmp/placeholder.key /tmp/placeholder.crt
 
 WORKDIR /scripts
 

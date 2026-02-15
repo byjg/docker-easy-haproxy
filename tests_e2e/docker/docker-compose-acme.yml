@@ -20,7 +20,7 @@
 # # - Line 36: easyhaproxy.http.host to your real domain
 #
 # # Create certs directory
-# mkdir -p ./certs/certbot
+# mkdir -p ./certs
 # ```
 #
 # HOW TO START:
@@ -43,7 +43,7 @@
 # # Expected: Issuer: C = US, O = Let's Encrypt
 #
 # # Check certificate files
-# ls -la ./certs/certbot/
+# ls -la ./certs/
 # # Expected: Your domain certificate files
 # ```
 #
@@ -53,7 +53,7 @@
 # # Keep certificates:
 # # docker compose -f docker-compose-acme.yml down
 # # Remove certificates too:
-# # docker compose -f docker-compose-acme.yml down && rm -rf ./certs/certbot
+# # docker compose -f docker-compose-acme.yml down && rm -rf ./certs
 # ```
 #
 # ==============================================================================
@@ -64,7 +64,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       # Persist the CERTBOT to avoid re-challenge when the server restarts
-      - ./certs/certbot:/certs/certbot
+      - ./certs:/etc/easyhaproxy/certs
     environment:
       EASYHAPROXY_DISCOVER: docker
       HAPROXY_CUSTOMERRORS: "true"

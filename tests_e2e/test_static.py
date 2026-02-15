@@ -101,7 +101,7 @@ class TestStaticBasic:
     def test_haproxy_config(self, static_basic):
         """Test HAProxy configuration has SSL and redirect configurations"""
         result = subprocess.run(
-            ["docker", "exec", "static-haproxy-1", "cat", "/etc/haproxy/haproxy.cfg"],
+            ["docker", "exec", "static-haproxy-1", "cat", "/etc/easyhaproxy/haproxy/haproxy.cfg"],
             capture_output=True,
             text=True,
             check=True
@@ -155,7 +155,7 @@ class TestStaticDenyPages:
     def test_haproxy_config(self, static_deny_pages):
         """Test HAProxy configuration has deny pages rules"""
         result = subprocess.run(
-            ["docker", "exec", "static-haproxy-1", "cat", "/etc/haproxy/haproxy.cfg"],
+            ["docker", "exec", "static-haproxy-1", "cat", "/etc/easyhaproxy/haproxy/haproxy.cfg"],
             capture_output=True,
             text=True,
             check=True
@@ -209,7 +209,7 @@ class TestStaticJWTValidator:
     def test_haproxy_config(self, static_jwt_validator):
         """Test HAProxy configuration has JWT validation rules"""
         result = subprocess.run(
-            ["docker", "exec", "static-haproxy-1", "cat", "/etc/haproxy/haproxy.cfg"],
+            ["docker", "exec", "static-haproxy-1", "cat", "/etc/easyhaproxy/haproxy/haproxy.cfg"],
             capture_output=True,
             text=True,
             check=True

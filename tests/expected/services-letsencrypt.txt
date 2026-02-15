@@ -12,7 +12,7 @@ global
     ssl-default-server-ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
     ssl-default-server-options no-sslv3 no-tlsv10 no-tlsv11 no-tls-tickets
 
-    ssl-dh-param-file /etc/haproxy/dhparam
+    ssl-dh-param-file /etc/easyhaproxy/haproxy/dhparam
 
 defaults
     log global
@@ -21,13 +21,13 @@ defaults
     timeout connect    3s
     timeout client    10s
     timeout server    10m
-    errorfile 400 /etc/haproxy/errors-custom/400.http
-    errorfile 403 /etc/haproxy/errors-custom/403.http
-    errorfile 408 /etc/haproxy/errors-custom/408.http
-    errorfile 500 /etc/haproxy/errors-custom/500.http
-    errorfile 502 /etc/haproxy/errors-custom/502.http
-    errorfile 503 /etc/haproxy/errors-custom/503.http
-    errorfile 504 /etc/haproxy/errors-custom/504.http
+    errorfile 400 /etc/easyhaproxy/haproxy/errors-custom/400.http
+    errorfile 403 /etc/easyhaproxy/haproxy/errors-custom/403.http
+    errorfile 408 /etc/easyhaproxy/haproxy/errors-custom/408.http
+    errorfile 500 /etc/easyhaproxy/haproxy/errors-custom/500.http
+    errorfile 502 /etc/easyhaproxy/haproxy/errors-custom/502.http
+    errorfile 503 /etc/easyhaproxy/haproxy/errors-custom/503.http
+    errorfile 504 /etc/easyhaproxy/haproxy/errors-custom/504.http
 
 
 frontend stats
@@ -76,7 +76,7 @@ backend srv_test2_example_org_80
     server srv-0 83d57d592e26:8080 check weight 1
 
 frontend http_in_443
-    bind *:443  ssl crt /certs/certbot/ alpn h2,http/1.1 crt /certs/haproxy/ alpn h2,http/1.1
+    bind *:443  ssl crt /etc/easyhaproxy/certs/certbot/ alpn h2,http/1.1 crt /etc/easyhaproxy/certs/haproxy/ alpn h2,http/1.1
     mode http
 
     acl is_rule_test_example_org_443_1 hdr(host) -i test.example.org

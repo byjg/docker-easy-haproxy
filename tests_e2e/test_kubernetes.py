@@ -1145,7 +1145,7 @@ class TestIPWhitelist:
         # Get HAProxy configuration
         result = subprocess.run(
             [kubectl, "exec", "-n", "easyhaproxy", pod_name,
-             "--", "cat", "/etc/haproxy/haproxy.cfg"],
+             "--", "cat", "/etc/easyhaproxy/haproxy/haproxy.cfg"],
             check=True,
             capture_output=True,
             text=True
@@ -1292,7 +1292,7 @@ class TestJWTValidatorSecret:
         # Get HAProxy configuration
         result = subprocess.run(
             [kubectl, "exec", "-n", "easyhaproxy", pod_name,
-             "--", "cat", "/etc/haproxy/haproxy.cfg"],
+             "--", "cat", "/etc/easyhaproxy/haproxy/haproxy.cfg"],
             check=True,
             capture_output=True,
             text=True
@@ -1327,7 +1327,7 @@ class TestJWTValidatorSecret:
             "JWT audience validation not found in API backend"
 
         # Verify JWT keys directory is used in this backend
-        assert "/etc/haproxy/jwt_keys/" in backend_block, \
+        assert "/etc/easyhaproxy/jwt_keys/" in backend_block, \
             "JWT keys directory not found in API backend"
 
     def test_access_without_token_denied(self, k8s_jwt_validator_secret):
@@ -1589,7 +1589,7 @@ class TestCloudflare:
         # Get HAProxy configuration
         result = subprocess.run(
             [kubectl, "exec", "-n", "easyhaproxy", pod_name,
-             "--", "cat", "/etc/haproxy/haproxy.cfg"],
+             "--", "cat", "/etc/easyhaproxy/haproxy/haproxy.cfg"],
             check=True,
             capture_output=True,
             text=True
@@ -1606,7 +1606,7 @@ class TestCloudflare:
             "Cloudflare plugin comment not found in myapp backend"
 
         # Verify ACL for Cloudflare IPs is in this backend
-        assert "acl from_cloudflare src -f /etc/haproxy/cloudflare_ips.lst" in backend_block, \
+        assert "acl from_cloudflare src -f /etc/easyhaproxy/cloudflare_ips.lst" in backend_block, \
             "Cloudflare IP ACL not found in myapp backend"
 
         # Verify real IP extraction from CF-Connecting-IP header is in this backend
@@ -1639,7 +1639,7 @@ class TestCloudflare:
         # Read the Cloudflare IP list file
         result = subprocess.run(
             [kubectl, "exec", "-n", "easyhaproxy", pod_name,
-             "--", "cat", "/etc/haproxy/cloudflare_ips.lst"],
+             "--", "cat", "/etc/easyhaproxy/cloudflare_ips.lst"],
             check=True,
             capture_output=True,
             text=True

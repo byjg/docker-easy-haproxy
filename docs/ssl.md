@@ -43,7 +43,7 @@ Add the Base64 string you generated before to the label `easyhaproxy.[definition
 
 ## Map the certificate as a docker volume
 
-EasyHAProxy stores the certificates inside the container folder `/certs/haproxy`.
+EasyHAProxy stores the certificates inside the container folder `/etc/easyhaproxy/certs/haproxy`.
 
 1. Run EasyHAProxy with the volume for the certificates:
 
@@ -52,7 +52,7 @@ docker volume create certs_haproxy
 
 docker run \
     /* other parameters */
-    -v certs_haproxy:/certs/haproxy \
+    -v certs_haproxy:/etc/easyhaproxy/certs/haproxy \
     -d byjg/easy-haproxy
 ```
 
@@ -77,7 +77,7 @@ MIIEojCCA4qgAwIBAgIUegW2BimwuL4RzRZ2WYkHA6U5nkAwDQYJKoZIhvcNAQEL
 3. Copy this certificate to EasyHAProxy volume:
 
 ```bash title="Copy certificate to container"
-docker cp single.pem easyhaproxy:/certs/haproxy
+docker cp single.pem easyhaproxy:/etc/easyhaproxy/certs/haproxy
 ```
 
 ----

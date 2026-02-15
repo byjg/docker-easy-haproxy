@@ -6,7 +6,7 @@
 #
 # To use:
 # 1. Update container names and ports
-# 2. Mount this config: -v ./conf/config-deny-pages.yml:/etc/haproxy/static/config.yml
+# 2. Mount this config: -v ./conf/config-deny-pages.yml:/etc/easyhaproxy/static/config.yml
 # 3. Test blocked paths:
 #    curl http://host1.local/admin        # Should return 404
 #    curl http://host2.local/wp-admin     # Should return 403 (different config)

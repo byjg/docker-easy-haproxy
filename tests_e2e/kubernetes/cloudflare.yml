@@ -27,7 +27,7 @@
 # # Edit your EasyHAProxy deployment and add:
 # #   volumeMounts:
 # #     - name: cloudflare-ips
-# #       mountPath: /etc/haproxy/cloudflare_ips.lst
+# #       mountPath: /etc/easyhaproxy/cloudflare_ips.lst
 # #       subPath: cloudflare_ips.lst
 # #   volumes:
 # #     - name: cloudflare-ips
@@ -121,7 +121,7 @@ metadata:
     # easyhaproxy.plugin.cloudflare.ip_list: "MTAuMC4wLjAvOAoxNzIuMTYuMC4wLzEyCjE5Mi4xNjguMC4wLzE2CjEyNy4wLjAuMQ=="
 
     # Optional: Specify custom IP list file path (only used if ip_list is not provided)
-    # easyhaproxy.plugin.cloudflare.ip_list_path: "/etc/haproxy/cloudflare_ips.lst"
+    # easyhaproxy.plugin.cloudflare.ip_list_path: "/etc/easyhaproxy/cloudflare_ips.lst"
   name: webapp-ingress-cloudflare
   namespace: default
 spec:

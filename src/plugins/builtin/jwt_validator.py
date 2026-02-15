@@ -47,7 +47,7 @@ Example YAML config:
         algorithm: RS256
         issuer: https://myaccount.auth0.com/
         audience: https://api.mywebsite.com
-        pubkey_path: /etc/haproxy/jwt_keys/pubkey.pem
+        pubkey_path: /etc/easyhaproxy/jwt_keys/pubkey.pem
         paths:
           - /api/admin
           - /api/sensitive
@@ -58,7 +58,7 @@ Example Container Label:
     easyhaproxy.http.plugin.jwt_validator.algorithm: RS256
     easyhaproxy.http.plugin.jwt_validator.issuer: https://auth.example.com/
     easyhaproxy.http.plugin.jwt_validator.audience: https://api.example.com
-    easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+    easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/easyhaproxy/jwt_keys/api_pubkey.pem
     easyhaproxy.http.plugin.jwt_validator.paths: /api/admin,/api/sensitive
     easyhaproxy.http.plugin.jwt_validator.only_paths: true
 
@@ -86,7 +86,7 @@ HAProxy Config Generated:
     http-request deny content-type 'text/html' string 'Unsupported JWT signing algorithm' unless { var(txn.alg) -m str RS256 }
     http-request deny content-type 'text/html' string 'Invalid JWT issuer' unless { var(txn.iss) -m str https://auth.example.com/ }
     http-request deny content-type 'text/html' string 'Invalid JWT audience' unless { var(txn.aud) -m str https://api.example.com }
-    http-request deny content-type 'text/html' string 'Invalid JWT signature' unless { http_auth_bearer,jwt_verify(txn.alg,"/etc/haproxy/jwt_keys/api_pubkey.pem") -m int 1 }
+    http-request deny content-type 'text/html' string 'Invalid JWT signature' unless { http_auth_bearer,jwt_verify(txn.alg,"/etc/easyhaproxy/jwt_keys/api_pubkey.pem") -m int 1 }
 
     # Validate expiration
     http-request set-var(txn.now) date()
@@ -100,7 +100,7 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from functions import Functions, logger_easyhaproxy
+from functions import Functions, logger_easyhaproxy, Consts
 from plugins import InitializationResult, PluginContext, PluginInterface, PluginResult, PluginType, ResourceRequest
 
 
@@ -118,7 +118,7 @@ class JwtValidatorPlugin(PluginInterface):
         self.only_paths = False  # If true, only specified paths are accessible
         self.allow_anonymous = False  # If true, allow requests without Authorization header
         # Make JWT_KEYS_DIR configurable via environment variable (for testing)
-        self.jwt_keys_dir = os.getenv("EASYHAPROXY_JWT_KEYS_DIR", "/etc/haproxy/jwt_keys")
+        self.jwt_keys_dir = os.getenv("EASYHAPROXY_JWT_KEYS_DIR", Consts.base_path + "/jwt_keys")
 
     @property
     def name(self) -> str:

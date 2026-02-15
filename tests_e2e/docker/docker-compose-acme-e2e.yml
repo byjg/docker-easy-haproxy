@@ -5,7 +5,7 @@
 # WHAT THIS TESTS:
 # - HAProxy routing of /.well-known/acme-challenge/ to certbot backend
 # - Certbot HTTP-01 challenge completion with Pebble ACME server
-# - Certificate issuance and storage in /certs/certbot/live/{domain}/
+# - Certificate issuance and storage in /etc/easyhaproxy/certs/live/{domain}/
 # - HTTPS serving with issued certificate
 # - Full end-to-end ACME protocol flow
 #
@@ -32,7 +32,7 @@
 # docker compose -f docker-compose-acme-e2e.yml logs haproxy
 #
 # # Verify certificate was issued
-# ls -la ../../certs/certbot/live/test.local/
+# ls -la ../../certs/live/test.local/
 #
 # # Test HTTPS (will show certificate warning - expected for test certs)
 # curl -k https://localhost/ -H "Host: test.local"
@@ -104,7 +104,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       # Certificate storage (Docker volume for clean test isolation)
-      - certbot-certs:/certs/certbot
+      - certbot-certs:/etc/easyhaproxy/certs
       # Pebble CA certificate (downloaded during test session)
       - ./pebble-ca.pem:/etc/ssl/certs/pebble-ca.pem:ro
     ports:

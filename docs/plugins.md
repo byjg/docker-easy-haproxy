@@ -71,7 +71,7 @@ metadata:
     easyhaproxy.plugin.jwt_validator.algorithm: "RS256"
     easyhaproxy.plugin.jwt_validator.issuer: "https://auth.example.com/"
     easyhaproxy.plugin.jwt_validator.audience: "https://api.example.com"
-    easyhaproxy.plugin.jwt_validator.pubkey_path: "/etc/haproxy/jwt_keys/api_pubkey.pem"
+    easyhaproxy.plugin.jwt_validator.pubkey_path: "/etc/easyhaproxy/jwt_keys/api_pubkey.pem"
     easyhaproxy.plugin.jwt_validator.paths: "/api/admin,/api/users"
     easyhaproxy.plugin.jwt_validator.only_paths: "false"
     # Configure deny_pages plugin
@@ -124,7 +124,7 @@ services:
 
 ### 3. Static YAML Configuration
 
-Configure plugins in `/etc/haproxy/static/config.yaml`:
+Configure plugins in `/etc/easyhaproxy/static/config.yaml`:
 
 ```yaml
 plugins:
@@ -200,9 +200,9 @@ services:
       easyhaproxy.http.plugins: jwt_validator
       easyhaproxy.http.plugin.jwt_validator.issuer: https://auth0.myapp.com/
       easyhaproxy.http.plugin.jwt_validator.audience: https://api.example.com
-      easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+      easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/easyhaproxy/jwt_keys/api_pubkey.pem
     volumes:
-      - ./auth_pubkey.pem:/etc/haproxy/jwt_keys/api_pubkey.pem:ro
+      - ./auth_pubkey.pem:/etc/easyhaproxy/jwt_keys/api_pubkey.pem:ro
 ```
 
 **Protect only admin/sensitive endpoints:**
@@ -213,11 +213,11 @@ services:
     labels:
       easyhaproxy.http.host: api.example.com
       easyhaproxy.http.plugins: jwt_validator
-      easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+      easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/easyhaproxy/jwt_keys/api_pubkey.pem
       easyhaproxy.http.plugin.jwt_validator.paths: /api/admin,/api/users,/api/billing
       easyhaproxy.http.plugin.jwt_validator.only_paths: false
     volumes:
-      - ./auth_pubkey.pem:/etc/haproxy/jwt_keys/api_pubkey.pem:ro
+      - ./auth_pubkey.pem:/etc/easyhaproxy/jwt_keys/api_pubkey.pem:ro
 # /api/health, /api/docs, etc. remain publicly accessible
 ```
 
@@ -229,11 +229,11 @@ services:
     labels:
       easyhaproxy.http.host: api.example.com
       easyhaproxy.http.plugins: jwt_validator
-      easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+      easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/easyhaproxy/jwt_keys/api_pubkey.pem
       easyhaproxy.http.plugin.jwt_validator.paths: /api/v1,/api/v2
       easyhaproxy.http.plugin.jwt_validator.only_paths: true
     volumes:
-      - ./auth_pubkey.pem:/etc/haproxy/jwt_keys/api_pubkey.pem:ro
+      - ./auth_pubkey.pem:/etc/easyhaproxy/jwt_keys/api_pubkey.pem:ro
 # All paths except /api/v1 and /api/v2 are denied
 ```
 
@@ -287,7 +287,7 @@ labels:
 Keep your system clean with automatic temp file removal:
 
 ```yaml
-# /etc/haproxy/static/config.yaml
+# /etc/easyhaproxy/static/config.yaml
 plugins:
   enabled: [cleanup]
   config:
@@ -346,13 +346,13 @@ EASYHAPROXY_LOG_LEVEL=DEBUG
 INFO: Loaded builtin plugin: cloudflare (domain)
 INFO: Loaded builtin plugin: cleanup (global)
 DEBUG: Executing domain plugin: cloudflare for domain: example.com
-DEBUG: Plugin cloudflare metadata: {'domain': 'example.com', 'ip_list_path': '/etc/haproxy/cloudflare_ips.lst'}
+DEBUG: Plugin cloudflare metadata: {'domain': 'example.com', 'ip_list_path': '/etc/easyhaproxy/cloudflare_ips.lst'}
 ```
 
 ### Plugin Not Loading
 
 **Check:**
-1. Plugin file exists in `/etc/haproxy/plugins/` or builtin directory
+1. Plugin file exists in `/etc/easyhaproxy/plugins/` or builtin directory
 2. Python syntax is valid
 3. Plugin class inherits from `PluginInterface`
 4. Check logs for load errors

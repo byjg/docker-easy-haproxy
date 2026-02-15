@@ -127,7 +127,7 @@ Execute **once per discovered domain/host**.
 ### Plugin Loading Order
 
 1. **Builtin plugins** - Loaded from `/src/plugins/builtin/`
-2. **External plugins** - Loaded from `/etc/haproxy/plugins/`
+2. **External plugins** - Loaded from `/etc/easyhaproxy/plugins/`
 
 Plugins are discovered automatically by filename (`*.py` excluding `__*.py`).
 
@@ -160,10 +160,10 @@ HAProxy Reload
 
 ### Step 1: Create Plugin File
 
-Create a new Python file in `/etc/haproxy/plugins/` (or builtin location for core plugins):
+Create a new Python file in `/etc/easyhaproxy/plugins/` (or builtin location for core plugins):
 
 ```python
-# /etc/haproxy/plugins/my_plugin.py
+# /etc/easyhaproxy/plugins/my_plugin.py
 
 import os
 import sys
@@ -248,7 +248,7 @@ services:
 **Via YAML configuration:**
 
 ```yaml
-# /etc/haproxy/static/config.yaml
+# /etc/easyhaproxy/static/config.yaml
 plugins:
   enabled: [my_plugin]
   config:
@@ -521,13 +521,13 @@ return PluginResult(
 return PluginResult(
     haproxy_config="use-fcgi-app fcgi_example_com",
     global_configs=[
-        "fcgi-app fcgi_example_com\n    docroot /var/www/html"
+        "fcgi-app fcgi_example_com\n    docroot /etc/easyhaproxy/www"
     ]
 )
 
 # With defaults-level config (new in v2.0)
 return PluginResult(
-    haproxy_config="acl from_cloudflare src -f /etc/haproxy/cloudflare_ips.lst",
+    haproxy_config="acl from_cloudflare src -f /etc/easyhaproxy/cloudflare_ips.lst",
     defaults_configs=[
         'log-format "%{+Q}[var(txn.real_ip)]:-/%ci:%cp [%tr] %ft %b/%s"'
     ]
@@ -551,7 +551,7 @@ class PluginManager:
 
         Args:
             plugins_dir: Directory containing plugin files (defaults to
-                        EASYHAPROXY_PLUGINS_DIR env var or /etc/haproxy/plugins)
+                        EASYHAPROXY_PLUGINS_DIR env var or /etc/easyhaproxy/plugins)
             abort_on_error: If True, abort on plugin errors; if False, log and continue
         """
 
@@ -573,7 +573,7 @@ class PluginManager:
 
 **Environment Variables:**
 
-- `EASYHAPROXY_PLUGINS_DIR` - Override plugin directory (default: `/etc/haproxy/plugins`)
+- `EASYHAPROXY_PLUGINS_DIR` - Override plugin directory (default: `/etc/easyhaproxy/plugins`)
 
 **Note:** You typically don't interact with PluginManager directly when writing plugins. It's used by EasyHAProxy core.
 
@@ -712,7 +712,7 @@ The plugin creates:
 
 Configuration:
     - enabled: Enable/disable the plugin (default: true)
-    - document_root: Document root path (default: /var/www/html)
+    - document_root: Document root path (default: /etc/easyhaproxy/www)
     - script_filename: Pattern for SCRIPT_FILENAME (default: %[path])
     - index_file: Default index file (default: index.php)
     - path_info: Enable PATH_INFO support (default: true)
@@ -722,7 +722,7 @@ Example YAML config:
     plugins:
       fastcgi:
         enabled: true
-        document_root: /var/www/html
+        document_root: /etc/easyhaproxy/www
         index_file: index.php
         path_info: true
 
@@ -748,7 +748,7 @@ class FastcgiPlugin(PluginInterface):
 
     def __init__(self):
         self.enabled = True
-        self.document_root = "/var/www/html"
+        self.document_root = "/etc/easyhaproxy/www"
         self.script_filename = "%[path]"
         self.index_file = "index.php"
         self.path_info = True
@@ -885,7 +885,7 @@ Example YAML config:
         algorithm: RS256
         issuer: https://myaccount.auth0.com/
         audience: https://api.mywebsite.com
-        pubkey_path: /etc/haproxy/jwt_keys/pubkey.pem
+        pubkey_path: /etc/easyhaproxy/jwt_keys/pubkey.pem
         paths:
           - /api/admin
           - /api/sensitive
@@ -896,7 +896,7 @@ Example Container Label:
     easyhaproxy.http.plugin.jwt_validator.algorithm: RS256
     easyhaproxy.http.plugin.jwt_validator.issuer: https://auth.example.com/
     easyhaproxy.http.plugin.jwt_validator.audience: https://api.example.com
-    easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+    easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/easyhaproxy/jwt_keys/api_pubkey.pem
     easyhaproxy.http.plugin.jwt_validator.paths: /api/admin,/api/sensitive
     easyhaproxy.http.plugin.jwt_validator.only_paths: true
 """
@@ -1267,7 +1267,7 @@ class CleanupPlugin(PluginInterface):
 
 ### Core Environment Variables
 
-- `EASYHAPROXY_PLUGINS_DIR` - Override plugin directory (default: `/etc/haproxy/plugins`)
+- `EASYHAPROXY_PLUGINS_DIR` - Override plugin directory (default: `/etc/easyhaproxy/plugins`)
 - `EASYHAPROXY_PLUGINS_ENABLED` - Comma-separated list of enabled plugins
 - `EASYHAPROXY_PLUGINS_ABORT_ON_ERROR` - Abort on plugin errors (default: `false`)
 
@@ -1685,7 +1685,7 @@ services:
       - "443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./my_plugin.py:/etc/haproxy/plugins/my_plugin.py
+      - ./my_plugin.py:/etc/easyhaproxy/plugins/my_plugin.py
     environment:
       - EASYHAPROXY_DISCOVER=docker
 ```
@@ -1707,7 +1707,7 @@ Expected output:
 **Verify generated configuration:**
 
 ```bash
-docker-compose exec haproxy cat /etc/haproxy/haproxy.cfg | grep -A 5 "My Plugin"
+docker-compose exec haproxy cat /etc/easyhaproxy/haproxy/haproxy.cfg | grep -A 5 "My Plugin"
 ```
 
 ---
@@ -1722,13 +1722,13 @@ docker-compose exec haproxy cat /etc/haproxy/haproxy.cfg | grep -A 5 "My Plugin"
 
 1. **File not in plugins directory**
    ```bash
-   ls -la /etc/haproxy/plugins/
+   ls -la /etc/easyhaproxy/plugins/
    # Ensure my_plugin.py exists
    ```
 
 2. **Invalid Python syntax**
    ```bash
-   python3 -m py_compile /etc/haproxy/plugins/my_plugin.py
+   python3 -m py_compile /etc/easyhaproxy/plugins/my_plugin.py
    # Check for syntax errors
    ```
 
@@ -1814,7 +1814,7 @@ docker-compose exec haproxy cat /etc/haproxy/haproxy.cfg | grep -A 5 "My Plugin"
 1. **Invalid HAProxy syntax in generated config**
    ```bash
    # Test configuration manually:
-   haproxy -c -f /etc/haproxy/haproxy.cfg
+   haproxy -c -f /etc/easyhaproxy/haproxy/haproxy.cfg
    ```
 
 2. **Missing quotes or escaping**
@@ -1907,7 +1907,7 @@ Share your plugin as a single `.py` file:
 
 ```bash
 # Users copy the file to their plugins directory:
-cp my_plugin.py /etc/haproxy/plugins/
+cp my_plugin.py /etc/easyhaproxy/plugins/
 ```
 
 **Advantages:**
@@ -1935,7 +1935,7 @@ my-easyhaproxy-plugin/
 **Installation:**
 ```bash
 # Users download and install:
-wget https://raw.githubusercontent.com/user/my-plugin/main/my_plugin.py -O /etc/haproxy/plugins/my_plugin.py
+wget https://raw.githubusercontent.com/user/my-plugin/main/my_plugin.py -O /etc/easyhaproxy/plugins/my_plugin.py
 ```
 
 #### Option 3: Docker Image with Plugin
@@ -1949,7 +1949,7 @@ FROM byjg/easy-haproxy:latest
 COPY my_plugin.py /app/src/plugins/builtin/
 
 # Optional: Add default configuration
-COPY plugin_config.yaml /etc/haproxy/static/config.yaml
+COPY plugin_config.yaml /etc/easyhaproxy/static/config.yaml
 ```
 
 **Build and distribute:**
@@ -1977,7 +1977,7 @@ Brief description of what your plugin does.
 
 ### Docker
 \`\`\`bash
-wget https://example.com/my_plugin.py -O /etc/haproxy/plugins/my_plugin.py
+wget https://example.com/my_plugin.py -O /etc/easyhaproxy/plugins/my_plugin.py
 \`\`\`
 
 ### Kubernetes

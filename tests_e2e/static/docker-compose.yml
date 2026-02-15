@@ -5,7 +5,7 @@
 # WHAT THIS DEMONSTRATES:
 # - EasyHAProxy using static YAML configuration (no service discovery)
 # - Useful for non-containerized backends, VMs, or bare metal servers
-# - Configuration via /etc/haproxy/static/config.yml
+# - Configuration via /etc/easyhaproxy/static/config.yml
 #
 # REQUIREMENTS (run these first):
 # ```bash
@@ -65,10 +65,10 @@ services:
       context: ../..
       dockerfile: build/Dockerfile
     volumes:
-      - ./conf/:/etc/haproxy/static/
-      - ../static/host1.local.pem:/certs/haproxy/host1.local.pem:ro
-      - ../docker/jwt_pubkey.pem:/etc/haproxy/jwt_keys/api_pubkey.pem:ro
-      - ../docker/jwt_pubkey.pem:/etc/haproxy/jwt_keys/admin_pubkey.pem:ro
+      - ./conf/:/etc/easyhaproxy/static/
+      - ../static/host1.local.pem:/etc/easyhaproxy/certs/haproxy/host1.local.pem:ro
+      - ../docker/jwt_pubkey.pem:/etc/easyhaproxy/jwt_keys/api_pubkey.pem:ro
+      - ../docker/jwt_pubkey.pem:/etc/easyhaproxy/jwt_keys/admin_pubkey.pem:ro
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       EASYHAPROXY_DISCOVER: static

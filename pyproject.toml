@@ -67,6 +67,7 @@ markers = [
     "cloudflare: marks tests for Cloudflare IP restoration plugin",
     "custom_label: marks tests for custom label prefix functionality",
     "static: marks tests for static configuration mode",
+    "acme: marks tests for certbot/acme",
 ]
 
 [tool.ruff]

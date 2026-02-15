@@ -36,18 +36,18 @@ docker run \
 
 ## Mapping custom .cfg files
 
-You can concatenate valid HAProxy `.cfg` files to the dynamically generated `haproxy.cfg` by mapping the folder `/etc/haproxy/conf.d`.
+You can concatenate valid HAProxy `.cfg` files to the dynamically generated `haproxy.cfg` by mapping the folder `/etc/easyhaproxy/haproxy/conf.d`.
 
 ```bash title="Mount custom config directory"
 docker run \
     /* other parameters */
-    -v /your/local/conf.d:/etc/haproxy/conf.d \
+    -v /your/local/conf.d:/etc/easyhaproxy/haproxy/conf.d \
     -d byjg/easy-haproxy
 ```
 
 ## Setting Custom Errors
 
-If enabled, map the volume : `/etc/haproxy/errors-custom/` to your container and put a file named `ERROR_NUMBER.http`
+If enabled, map the volume : `/etc/easyhaproxy/haproxy/errors-custom/` to your container and put a file named `ERROR_NUMBER.http`
 where ERROR_NUMBER is the HTTP error code (e.g., `503.http`)
 
 ----

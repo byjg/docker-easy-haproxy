@@ -77,9 +77,9 @@ services:
       easyhaproxy.http.plugin.jwt_validator.algorithm: RS256
       easyhaproxy.http.plugin.jwt_validator.issuer: https://auth.example.com/
       easyhaproxy.http.plugin.jwt_validator.audience: https://api.example.com
-      easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+      easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/easyhaproxy/jwt_keys/api_pubkey.pem
     volumes:
-      - ./pubkey.pem:/etc/haproxy/jwt_keys/api_pubkey.pem:ro
+      - ./pubkey.pem:/etc/easyhaproxy/jwt_keys/api_pubkey.pem:ro
 ```
 
 ### Protect Specific Paths Only
@@ -87,7 +87,7 @@ services:
 ```yaml
 labels:
   easyhaproxy.http.plugins: jwt_validator
-  easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+  easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/easyhaproxy/jwt_keys/api_pubkey.pem
   easyhaproxy.http.plugin.jwt_validator.paths: /api/admin,/api/sensitive
   easyhaproxy.http.plugin.jwt_validator.only_paths: false
 # /api/health, /api/docs, etc. remain publicly accessible
@@ -98,7 +98,7 @@ labels:
 ```yaml
 labels:
   easyhaproxy.http.plugins: jwt_validator
-  easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+  easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/easyhaproxy/jwt_keys/api_pubkey.pem
   easyhaproxy.http.plugin.jwt_validator.paths: /api/public,/api/v1
   easyhaproxy.http.plugin.jwt_validator.only_paths: true
 # All paths except /api/public and /api/v1 are denied
@@ -110,7 +110,7 @@ labels:
 labels:
   easyhaproxy.http.plugin.jwt_validator.issuer: none
   easyhaproxy.http.plugin.jwt_validator.audience: none
-  easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+  easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/easyhaproxy/jwt_keys/api_pubkey.pem
 ```
 
 ### Allow Anonymous Access (Optional JWT)
@@ -121,10 +121,10 @@ services:
     labels:
       easyhaproxy.http.host: api.example.com
       easyhaproxy.http.plugins: jwt_validator
-      easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+      easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/easyhaproxy/jwt_keys/api_pubkey.pem
       easyhaproxy.http.plugin.jwt_validator.allow_anonymous: true
     volumes:
-      - ./pubkey.pem:/etc/haproxy/jwt_keys/api_pubkey.pem:ro
+      - ./pubkey.pem:/etc/easyhaproxy/jwt_keys/api_pubkey.pem:ro
 # Requests without Authorization header are allowed
 # Requests with Authorization header are validated
 # Invalid JWTs are rejected
@@ -204,7 +204,7 @@ metadata:
     easyhaproxy.plugin.jwt_validator.algorithm: "RS256"
     easyhaproxy.plugin.jwt_validator.issuer: "https://auth.example.com/"
     easyhaproxy.plugin.jwt_validator.audience: "https://api.example.com"
-    easyhaproxy.plugin.jwt_validator.pubkey_path: "/etc/haproxy/jwt_keys/api_pubkey.pem"
+    easyhaproxy.plugin.jwt_validator.pubkey_path: "/etc/easyhaproxy/jwt_keys/api_pubkey.pem"
     easyhaproxy.plugin.jwt_validator.paths: "/api/admin,/api/users"
     easyhaproxy.plugin.jwt_validator.only_paths: "false"
 spec:
@@ -227,7 +227,7 @@ spec:
 ### Static YAML Configuration
 
 ```yaml
-# /etc/haproxy/static/config.yaml
+# /etc/easyhaproxy/static/config.yaml
 containers:
   "api.example.com:443":
     ip: ["api-service:8080"]
@@ -238,7 +238,7 @@ containers:
         algorithm: RS256
         issuer: https://auth.example.com/
         audience: https://api.example.com
-        pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+        pubkey_path: /etc/easyhaproxy/jwt_keys/api_pubkey.pem
 ```
 
 ### Environment Variables
@@ -277,7 +277,7 @@ http-request set-var(txn.exp) http_auth_bearer,jwt_payload_query('$.exp','int')
 http-request deny content-type 'text/html' string 'Unsupported JWT signing algorithm' unless { var(txn.alg) -m str RS256 }
 http-request deny content-type 'text/html' string 'Invalid JWT issuer' unless { var(txn.iss) -m str https://auth.example.com/ }
 http-request deny content-type 'text/html' string 'Invalid JWT audience' unless { var(txn.aud) -m str https://api.example.com }
-http-request deny content-type 'text/html' string 'Invalid JWT signature' unless { http_auth_bearer,jwt_verify(txn.alg,"/etc/haproxy/jwt_keys/api_pubkey.pem") -m int 1 }
+http-request deny content-type 'text/html' string 'Invalid JWT signature' unless { http_auth_bearer,jwt_verify(txn.alg,"/etc/easyhaproxy/jwt_keys/api_pubkey.pem") -m int 1 }
 
 # Validate expiration
 http-request set-var(txn.now) date()
@@ -303,7 +303,7 @@ http-request set-var(txn.exp) http_auth_bearer,jwt_payload_query('$.exp','int') 
 
 # Validate JWT (only on protected paths)
 http-request deny content-type 'text/html' string 'Unsupported JWT signing algorithm' unless { var(txn.alg) -m str RS256 } if jwt_protected_path
-http-request deny content-type 'text/html' string 'Invalid JWT signature' unless { http_auth_bearer,jwt_verify(txn.alg,"/etc/haproxy/jwt_keys/api_pubkey.pem") -m int 1 } if jwt_protected_path
+http-request deny content-type 'text/html' string 'Invalid JWT signature' unless { http_auth_bearer,jwt_verify(txn.alg,"/etc/easyhaproxy/jwt_keys/api_pubkey.pem") -m int 1 } if jwt_protected_path
 
 # Validate expiration
 http-request set-var(txn.now) date() if jwt_protected_path
@@ -332,7 +332,7 @@ http-request set-var(txn.exp) http_auth_bearer,jwt_payload_query('$.exp','int')
 
 # Validate JWT (all requests at this point are on allowed paths)
 http-request deny content-type 'text/html' string 'Unsupported JWT signing algorithm' unless { var(txn.alg) -m str RS256 }
-http-request deny content-type 'text/html' string 'Invalid JWT signature' unless { http_auth_bearer,jwt_verify(txn.alg,"/etc/haproxy/jwt_keys/api_pubkey.pem") -m int 1 }
+http-request deny content-type 'text/html' string 'Invalid JWT signature' unless { http_auth_bearer,jwt_verify(txn.alg,"/etc/easyhaproxy/jwt_keys/api_pubkey.pem") -m int 1 }
 
 # Validate expiration
 http-request set-var(txn.now) date()
@@ -356,7 +356,7 @@ http-request set-var(txn.exp) http_auth_bearer,jwt_payload_query('$.exp','int') 
 http-request deny content-type 'text/html' string 'Unsupported JWT signing algorithm' unless { var(txn.alg) -m str RS256 } if { req.hdr(authorization) -m found }
 http-request deny content-type 'text/html' string 'Invalid JWT issuer' unless { var(txn.iss) -m str https://auth.example.com/ } if { req.hdr(authorization) -m found }
 http-request deny content-type 'text/html' string 'Invalid JWT audience' unless { var(txn.aud) -m str https://api.example.com } if { req.hdr(authorization) -m found }
-http-request deny content-type 'text/html' string 'Invalid JWT signature' unless { http_auth_bearer,jwt_verify(txn.alg,"/etc/haproxy/jwt_keys/api_pubkey.pem") -m int 1 } if { req.hdr(authorization) -m found }
+http-request deny content-type 'text/html' string 'Invalid JWT signature' unless { http_auth_bearer,jwt_verify(txn.alg,"/etc/easyhaproxy/jwt_keys/api_pubkey.pem") -m int 1 } if { req.hdr(authorization) -m found }
 
 # Validate expiration (only if Authorization header is present)
 http-request set-var(txn.now) date() if { req.hdr(authorization) -m found }

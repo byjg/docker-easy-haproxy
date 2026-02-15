@@ -12,7 +12,7 @@ global
     ssl-default-server-ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
     ssl-default-server-options no-sslv3 no-tlsv10 no-tlsv11 no-tls-tickets
 
-    ssl-dh-param-file /etc/haproxy/dhparam
+    ssl-dh-param-file /etc/easyhaproxy/haproxy/dhparam
 
 defaults
     log global
@@ -68,7 +68,7 @@ backend srv_node-exporter_quantum_example_org_31337
     server srv-0 my-stack_node-exporter:9100 check weight 1
 
 frontend http_in_443
-    bind *:443  ssl crt /certs/certbot/ alpn h2,http/1.1 crt /certs/haproxy/ alpn h2,http/1.1
+    bind *:443  ssl crt /etc/easyhaproxy/certs/certbot/ alpn h2,http/1.1 crt /etc/easyhaproxy/certs/haproxy/ alpn h2,http/1.1
     mode http
     redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i somehost.com.br }
     redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i somehost.com }

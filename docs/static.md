@@ -66,12 +66,12 @@ The `containers` format simplifies static configuration:
 - **Clearer mapping**: Format mirrors internal Docker label structure
 :::
 
-Then map this file to `/etc/haproxy/static/config.yml` in your EasyHAProxy container:
+Then map this file to `/etc/easyhaproxy/static/config.yml` in your EasyHAProxy container:
 
 ```bash title="Run EasyHAProxy with static configuration"
 docker run -d \
       --name easy-haproxy-container \
-      -v /my/static/:/etc/haproxy/static/ \
+      -v /my/static/:/etc/easyhaproxy/static/ \
       -e EASYHAPROXY_DISCOVER="static" \
       # + Environment Variables \
       -p 80:80 \

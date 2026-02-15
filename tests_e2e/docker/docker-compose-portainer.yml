@@ -62,8 +62,8 @@ services:
     image: byjg/easy-haproxy:5.0.0
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - certs_certbot:/certs/certbot
-#      - certs_haproxy:/certs/haproxy
+      - certs_certbot:/etc/easyhaproxy/certs/certbot
+#      - certs_haproxy:/etc/easyhaproxy/certs/haproxy
 
     environment:
       EASYHAPROXY_DISCOVER: docker

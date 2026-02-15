@@ -73,7 +73,7 @@ spec:
 ### Static YAML Configuration
 
 ```yaml
-# /etc/haproxy/static/config.yaml
+# /etc/easyhaproxy/static/config.yaml
 containers:
   "example.com:80":
     ip: ["webapp:80"]

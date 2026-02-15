@@ -33,7 +33,7 @@ At a high level, ACME with Easy HAProxy works in two stages:
      - Manually setting `EASYHAPROXY_CERTBOT_SERVER` (and `EASYHAPROXY_CERTBOT_EAB_KID` / `EASYHAPROXY_CERTBOT_EAB_HMAC_KEY` when your CA requires EAB).
    - Always set your contact email via `EASYHAPROXY_CERTBOT_EMAIL`.
    - Ensure ports 80 and 443 are publicly reachable on the EasyHAProxy host.
-   - Persist the folder `/certs/certbot` on a durable volume so issued/renewed certificates survive container restarts and avoid hitting CA rate limits.
+   - Persist the folder `/etc/easyhaproxy/certs/certbot` on a durable volume so issued/renewed certificates survive container restarts and avoid hitting CA rate limits.
    - Challenge method is HTTP-01 only; EasyHAProxy configures a standalone Certbot responder internally.
 
 2. Enable ACME per domain (per service/app)
@@ -44,7 +44,7 @@ At a high level, ACME with Easy HAProxy works in two stages:
 What happens under the hood
 - When a labeled domain is detected and a certificate is needed, EasyHAProxy runs Certbot with `--preferred-challenges http` and a standalone responder bound to internal port 2080.
 - HAProxy temporarily routes `/.well-known/acme-challenge/` for that domain to the Certbot responder, allowing the CA to validate via HTTP-01.
-- On success, EasyHAProxy merges the issued cert and key and stores them under `/certs/certbot` (one PEM per domain), then reloads HAProxy to serve HTTPS for that domain.
+- On success, EasyHAProxy merges the issued cert and key and stores them under `/etc/easyhaproxy/certs/certbot` (one PEM per domain), then reloads HAProxy to serve HTTPS for that domain.
 - Certificates are monitored and renewed automatically before expiry.
 
 Tips
@@ -105,7 +105,7 @@ docker run \
     -e EASYHAPROXY_CERTBOT_EMAIL=john@doe.com \
     -p 80:80 \
     -p 443:443 \
-    -v /path/to/guest/certbot/certs:/certs/certbot \
+    -v /path/to/guest/certbot/certs:/etc/easyhaproxy/certs/certbot \
     ... \
     byjg/easy-haproxy
 ```
@@ -118,7 +118,7 @@ docker run \
 
 :::danger Important: Persist Certbot Certificates
 To avoid hitting rate limits and certificate issuing problems:
-- **You must persist** the container folder `/certs/certbot` outside the container
+- **You must persist** the container folder `/etc/easyhaproxy/certs/certbot` outside the container
 - **Never delete or modify** its contents manually
 - If you don't persist this folder, or if you delete/modify its contents, certificate issuing may not work properly and you may hit rate limits
 ::: 

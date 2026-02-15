@@ -17,6 +17,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import easymapping
+from functions import Consts
 from plugins import PluginContext, PluginManager
 from plugins.builtin.cleanup import CleanupPlugin
 from plugins.builtin.cloudflare import CloudflarePlugin
@@ -43,7 +44,7 @@ class TestCloudflarePlugin:
         assert plugin.name == "cloudflare"
         assert plugin.enabled is True
         assert plugin.use_builtin_ips is True
-        assert plugin.ip_list_path == "/etc/haproxy/cloudflare_ips.lst"
+        assert plugin.ip_list_path == f"{Consts.base_path}/cloudflare_ips.lst"
         assert len(plugin.CLOUDFLARE_IPS) == 22  # 15 IPv4 + 7 IPv6
 
     def test_cloudflare_plugin_configuration(self):
@@ -85,11 +86,11 @@ class TestCloudflarePlugin:
 
         assert result.haproxy_config is not None
         assert "Cloudflare" in result.haproxy_config
-        assert "acl from_cloudflare src -f /etc/haproxy/cloudflare_ips.lst" in result.haproxy_config
+        assert f"acl from_cloudflare src -f {Consts.base_path}/cloudflare_ips.lst" in result.haproxy_config
         assert "http-request set-var(txn.real_ip) req.hdr(CF-Connecting-IP)" in result.haproxy_config
         assert "http-request set-header X-Forwarded-For %[var(txn.real_ip)]" in result.haproxy_config
         assert result.metadata["domain"] == "example.com"
-        assert result.metadata["ip_list_path"] == "/etc/haproxy/cloudflare_ips.lst"
+        assert result.metadata["ip_list_path"] == f"{Consts.base_path}/cloudflare_ips.lst"
 
     def test_cloudflare_plugin_disabled(self):
         """Test plugin returns empty config when disabled"""
@@ -123,7 +124,7 @@ class TestCloudflarePlugin:
 
         # Verify Cloudflare config is in the output
         assert "Cloudflare - Restore original visitor IP" in haproxy_config
-        assert "acl from_cloudflare src -f /etc/haproxy/cloudflare_ips.lst" in haproxy_config
+        assert f"acl from_cloudflare src -f {Consts.base_path}/cloudflare_ips.lst" in haproxy_config
         assert "http-request set-var(txn.real_ip) req.hdr(CF-Connecting-IP)" in haproxy_config
         assert "http-request set-header X-Forwarded-For %[var(txn.real_ip)]" in haproxy_config
         # Verify log-format is in defaults section (from defaults_configs)
@@ -688,7 +689,7 @@ class TestJwtValidatorPlugin:
             "algorithm": "RS256",
             "issuer": "https://auth.example.com/",
             "audience": "https://api.example.com",
-            "pubkey_path": "/etc/haproxy/jwt_keys/api_pubkey.pem"
+            "pubkey_path": f"{Consts.base_path}/jwt_keys/api_pubkey.pem"
         })
 
         context = PluginContext(
@@ -712,7 +713,7 @@ class TestJwtValidatorPlugin:
         assert "var(txn.alg) -m str RS256" in result.haproxy_config
         assert "var(txn.iss) -m str https://auth.example.com/" in result.haproxy_config
         assert "var(txn.aud) -m str https://api.example.com" in result.haproxy_config
-        assert 'jwt_verify(txn.alg,"/etc/haproxy/jwt_keys/api_pubkey.pem")' in result.haproxy_config
+        assert f'jwt_verify(txn.alg,"{Consts.base_path}/jwt_keys/api_pubkey.pem")' in result.haproxy_config
         assert "JWT has expired" in result.haproxy_config
         assert result.metadata["domain"] == "api.example.com"
         assert result.metadata["algorithm"] == "RS256"
@@ -742,7 +743,7 @@ class TestJwtValidatorPlugin:
 
         assert result.haproxy_config is not None
         assert "JWT Validator" in result.haproxy_config
-        assert "/etc/haproxy/jwt_keys/api_example_com_pubkey.pem" in result.haproxy_config
+        assert f"{Consts.base_path}/jwt_keys/api_example_com_pubkey.pem" in result.haproxy_config
         # Verify the decoded content is stored in metadata
         assert result.metadata["pubkey_content"] == "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqh...\n-----END PUBLIC KEY-----"
 
@@ -750,7 +751,7 @@ class TestJwtValidatorPlugin:
         """Test plugin skips issuer/audience validation when not configured"""
         plugin = JwtValidatorPlugin()
         plugin.configure({
-            "pubkey_path": "/etc/haproxy/jwt_keys/api_pubkey.pem"
+            "pubkey_path": f"{Consts.base_path}/jwt_keys/api_pubkey.pem"
         })
 
         context = PluginContext(
@@ -775,7 +776,7 @@ class TestJwtValidatorPlugin:
         plugin = JwtValidatorPlugin()
         plugin.configure({
             "enabled": "false",
-            "pubkey_path": "/etc/haproxy/jwt_keys/api_pubkey.pem"
+            "pubkey_path": f"{Consts.base_path}/jwt_keys/api_pubkey.pem"
         })
 
         context = PluginContext(
@@ -826,7 +827,7 @@ class TestJwtValidatorPlugin:
         """Test plugin with paths configured and only_paths=false"""
         plugin = JwtValidatorPlugin()
         plugin.configure({
-            "pubkey_path": "/etc/haproxy/jwt_keys/api_pubkey.pem",
+            "pubkey_path": f"{Consts.base_path}/jwt_keys/api_pubkey.pem",
             "paths": ["/api/admin", "/api/sensitive"],
             "only_paths": "false"
         })
@@ -860,7 +861,7 @@ class TestJwtValidatorPlugin:
         """Test plugin with paths configured and only_paths=true"""
         plugin = JwtValidatorPlugin()
         plugin.configure({
-            "pubkey_path": "/etc/haproxy/jwt_keys/api_pubkey.pem",
+            "pubkey_path": f"{Consts.base_path}/jwt_keys/api_pubkey.pem",
             "paths": ["/api/public"],
             "only_paths": "true"
         })
@@ -894,7 +895,7 @@ class TestJwtValidatorPlugin:
         """Test plugin parses comma-separated paths from container labels"""
         plugin = JwtValidatorPlugin()
         plugin.configure({
-            "pubkey_path": "/etc/haproxy/jwt_keys/api_pubkey.pem",
+            "pubkey_path": f"{Consts.base_path}/jwt_keys/api_pubkey.pem",
             "paths": "/api/admin,/api/sensitive,/api/protected"
         })
 
@@ -904,7 +905,7 @@ class TestJwtValidatorPlugin:
         """Test plugin parses paths from list (YAML config)"""
         plugin = JwtValidatorPlugin()
         plugin.configure({
-            "pubkey_path": "/etc/haproxy/jwt_keys/api_pubkey.pem",
+            "pubkey_path": f"{Consts.base_path}/jwt_keys/api_pubkey.pem",
             "paths": ["/api/admin", "/api/sensitive"]
         })
 
@@ -914,7 +915,7 @@ class TestJwtValidatorPlugin:
         """Test plugin protects all paths when paths is not configured"""
         plugin = JwtValidatorPlugin()
         plugin.configure({
-            "pubkey_path": "/etc/haproxy/jwt_keys/api_pubkey.pem"
+            "pubkey_path": f"{Consts.base_path}/jwt_keys/api_pubkey.pem"
         })
 
         context = PluginContext(
@@ -947,7 +948,7 @@ class TestFastcgiPlugin:
 
         assert plugin.name == "fastcgi"
         assert plugin.enabled is True
-        assert plugin.document_root == "/var/www/html"
+        assert plugin.document_root == f"{Consts.base_path}/www"
         assert plugin.index_file == "index.php"
         assert plugin.path_info is True
         assert plugin.custom_params == {}
@@ -969,7 +970,7 @@ class TestFastcgiPlugin:
         """Test plugin generates correct HAProxy config"""
         plugin = FastcgiPlugin()
         plugin.configure({
-            "document_root": "/var/www/html",
+            "document_root": f"{Consts.base_path}/www",
             "index_file": "index.php"
         })
 
@@ -991,9 +992,9 @@ class TestFastcgiPlugin:
         assert len(result.global_configs) == 1
         fcgi_app_def = result.global_configs[0]
         assert "fcgi-app fcgi_phpapp_local" in fcgi_app_def
-        assert "docroot /var/www/html" in fcgi_app_def
+        assert f"docroot {Consts.base_path}/www" in fcgi_app_def
         assert "index index.php" in fcgi_app_def
-        assert result.metadata["document_root"] == "/var/www/html"
+        assert result.metadata["document_root"] == f"{Consts.base_path}/www"
         assert result.metadata["index_file"] == "index.php"
 
     def test_fastcgi_plugin_custom_params(self):

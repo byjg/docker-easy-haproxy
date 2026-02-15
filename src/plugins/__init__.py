@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from functions import logger_easyhaproxy
+from functions import logger_easyhaproxy, Consts
 
 
 class PluginType(Enum):
@@ -108,12 +108,12 @@ class PluginManager:
         Initialize the plugin manager
 
         Args:
-            plugins_dir: Directory containing plugin files (defaults to EASYHAPROXY_PLUGINS_DIR env var or /etc/haproxy/plugins)
+            plugins_dir: Directory containing plugin files (defaults to EASYHAPROXY_PLUGINS_DIR env var or /etc/easyhaproxy/plugins)
             abort_on_error: If True, abort on plugin errors; if False, log and continue
         """
         self.plugins_dir = plugins_dir or os.getenv(
             "EASYHAPROXY_PLUGINS_DIR",
-            "/etc/haproxy/plugins"
+            Consts.base_path + "/plugins"
         )
         self.abort_on_error = abort_on_error
         self.plugins: dict[str, PluginInterface] = {}

@@ -53,7 +53,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       # Mount Cloudflare IP list
-      - ./cloudflare_ips.lst:/etc/haproxy/cloudflare_ips.lst:ro
+      - ./cloudflare_ips.lst:/etc/easyhaproxy/cloudflare_ips.lst:ro
     environment:
       EASYHAPROXY_DISCOVER: docker
       HAPROXY_CUSTOMERRORS: "true"
@@ -77,4 +77,4 @@ services:
 
       # Use custom IP list (disable built-in IPs)
       easyhaproxy.http.plugin.cloudflare.use_builtin_ips: false
-      easyhaproxy.http.plugin.cloudflare.ip_list_path: /etc/haproxy/cloudflare_ips.lst
+      easyhaproxy.http.plugin.cloudflare.ip_list_path: /etc/easyhaproxy/cloudflare_ips.lst

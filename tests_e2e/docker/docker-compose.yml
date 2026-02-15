@@ -54,7 +54,7 @@ services:
     image: byjg/easy-haproxy:local
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./host2.local.pem:/certs/haproxy/host2.local.pem
+      - ./host2.local.pem:/etc/easyhaproxy/certs/haproxy/host2.local.pem
     environment:
       EASYHAPROXY_DISCOVER: docker
       EASYHAPROXY_SSL_MODE: "loose"

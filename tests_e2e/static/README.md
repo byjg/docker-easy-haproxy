@@ -18,7 +18,7 @@ Static mode uses explicit YAML configuration files instead of dynamic service di
 
 ## Configuration Files
 
-All scenarios use `/etc/haproxy/static/config.yml` mounted from `./conf/config.yml`.
+All scenarios use `/etc/easyhaproxy/static/config.yml` mounted from `./conf/config.yml`.
 
 Choose one of these pre-made configurations:
 

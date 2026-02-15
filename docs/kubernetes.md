@@ -177,7 +177,7 @@ metadata:
     easyhaproxy.plugin.jwt_validator.algorithm: "RS256"
     easyhaproxy.plugin.jwt_validator.issuer: "https://auth.example.com/"
     easyhaproxy.plugin.jwt_validator.audience: "https://api.example.com"
-    easyhaproxy.plugin.jwt_validator.pubkey_path: "/etc/haproxy/jwt_keys/api_pubkey.pem"
+    easyhaproxy.plugin.jwt_validator.pubkey_path: "/etc/easyhaproxy/jwt_keys/api_pubkey.pem"
 spec:
   ingressClassName: easyhaproxy
 ```

@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 import time
 from pathlib import Path
+import requests
 import jwt as jwt_lib
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
@@ -21,9 +22,12 @@ _docker_image_built = False
 class DockerComposeFixture:
     """Helper class to manage docker-compose lifecycle"""
 
-    def __init__(self, compose_file: str, startup_wait: int = 3, build: bool = None):
+    def __init__(self, compose_file: str, startup_wait: int = 3, build: bool = None,
+                 health_check: callable = None, health_check_timeout: int = 60):
         self.compose_file = compose_file
         self.startup_wait = startup_wait
+        self.health_check = health_check
+        self.health_check_timeout = health_check_timeout
 
         # Smart build strategy: build on first call, skip on subsequent calls
         global _docker_image_built
@@ -60,9 +64,31 @@ class DockerComposeFixture:
         if self.build:
             _docker_image_built = True
 
-        print(f"  ✓ Services started, waiting {self.startup_wait}s for initialization...")
-        time.sleep(self.startup_wait)
-        print(f"  ✓ Services ready")
+        # Use health check if provided, otherwise fall back to fixed delay
+        if self.health_check:
+            print(f"  ✓ Services started, waiting for health check (timeout: {self.health_check_timeout}s)...")
+            start_time = time.time()
+            poll_interval = 1
+
+            while time.time() - start_time < self.health_check_timeout:
+                try:
+                    if self.health_check():
+                        elapsed = time.time() - start_time
+                        print(f"  ✓ Services ready (health check passed in {elapsed:.1f}s)")
+                        return
+                except Exception:
+                    # Health check not ready yet, continue polling
+                    pass
+
+                time.sleep(poll_interval)
+
+            # Health check timed out
+            elapsed = time.time() - start_time
+            raise TimeoutError(f"Health check did not pass within {elapsed:.1f}s")
+        else:
+            print(f"  ✓ Services started, waiting {self.startup_wait}s for initialization...")
+            time.sleep(self.startup_wait)
+            print(f"  ✓ Services ready")
 
     def down(self):
         """Stop and remove docker-compose services"""
