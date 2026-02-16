@@ -48,6 +48,9 @@ class DockerComposeFixture:
         if self.build:
             cmd.append("--build")
 
+        # Use native Docker healthcheck waiting
+        cmd.append("--wait")
+
         result = subprocess.run(
             cmd,
             capture_output=True,
@@ -96,7 +99,7 @@ class DockerComposeFixture:
         print(f"  → Stopping services from {compose_name}...")
 
         result = subprocess.run(
-            ["docker", "compose", "-f", self.compose_file, "down", "--remove-orphans"],
+            ["docker", "compose", "-f", self.compose_file, "down", "--remove-orphans", "-t", "0"],
             capture_output=True,
             text=True
         )

@@ -858,7 +858,7 @@ def docker_compose_acme() -> Generator[None, None, None]:
         stderr=subprocess.DEVNULL  # Ignore error if volume doesn't exist
     )
 
-    fixture = DockerComposeFixture(str(DOCKER_DIR / "docker-compose-acme-e2e.yml"), startup_wait=15)
+    fixture = DockerComposeFixture(str(DOCKER_DIR / "docker-compose-acme-e2e.yml"), startup_wait=0)
     fixture.up()
     yield
     fixture.down()
@@ -930,26 +930,38 @@ class TestACME:
 
     def test_certificate_issuance(self, docker_compose_acme):
         """Test that Pebble successfully issues a certificate"""
-        # Check HAProxy logs for certificate issuance
-        result = subprocess.run(
-            ["docker", "logs", "docker-haproxy-1"],
-            capture_output=True,
-            text=True
-        )
-        logs = result.stdout + result.stderr
+        # Wait for certificate issuance (Certbot runs in background loop)
+        # Typical time: 10-15 seconds from container start
+        max_wait = 30
+        check_interval = 2
+        has_success = False
 
-        # Look for certbot success messages
-        # Certbot outputs: "Successfully received certificate"
-        has_success = "Successfully received certificate" in logs or \
-                     "Certificate not yet due for renewal" in logs or \
-                     "Cert not yet due for renewal" in logs
+        for attempt in range(max_wait // check_interval):
+            result = subprocess.run(
+                ["docker", "logs", "docker-haproxy-1"],
+                capture_output=True,
+                text=True
+            )
+            logs = result.stdout + result.stderr
 
-        # If not successful, check for Pebble connection
+            # Look for certbot success messages
+            # Certbot outputs: "Successfully received certificate"
+            has_success = "Successfully received certificate" in logs or \
+                         "Certificate not yet due for renewal" in logs or \
+                         "Cert not yet due for renewal" in logs
+
+            if has_success:
+                break
+
+            # Wait before next check
+            time.sleep(check_interval)
+
+        # If not successful after waiting, check for Pebble connection
         if not has_success:
             # Check if we can at least connect to Pebble
             has_pebble_connection = "pebble:14000/dir" in logs or "pebble:14000" in logs
             assert has_pebble_connection, \
-                f"HAProxy cannot connect to Pebble ACME server. Check docker network.\nLogs:\n{logs[-2000:]}"
+                f"HAProxy cannot connect to Pebble ACME server after {max_wait}s. Check docker network.\nLogs:\n{logs[-2000:]}"
 
         # Verify merged certificate file exists
         # EasyHAProxy merges cert+key from /etc/easyhaproxy/certs/live/ to /etc/easyhaproxy/certs/certbot/{domain}.pem

@@ -65,6 +65,12 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       # Persist the CERTBOT to avoid re-challenge when the server restarts
       - ./certs:/etc/easyhaproxy/certs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-u", "admin:password", "http://localhost:1936"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
     environment:
       EASYHAPROXY_DISCOVER: docker
       HAPROXY_CUSTOMERRORS: "true"

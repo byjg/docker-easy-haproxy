@@ -48,6 +48,12 @@ services:
     image: byjg/easy-haproxy:local
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-u", "admin:password", "http://localhost:1936"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
     environment:
       EASYHAPROXY_DISCOVER: docker
       HAPROXY_CUSTOMERRORS: "true"

@@ -462,7 +462,7 @@ class KubernetesFixture:
         """Delete Kubernetes resources"""
         subprocess.run(
             [self.kubectl, "delete", "-f", self.manifest_file, "-n", self.namespace,
-             "--ignore-not-found=true"],
+             "--ignore-not-found=true", "--force", "--grace-period=0"],
             check=True,
             capture_output=True
         )
@@ -471,7 +471,7 @@ class KubernetesFixture:
         if self.namespace != "default":
             subprocess.run(
                 [self.kubectl, "delete", "namespace", self.namespace,
-                 "--ignore-not-found=true"],
+                 "--ignore-not-found=true", "--force", "--grace-period=0"],
                 capture_output=True
             )
 
@@ -556,7 +556,7 @@ def k8s_service_tls(kind_cluster) -> Generator[str, None, None]:
         # Cleanup
         subprocess.run(
             [kubectl_cmd, "delete", "-f", str(temp_manifest_path), "-n", "default",
-             "--ignore-not-found=true"],
+             "--ignore-not-found=true", "--force", "--grace-period=0"],
             check=True,
             capture_output=True
         )
@@ -597,7 +597,7 @@ def k8s_jwt_validator_secret(kind_cluster) -> Generator[dict, None, None]:
     print("  → Creating JWT secret 'jwt-pubkey-secret'...")
     subprocess.run(
         [kubectl_cmd, "delete", "secret", "jwt-pubkey-secret", "-n", "default",
-         "--ignore-not-found=true"],
+         "--ignore-not-found=true", "--force", "--grace-period=0"],
         capture_output=True
     )
     subprocess.run(
@@ -611,7 +611,7 @@ def k8s_jwt_validator_secret(kind_cluster) -> Generator[dict, None, None]:
     print("  → Creating JWT secret 'jwt-custom-secret'...")
     subprocess.run(
         [kubectl_cmd, "delete", "secret", "jwt-custom-secret", "-n", "default",
-         "--ignore-not-found=true"],
+         "--ignore-not-found=true", "--force", "--grace-period=0"],
         capture_output=True
     )
     subprocess.run(
@@ -655,12 +655,12 @@ def k8s_jwt_validator_secret(kind_cluster) -> Generator[dict, None, None]:
     # Delete the JWT secrets
     subprocess.run(
         [kubectl_cmd, "delete", "secret", "jwt-pubkey-secret", "-n", "default",
-         "--ignore-not-found=true"],
+         "--ignore-not-found=true", "--force", "--grace-period=0"],
         capture_output=True
     )
     subprocess.run(
         [kubectl_cmd, "delete", "secret", "jwt-custom-secret", "-n", "default",
-         "--ignore-not-found=true"],
+         "--ignore-not-found=true", "--force", "--grace-period=0"],
         capture_output=True
     )
 
@@ -740,7 +740,7 @@ def k8s_cloudflare(kind_cluster, kind_cmd) -> Generator[str, None, None]:
         # Cleanup
         subprocess.run(
             [kubectl_cmd, "delete", "-f", str(temp_manifest_path), "-n", "default",
-             "--ignore-not-found=true"],
+             "--ignore-not-found=true", "--force", "--grace-period=0"],
             check=True,
             capture_output=True
         )

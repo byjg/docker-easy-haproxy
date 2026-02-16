@@ -72,6 +72,129 @@ class TestCertbotStaticMethods:
         hmac = "test-hmac-key-abcdef"
         assert Certbot.set_eab_hmac_key(hmac) == f'--eab-hmac-key "{hmac}"'
 
+    def test_check_acme_environment_ready_missing_email(self):
+        """Test ACME environment check with missing email"""
+        is_ready, error_msg = Certbot.check_acme_environment_ready("", "--staging")
+        assert is_ready is False
+        assert "ACME email not configured" in error_msg
+
+    def test_check_acme_environment_ready_missing_server(self):
+        """Test ACME environment check with missing server"""
+        is_ready, error_msg = Certbot.check_acme_environment_ready("test@example.com", "")
+        assert is_ready is False
+        assert "ACME server not configured" in error_msg
+
+    def test_check_acme_environment_ready_staging(self):
+        """Test ACME environment check with staging server (no URL to check)"""
+        is_ready, error_msg = Certbot.check_acme_environment_ready("test@example.com", "--staging")
+        assert is_ready is True
+        assert error_msg == ""
+
+    @patch('requests.get')
+    def test_check_acme_environment_ready_server_reachable(self, mock_get):
+        """Test ACME environment check with reachable server"""
+        # Mock successful response with valid ACME directory
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "newAccount": "https://acme.example.com/new-account",
+            "newNonce": "https://acme.example.com/new-nonce",
+            "newOrder": "https://acme.example.com/new-order"
+        }
+        mock_get.return_value = mock_response
+
+        is_ready, error_msg = Certbot.check_acme_environment_ready(
+            "test@example.com",
+            "--server https://acme.example.com/directory"
+        )
+
+        assert is_ready is True
+        assert error_msg == ""
+        mock_get.assert_called_once_with("https://acme.example.com/directory", timeout=10, verify=True)
+
+    @patch('requests.get')
+    def test_check_acme_environment_ready_server_unreachable(self, mock_get):
+        """Test ACME environment check with unreachable server"""
+        import requests
+        mock_get.side_effect = requests.exceptions.ConnectionError("Connection refused")
+
+        is_ready, error_msg = Certbot.check_acme_environment_ready(
+            "test@example.com",
+            "--server https://acme.example.com/directory"
+        )
+
+        assert is_ready is False
+        assert "not reachable" in error_msg
+        assert "Connection refused" in error_msg
+
+    @patch('requests.get')
+    def test_check_acme_environment_ready_server_timeout(self, mock_get):
+        """Test ACME environment check with timeout"""
+        import requests
+        mock_get.side_effect = requests.exceptions.Timeout("Request timed out")
+
+        is_ready, error_msg = Certbot.check_acme_environment_ready(
+            "test@example.com",
+            "--server https://acme.example.com/directory"
+        )
+
+        assert is_ready is False
+        assert "not reachable" in error_msg
+        assert "timed out" in error_msg
+
+    @patch('requests.get')
+    def test_check_acme_environment_ready_server_http_error(self, mock_get):
+        """Test ACME environment check with HTTP error status"""
+        mock_response = Mock()
+        mock_response.status_code = 404
+        mock_get.return_value = mock_response
+
+        is_ready, error_msg = Certbot.check_acme_environment_ready(
+            "test@example.com",
+            "--server https://acme.example.com/directory"
+        )
+
+        assert is_ready is False
+        assert "returned HTTP 404" in error_msg
+
+    @patch('requests.get')
+    def test_check_acme_environment_ready_invalid_acme_directory(self, mock_get):
+        """Test ACME environment check with invalid ACME directory"""
+        # Mock response without required "newAccount" key
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "status": "ok",
+            "message": "Not an ACME directory"
+        }
+        mock_get.return_value = mock_response
+
+        is_ready, error_msg = Certbot.check_acme_environment_ready(
+            "test@example.com",
+            "--server https://acme.example.com/directory"
+        )
+
+        assert is_ready is False
+        assert "invalid ACME directory" in error_msg
+
+    @patch.dict(os.environ, {'REQUESTS_CA_BUNDLE': '/path/to/pebble-ca.pem'})
+    @patch('requests.get')
+    def test_check_acme_environment_ready_respects_ca_bundle(self, mock_get):
+        """Test that REQUESTS_CA_BUNDLE environment variable is respected"""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"newAccount": "https://pebble:14000/new-account"}
+        mock_get.return_value = mock_response
+
+        is_ready, error_msg = Certbot.check_acme_environment_ready(
+            "test@example.com",
+            "--server https://pebble:14000/dir"
+        )
+
+        assert is_ready is True
+        # Verify verify parameter uses REQUESTS_CA_BUNDLE
+        mock_get.assert_called_once_with("https://pebble:14000/dir", timeout=10, verify='/path/to/pebble-ca.pem')
+
 
 class TestCertbotInitialization:
     """Test Certbot class initialization"""

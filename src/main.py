@@ -35,6 +35,15 @@ def start():
 
     certbot = Certbot(Consts.certs_certbot)
 
+    # Check ACME environment readiness if Certbot is configured
+    if certbot.email != "":
+        is_ready, error_msg = Certbot.check_acme_environment_ready(certbot.email, certbot.acme_server)
+        if not is_ready:
+            logger_easyhaproxy.warning(f"ACME environment not ready: {error_msg}")
+            logger_easyhaproxy.warning("Certificate auto-renewal may fail. Verify ACME server configuration.")
+        else:
+            logger_easyhaproxy.info("ACME environment validated and ready")
+
     while True:
         if old_haproxy is not None:
             old_haproxy.kill()

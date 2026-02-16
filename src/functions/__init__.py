@@ -458,6 +458,46 @@ class Certbot:
         else:
             return ""
 
+    @staticmethod
+    def check_acme_environment_ready(email, acme_server):
+        """
+        Check if ACME environment is ready for certificate operations.
+
+        Args:
+            email: EASYHAPROXY_CERTBOT_EMAIL value
+            acme_server: Processed ACME server string from set_acme_server()
+
+        Returns:
+            tuple: (is_ready: bool, error_message: str)
+        """
+        # Check 1: Email configured
+        if not email or email == "":
+            return False, "ACME email not configured (EASYHAPROXY_CERTBOT_EMAIL)"
+
+        # Check 2: ACME server configured
+        if not acme_server or acme_server == "":
+            return False, "ACME server not configured (EASYHAPROXY_CERTBOT_SERVER)"
+
+        # Check 3: ACME server reachability (if URL provided)
+        if "--server " in acme_server:
+            server_url = acme_server.replace("--server ", "")
+            try:
+                # Use 10s timeout, respect REQUESTS_CA_BUNDLE for Pebble CA
+                response = requests.get(server_url, timeout=10, verify=os.getenv("REQUESTS_CA_BUNDLE", True))
+                if response.status_code != 200:
+                    return False, f"ACME server {server_url} returned HTTP {response.status_code}"
+
+                # Validate ACME directory structure (RFC 8555)
+                data = response.json()
+                if "newAccount" not in data:
+                    return False, f"ACME server {server_url} returned invalid ACME directory"
+            except requests.exceptions.RequestException as e:
+                return False, f"ACME server {server_url} not reachable: {str(e)}"
+            except Exception as e:
+                return False, f"ACME server validation failed: {str(e)}"
+
+        return True, ""
+
     def check_certificates(self, hosts):
         if self.email == "" or len(hosts) == 0:
             return False
