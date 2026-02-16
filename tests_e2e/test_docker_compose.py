@@ -34,10 +34,6 @@ import requests
 import jwt as jwt_lib
 from typing import Generator
 from utils import extract_backend_block, DockerComposeFixture
-import urllib3
-
-# Disable SSL warnings for Pebble health checks (self-signed certs)
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Base directory for docker-compose files
 BASE_DIR = Path(__file__).parent.absolute()
@@ -847,34 +843,10 @@ class TestChangedLabel:
 # Test: docker-compose-acme-e2e.yml - ACME/Certbot with Pebble
 # =============================================================================
 
-def wait_for_pebble() -> bool:
-    """
-    Health check function to verify Pebble ACME server is ready.
-
-    Returns True if Pebble is responding to the /dir endpoint.
-    This is used instead of Docker healthchecks for more reliable startup
-    detection in CI environments.
-    """
-    try:
-        # Pebble uses self-signed certificates, so we need verify=False
-        response = requests.get("https://127.0.0.1:14000/dir", verify=False, timeout=5)
-        return response.status_code == 200
-    except Exception:
-        return False
-
-
 @pytest.fixture
 def docker_compose_acme() -> Generator[None, None, None]:
-    """
-    Fixture for docker-compose-acme-e2e.yml - ACME/Certbot E2E test
-
-    Uses staged startup to ensure services start in the correct order:
-    1. Pebble ACME server first
-    2. HAProxy (after Pebble is ready)
-    3. Backend
-    """
+    """Fixture for docker-compose-acme-e2e.yml - ACME/Certbot E2E test"""
     volume_name = "docker_certbot-certs"
-    compose_file = str(DOCKER_DIR / "docker-compose-acme-e2e.yml")
 
     # Download Pebble CA certificate (only once per test session)
     create_pebble_ca_file()
@@ -883,112 +855,23 @@ def docker_compose_acme() -> Generator[None, None, None]:
     subprocess.run(
         ["docker", "volume", "rm", volume_name],
         stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL  # Ignore error if volume doesn't exist
+    )
+
+    fixture = DockerComposeFixture(str(DOCKER_DIR / "docker-compose-acme-e2e.yml"), startup_wait=0)
+    fixture.up()
+    yield
+    fixture.down()
+
+    # Clean up volume after test
+    subprocess.run(
+        ["docker", "volume", "rm", volume_name],
+        stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
     )
 
-    print()
-    print("  → Starting ACME test environment in stages...")
-
-    # Change to docker directory so relative paths in docker-compose work correctly
-    original_dir = os.getcwd()
-    docker_dir = DOCKER_DIR
-
-    try:
-        os.chdir(docker_dir)
-
-        # Stage 1: Start Pebble ACME server first
-        print("  → Stage 1: Starting Pebble ACME server...")
-        result = subprocess.run(
-            ["docker", "compose", "-f", "docker-compose-acme-e2e.yml", "up", "-d", "pebble"],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-
-        # Wait for Pebble to be ready
-        print("  → Waiting for Pebble to be ready (timeout: 90s)...")
-        start_time = time.time()
-        pebble_ready = False
-        while time.time() - start_time < 90:
-            if wait_for_pebble():
-                pebble_ready = True
-                break
-            time.sleep(1)
-
-        if not pebble_ready:
-            # Debug: Check container status and logs
-            print("  ✗ Pebble did not become ready, checking container status...")
-            status_result = subprocess.run(
-                ["docker", "ps", "-a", "--filter", "name=pebble", "--format", "{{.Names}}\t{{.Status}}"],
-                capture_output=True,
-                text=True
-            )
-            print(f"  Container status: {status_result.stdout.strip()}")
-
-            # Get container logs
-            logs_result = subprocess.run(
-                ["docker", "compose", "-f", "docker-compose-acme-e2e.yml", "logs", "pebble"],
-                capture_output=True,
-                text=True
-            )
-            print(f"  Pebble logs:\n{logs_result.stdout}")
-            if logs_result.stderr:
-                print(f"  Pebble stderr:\n{logs_result.stderr}")
-
-            raise TimeoutError("Pebble did not become ready within 90 seconds")
-
-        # Stage 2: Start HAProxy
-        print("  → Stage 2: Starting HAProxy...")
-        result = subprocess.run(
-            ["docker", "compose", "-f", "docker-compose-acme-e2e.yml", "up", "-d", "haproxy"],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        print("  → Waiting for HAProxy to initialize...")
-        time.sleep(5)
-
-        # Stage 3: Start Backend
-        print("  → Stage 3: Starting backend...")
-        result = subprocess.run(
-            ["docker", "compose", "-f", "docker-compose-acme-e2e.yml", "up", "-d", "backend"],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        print("  → Waiting for backend to initialize...")
-        time.sleep(3)
-
-        print("  ✓ All services started and ready")
-
-        yield
-
-    finally:
-        # Cleanup
-        print("  → Stopping ACME test environment...")
-        subprocess.run(
-            ["docker", "compose", "-f", "docker-compose-acme-e2e.yml", "down", "--remove-orphans", "-t", "0"],
-            capture_output=True,
-            text=True
-        )
-        print("  ✓ Services stopped and cleaned up")
-
-        # Restore original directory
-        os.chdir(original_dir)
-
-        # Clean up volume
-        subprocess.run(
-            ["docker", "volume", "rm", volume_name],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
-
 
 @pytest.mark.acme
-@pytest.mark.skipif(
-    os.getenv("CI") == "true" and os.getenv("SKIP_ACME_TESTS") == "true",
-    reason="ACME tests skipped in CI (set SKIP_ACME_TESTS=false to enable)"
-)
 class TestACME:
     """Tests for docker-compose-acme-e2e.yml - ACME/Certbot with Pebble test server"""
 

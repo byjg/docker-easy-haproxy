@@ -25,4 +25,4 @@ build/
 /tests_e2e/docker/jwt_private.pem
 /tests_e2e/docker/jwt_pubkey.pem
 /tests_e2e/docker/cloudflare_ips.lst
-/tests_e2e/docker/pebble-*
+/tests_e2e/docker/pebble-ca.pem
