@@ -107,6 +107,9 @@ jobs:
           export PATH="$HOME/.local/bin:$PATH"
           uv sync --group dev
 
+      - name: Clean Docker build cache
+        run: docker builder prune -af
+
       - name: Run Static E2E tests
         run: |
           export PATH="$HOME/.local/bin:$PATH"
