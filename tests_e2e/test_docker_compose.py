@@ -889,11 +889,17 @@ def docker_compose_acme() -> Generator[None, None, None]:
     print()
     print("  → Starting ACME test environment in stages...")
 
+    # Change to docker directory so relative paths in docker-compose work correctly
+    original_dir = os.getcwd()
+    docker_dir = DOCKER_DIR
+
     try:
+        os.chdir(docker_dir)
+
         # Stage 1: Start Pebble ACME server first
         print("  → Stage 1: Starting Pebble ACME server...")
         result = subprocess.run(
-            ["docker", "compose", "-f", compose_file, "up", "-d", "pebble"],
+            ["docker", "compose", "-f", "docker-compose-acme-e2e.yml", "up", "-d", "pebble"],
             capture_output=True,
             text=True,
             check=True
@@ -921,7 +927,7 @@ def docker_compose_acme() -> Generator[None, None, None]:
 
             # Get container logs
             logs_result = subprocess.run(
-                ["docker", "compose", "-f", compose_file, "logs", "pebble"],
+                ["docker", "compose", "-f", "docker-compose-acme-e2e.yml", "logs", "pebble"],
                 capture_output=True,
                 text=True
             )
@@ -934,7 +940,7 @@ def docker_compose_acme() -> Generator[None, None, None]:
         # Stage 2: Start HAProxy
         print("  → Stage 2: Starting HAProxy...")
         result = subprocess.run(
-            ["docker", "compose", "-f", compose_file, "up", "-d", "haproxy"],
+            ["docker", "compose", "-f", "docker-compose-acme-e2e.yml", "up", "-d", "haproxy"],
             capture_output=True,
             text=True,
             check=True
@@ -945,7 +951,7 @@ def docker_compose_acme() -> Generator[None, None, None]:
         # Stage 3: Start Backend
         print("  → Stage 3: Starting backend...")
         result = subprocess.run(
-            ["docker", "compose", "-f", compose_file, "up", "-d", "backend"],
+            ["docker", "compose", "-f", "docker-compose-acme-e2e.yml", "up", "-d", "backend"],
             capture_output=True,
             text=True,
             check=True
@@ -961,11 +967,14 @@ def docker_compose_acme() -> Generator[None, None, None]:
         # Cleanup
         print("  → Stopping ACME test environment...")
         subprocess.run(
-            ["docker", "compose", "-f", compose_file, "down", "--remove-orphans", "-t", "0"],
+            ["docker", "compose", "-f", "docker-compose-acme-e2e.yml", "down", "--remove-orphans", "-t", "0"],
             capture_output=True,
             text=True
         )
         print("  ✓ Services stopped and cleaned up")
+
+        # Restore original directory
+        os.chdir(original_dir)
 
         # Clean up volume
         subprocess.run(
