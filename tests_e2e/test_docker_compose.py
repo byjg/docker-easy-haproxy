@@ -865,8 +865,16 @@ def wait_for_pebble() -> bool:
 
 @pytest.fixture
 def docker_compose_acme() -> Generator[None, None, None]:
-    """Fixture for docker-compose-acme-e2e.yml - ACME/Certbot E2E test"""
+    """
+    Fixture for docker-compose-acme-e2e.yml - ACME/Certbot E2E test
+
+    Uses staged startup to ensure services start in the correct order:
+    1. Pebble ACME server first
+    2. HAProxy (after Pebble is ready)
+    3. Backend
+    """
     volume_name = "docker_certbot-certs"
+    compose_file = str(DOCKER_DIR / "docker-compose-acme-e2e.yml")
 
     # Download Pebble CA certificate (only once per test session)
     create_pebble_ca_file()
@@ -875,26 +883,74 @@ def docker_compose_acme() -> Generator[None, None, None]:
     subprocess.run(
         ["docker", "volume", "rm", volume_name],
         stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL  # Ignore error if volume doesn't exist
-    )
-
-    # Use custom health check for Pebble with generous timeout for CI
-    fixture = DockerComposeFixture(
-        str(DOCKER_DIR / "docker-compose-acme-e2e.yml"),
-        startup_wait=0,
-        health_check=wait_for_pebble,
-        health_check_timeout=90  # Extended timeout for slow CI environments
-    )
-    fixture.up()
-    yield
-    fixture.down()
-
-    # Clean up volume after test
-    subprocess.run(
-        ["docker", "volume", "rm", volume_name],
-        stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
     )
+
+    print()
+    print("  → Starting ACME test environment in stages...")
+
+    try:
+        # Stage 1: Start Pebble ACME server first
+        print("  → Stage 1: Starting Pebble ACME server...")
+        result = subprocess.run(
+            ["docker", "compose", "-f", compose_file, "up", "-d", "pebble"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+
+        # Wait for Pebble to be ready
+        print("  → Waiting for Pebble to be ready (timeout: 90s)...")
+        start_time = time.time()
+        while time.time() - start_time < 90:
+            if wait_for_pebble():
+                break
+            time.sleep(1)
+        else:
+            raise TimeoutError("Pebble did not become ready within 90 seconds")
+
+        # Stage 2: Start HAProxy
+        print("  → Stage 2: Starting HAProxy...")
+        result = subprocess.run(
+            ["docker", "compose", "-f", compose_file, "up", "-d", "haproxy"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        print("  → Waiting for HAProxy to initialize...")
+        time.sleep(5)
+
+        # Stage 3: Start Backend
+        print("  → Stage 3: Starting backend...")
+        result = subprocess.run(
+            ["docker", "compose", "-f", compose_file, "up", "-d", "backend"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        print("  → Waiting for backend to initialize...")
+        time.sleep(3)
+
+        print("  ✓ All services started and ready")
+
+        yield
+
+    finally:
+        # Cleanup
+        print("  → Stopping ACME test environment...")
+        subprocess.run(
+            ["docker", "compose", "-f", compose_file, "down", "--remove-orphans", "-t", "0"],
+            capture_output=True,
+            text=True
+        )
+        print("  ✓ Services stopped and cleaned up")
+
+        # Clean up volume
+        subprocess.run(
+            ["docker", "volume", "rm", volume_name],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
 
 
 @pytest.mark.acme
