@@ -932,11 +932,11 @@ class TestACME:
         """Test that Pebble successfully issues a certificate"""
         # Wait for certificate issuance (Certbot runs in background loop)
         # Typical time: 10-15 seconds from container start
-        max_wait = 30
-        check_interval = 2
+        max_retries = 30
+        check_interval = 1
         has_success = False
 
-        for attempt in range(max_wait // check_interval):
+        for attempt in range(max_retries):
             result = subprocess.run(
                 ["docker", "logs", "docker-haproxy-1"],
                 capture_output=True,
@@ -961,7 +961,7 @@ class TestACME:
             # Check if we can at least connect to Pebble
             has_pebble_connection = "pebble:14000/dir" in logs or "pebble:14000" in logs
             assert has_pebble_connection, \
-                f"HAProxy cannot connect to Pebble ACME server after {max_wait}s. Check docker network.\nLogs:\n{logs[-2000:]}"
+                f"HAProxy cannot connect to Pebble ACME server after {max_retries}s. Check docker network.\nLogs:\n{logs[-2000:]}"
 
         # Verify merged certificate file exists
         # EasyHAProxy merges cert+key from /etc/easyhaproxy/certs/live/ to /etc/easyhaproxy/certs/certbot/{domain}.pem
