@@ -34,6 +34,10 @@ import requests
 import jwt as jwt_lib
 from typing import Generator
 from utils import extract_backend_block, DockerComposeFixture
+import urllib3
+
+# Disable SSL warnings for Pebble health checks (self-signed certs)
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Base directory for docker-compose files
 BASE_DIR = Path(__file__).parent.absolute()
@@ -843,6 +847,22 @@ class TestChangedLabel:
 # Test: docker-compose-acme-e2e.yml - ACME/Certbot with Pebble
 # =============================================================================
 
+def wait_for_pebble() -> bool:
+    """
+    Health check function to verify Pebble ACME server is ready.
+
+    Returns True if Pebble is responding to the /dir endpoint.
+    This is used instead of Docker healthchecks for more reliable startup
+    detection in CI environments.
+    """
+    try:
+        # Pebble uses self-signed certificates, so we need verify=False
+        response = requests.get("https://127.0.0.1:14000/dir", verify=False, timeout=5)
+        return response.status_code == 200
+    except Exception:
+        return False
+
+
 @pytest.fixture
 def docker_compose_acme() -> Generator[None, None, None]:
     """Fixture for docker-compose-acme-e2e.yml - ACME/Certbot E2E test"""
@@ -858,7 +878,13 @@ def docker_compose_acme() -> Generator[None, None, None]:
         stderr=subprocess.DEVNULL  # Ignore error if volume doesn't exist
     )
 
-    fixture = DockerComposeFixture(str(DOCKER_DIR / "docker-compose-acme-e2e.yml"), startup_wait=0)
+    # Use custom health check for Pebble with generous timeout for CI
+    fixture = DockerComposeFixture(
+        str(DOCKER_DIR / "docker-compose-acme-e2e.yml"),
+        startup_wait=0,
+        health_check=wait_for_pebble,
+        health_check_timeout=90  # Extended timeout for slow CI environments
+    )
     fixture.up()
     yield
     fixture.down()

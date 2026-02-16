@@ -64,22 +64,6 @@ services:
     networks:
       - acme-test
 
-  # Pebble health check sidecar
-  pebble_health:
-    image: curlimages/curl:8.6.0
-    depends_on:
-      - pebble
-    healthcheck:
-      test: ["CMD", "curl", "-skf", "https://pebble:14000/dir"]
-      interval: 2s
-      timeout: 5s
-      start_period: 20s  # Extended startup window for slow CI
-      retries: 30        # Increased retries for CI reliability
-    networks:
-      - acme-test
-    restart: "no"
-    command: ["tail", "-f", "/dev/null"]
-
   # Backend web server
   backend:
     image: byjg/static-httpserver
@@ -98,10 +82,8 @@ services:
       context: ../..
       dockerfile: build/Dockerfile
     depends_on:
-      pebble_health:
-        condition: service_healthy
-      backend:
-        condition: service_started
+      - pebble
+      - backend
     healthcheck:
       test: ["CMD", "curl", "-f", "-u", "admin:password", "http://localhost:1936"]
       interval: 10s
