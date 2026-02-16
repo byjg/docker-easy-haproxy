@@ -26,15 +26,12 @@ services:
       - "443:443/tcp"
       - "1936:1936/tcp"
 
-    networks:
-      - easyhaproxy
-
 volumes:
   certs_certbot:
-    external: true
+#    external: true
   certs_haproxy:
-    external: true
+#    external: true
 
 networks:
   easyhaproxy:
-    external: true
+#    external: true
