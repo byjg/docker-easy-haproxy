@@ -17,7 +17,11 @@ class HeaderEchoHandler(BaseHTTPRequestHandler):
         response = {
             'headers': headers,
             'client_ip': self.client_address[0],
-            'x_forwarded_for': self.headers.get('X-Forwarded-For', 'NOT SET')
+            'x_forwarded_for': self.headers.get('X-Forwarded-For', 'NOT SET'),
+            'x_forwarded_host': self.headers.get('X-Forwarded-Host', 'NOT SET'),
+            'x_forwarded_port': self.headers.get('X-Forwarded-Port', 'NOT SET'),
+            'x_forwarded_proto': self.headers.get('X-Forwarded-Proto', 'NOT SET'),
+            'x_request_id': self.headers.get('X-Request-ID', 'NOT SET')
         }
 
         self.wfile.write(json.dumps(response, indent=2).encode())

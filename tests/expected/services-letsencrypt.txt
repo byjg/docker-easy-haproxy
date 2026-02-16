@@ -16,6 +16,8 @@ global
 
 defaults
     log global
+    unique-id-format %{+X}o\ %ci:%cp_%fi:%fp_%Ts_%rt:%pid
+    unique-id-header X-Edge-Request-ID
     option httplog
 
     timeout connect    3s
@@ -65,6 +67,8 @@ backend srv_test_example_org_80
     option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
+    http-request set-header X-Forwarded-Host %[req.hdr(Host)]
+    http-request set-header X-Request-ID %[uuid()]
     server srv-0 f5c645a0dfc6:80 check weight 1
     server srv-1 b63438410b6a:80 check weight 1
 backend srv_test2_example_org_80
@@ -73,6 +77,8 @@ backend srv_test2_example_org_80
     option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
+    http-request set-header X-Forwarded-Host %[req.hdr(Host)]
+    http-request set-header X-Request-ID %[uuid()]
     server srv-0 83d57d592e26:8080 check weight 1
 
 frontend http_in_443
@@ -89,6 +95,8 @@ backend srv_test_example_org_443
     option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
+    http-request set-header X-Forwarded-Host %[req.hdr(Host)]
+    http-request set-header X-Request-ID %[uuid()]
     server srv-0 f5c645a0dfc6:80 check weight 1 verify none
     server srv-1 b63438410b6a:80 check weight 1 verify none
 

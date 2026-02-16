@@ -134,6 +134,8 @@ backend srv_phpapp_local_80
     option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
+    http-request set-header X-Forwarded-Host %[req.hdr(Host)]
+    http-request set-header X-Request-ID %[uuid()]
     server srv-0 /run/php/php-fpm.sock check weight 1 proto fcgi
 ```
 

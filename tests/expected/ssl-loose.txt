@@ -14,6 +14,8 @@ global
 
 defaults
     log global
+    unique-id-format %{+X}o\ %ci:%cp_%fi:%fp_%Ts_%rt:%pid
+    unique-id-header X-Edge-Request-ID
     option httplog
 
     timeout connect    3s

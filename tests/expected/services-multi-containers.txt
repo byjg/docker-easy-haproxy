@@ -16,6 +16,8 @@ global
 
 defaults
     log global
+    unique-id-format %{+X}o\ %ci:%cp_%fi:%fp_%Ts_%rt:%pid
+    unique-id-header X-Edge-Request-ID
     option httplog
 
     timeout connect    3s
@@ -38,6 +40,8 @@ backend srv_www_helloworld_com_19901
     option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
+    http-request set-header X-Forwarded-Host %[req.hdr(Host)]
+    http-request set-header X-Request-ID %[uuid()]
     server srv-0 test_nginx.2.t5r94mjlced7m3t5orfjbowmm:80 check weight 1
     server srv-1 test_nginx.1.p552hqxkdx88narjrp5kouwb2:80 check weight 1
 
