@@ -902,11 +902,33 @@ def docker_compose_acme() -> Generator[None, None, None]:
         # Wait for Pebble to be ready
         print("  → Waiting for Pebble to be ready (timeout: 90s)...")
         start_time = time.time()
+        pebble_ready = False
         while time.time() - start_time < 90:
             if wait_for_pebble():
+                pebble_ready = True
                 break
             time.sleep(1)
-        else:
+
+        if not pebble_ready:
+            # Debug: Check container status and logs
+            print("  ✗ Pebble did not become ready, checking container status...")
+            status_result = subprocess.run(
+                ["docker", "ps", "-a", "--filter", "name=pebble", "--format", "{{.Names}}\t{{.Status}}"],
+                capture_output=True,
+                text=True
+            )
+            print(f"  Container status: {status_result.stdout.strip()}")
+
+            # Get container logs
+            logs_result = subprocess.run(
+                ["docker", "compose", "-f", compose_file, "logs", "pebble"],
+                capture_output=True,
+                text=True
+            )
+            print(f"  Pebble logs:\n{logs_result.stdout}")
+            if logs_result.stderr:
+                print(f"  Pebble stderr:\n{logs_result.stderr}")
+
             raise TimeoutError("Pebble did not become ready within 90 seconds")
 
         # Stage 2: Start HAProxy
@@ -954,6 +976,10 @@ def docker_compose_acme() -> Generator[None, None, None]:
 
 
 @pytest.mark.acme
+@pytest.mark.skipif(
+    os.getenv("CI") == "true" and os.getenv("SKIP_ACME_TESTS") == "true",
+    reason="ACME tests skipped in CI (set SKIP_ACME_TESTS=false to enable)"
+)
 class TestACME:
     """Tests for docker-compose-acme-e2e.yml - ACME/Certbot with Pebble test server"""
 
