@@ -149,8 +149,8 @@ def test_container_env_stats_password():
                    "stats": {
                        "username": "admin",
                        "password": "xyz",
-                       "port": "1936"
-
+                       "port": "1936",
+                       "cors_origin": ""
                    },
                    "logLevel": {
                        "easyhaproxy": Functions.DEBUG,
@@ -191,7 +191,8 @@ def test_container_env_stats_password_2():
                    "stats": {
                        "username": "abc",
                        "password": "xyz",
-                       "port": "2101"
+                       "port": "2101",
+                       "cors_origin": ""
                    },
                    "logLevel": {
                        "easyhaproxy": Functions.DEBUG,

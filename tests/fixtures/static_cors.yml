@@ -1,0 +1,11 @@
+stats:
+  username: admin
+  password: test123
+  port: 1936
+  cors_origin: http://localhost:3000
+
+customerrors: false
+
+containers:
+  "host1.com.br:80":
+    ip: ["container:5000"]

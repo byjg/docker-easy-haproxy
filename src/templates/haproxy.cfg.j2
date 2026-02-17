@@ -62,6 +62,23 @@ frontend stats
     bind *:{{ data_stats["port"] | default(1936) }}
     mode http
     http-request use-service prometheus-exporter if { path /metrics }
+{%- if data_stats["cors_origin"] | default("") != "" %}
+
+    # CORS for stats dashboard (only for configured origin)
+    acl from_ui hdr(Origin) -i {{ data_stats["cors_origin"] }}
+    acl preflight method OPTIONS
+
+    # Preflight response
+    http-request return status 204 hdr "Access-Control-Allow-Origin" "%[req.hdr(Origin)]" hdr "Access-Control-Allow-Methods" "GET, OPTIONS" hdr "Access-Control-Allow-Headers" "Authorization, Content-Type" hdr "Access-Control-Max-Age" "86400" hdr "Vary" "Origin" if from_ui preflight
+
+    # Actual response headers
+    http-after-response set-header Access-Control-Allow-Origin "{{ data_stats["cors_origin"] }}"
+    http-after-response set-header Access-Control-Allow-Methods "GET, OPTIONS"
+    http-after-response set-header Access-Control-Allow-Headers "Authorization, Content-Type"
+    http-after-response set-header Access-Control-Expose-Headers "X-Request-ID"
+    http-after-response set-header Vary "Origin"
+{% endif %}
+
     stats enable
     stats hide-version
     stats realm Haproxy\ Statistics

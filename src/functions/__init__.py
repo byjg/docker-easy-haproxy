@@ -39,6 +39,7 @@ class ContainerEnv:
                 "username": os.getenv("HAPROXY_USERNAME") if os.getenv("HAPROXY_USERNAME") else "admin",
                 "password": os.getenv("HAPROXY_PASSWORD"),
                 "port": os.getenv("HAPROXY_STATS_PORT") if os.getenv("HAPROXY_STATS_PORT") else "1936",
+                "cors_origin": os.getenv("HAPROXY_STATS_CORS_ORIGIN", ""),
             }
 
         env_vars["lookup_label"] = os.getenv("EASYHAPROXY_LABEL_PREFIX") if os.getenv(
@@ -149,6 +150,8 @@ class ContainerEnv:
                 os.environ['HAPROXY_PASSWORD'] = str(stats['password'])
             if 'port' in stats:
                 os.environ['HAPROXY_STATS_PORT'] = str(stats['port'])
+            if 'cors_origin' in stats:
+                os.environ['HAPROXY_STATS_CORS_ORIGIN'] = str(stats['cors_origin'])
 
         # Convert logLevel
         if 'logLevel' in yaml_config:
@@ -333,10 +336,12 @@ class DaemonizeHAProxy:
         self.custom_config_folder = custom_config_folder if custom_config_folder is not None else Consts.custom_config_folder
 
     def haproxy(self, action):
-        self.__prepare(self.get_haproxy_command(action))
+        error = self.__prepare(self.get_haproxy_command(action), action)
 
-        if self.process is None:
-            return
+        if error or self.process is None:
+            logger_haproxy.fatal(f"Failed to start HAProxy ({action}). Exiting.")
+            import sys
+            sys.exit(1)
 
         self.thread = Process(target=self.__start, args=())
         self.thread.start()
@@ -360,9 +365,41 @@ class DaemonizeHAProxy:
                 )
                 return self.get_haproxy_command(DaemonizeHAProxy.HAPROXY_START, pid_file)
 
-    def __prepare(self, command):
+    def __validate_config(self):
+        """Validate HAProxy configuration before starting."""
+        validation_cmd = ["haproxy", "-c", "-f", Consts.haproxy_config]
+
+        # Add custom config files if they exist
+        for config_file in self.get_custom_config_files().keys():
+            validation_cmd.extend(["-f", config_file])
+
+        try:
+            result = subprocess.run(
+                validation_cmd,
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+
+            if result.returncode != 0:
+                return result.stderr if result.stderr else result.stdout
+            return None
+
+        except subprocess.TimeoutExpired:
+            return "HAProxy configuration validation timed out"
+        except Exception as e:
+            return f"Error validating configuration: {e}"
+
+    def __prepare(self, command, action=None):
         if not isinstance(command, (list, tuple)):
             command = shlex.split(command)
+
+        # Validate HAProxy config before starting (but not on reload - HAProxy validates itself during reload)
+        if action == DaemonizeHAProxy.HAPROXY_START:
+            validation_error = self.__validate_config()
+            if validation_error:
+                logger_haproxy.fatal(f"HAProxy configuration validation failed:\n{validation_error}")
+                return validation_error
 
         try:
             logger_haproxy.debug(f"HAPROXY command: {command}")
@@ -372,9 +409,12 @@ class DaemonizeHAProxy:
                                             stderr=subprocess.PIPE,
                                             bufsize=-1,
                                             universal_newlines=True)
+            return None
 
         except Exception as e:
-            logger_haproxy.error(f"{e}")
+            error_msg = f"Failed to start HAProxy process: {e}"
+            logger_haproxy.error(error_msg)
+            return error_msg
 
     def __start(self):
         try:

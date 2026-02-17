@@ -68,6 +68,7 @@ markers = [
     "custom_label: marks tests for custom label prefix functionality",
     "static: marks tests for static configuration mode",
     "acme: marks tests for certbot/acme",
+    "proxy_headers: marks tests for proxy headers",
 ]
 
 [tool.ruff]

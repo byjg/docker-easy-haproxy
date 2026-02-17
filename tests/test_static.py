@@ -90,4 +90,36 @@ def test_processor_static_multiple_domains_same_container():
     # Both should point to the same container
     assert haproxy_cfg.count('server srv-0 webapp:8080') == 2
 
+
+def test_processor_static_with_cors():
+    """Test that CORS configuration is properly generated when cors_origin is set"""
+    ProcessorInterface.static_file = os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        "./fixtures/static_cors.yml"
+    )
+    static = ProcessorInterface.factory(ProcessorInterface.STATIC)
+
+    haproxy_cfg = static.get_haproxy_conf()
+
+    # Verify CORS configuration is present in stats frontend
+    assert '# CORS for stats dashboard (only for configured origin)' in haproxy_cfg
+    assert 'acl from_ui hdr(Origin) -i http://localhost:3000' in haproxy_cfg
+    assert 'acl preflight method OPTIONS' in haproxy_cfg
+
+    # Verify preflight response
+    assert 'http-request return status 204' in haproxy_cfg
+    assert 'hdr "Access-Control-Allow-Origin"' in haproxy_cfg
+    assert 'hdr "Access-Control-Allow-Methods" "GET, OPTIONS"' in haproxy_cfg
+    assert 'hdr "Access-Control-Allow-Headers" "Authorization, Content-Type"' in haproxy_cfg
+    assert 'if from_ui preflight' in haproxy_cfg
+
+    # Verify actual response headers (no ACL condition in response phase)
+    assert 'http-after-response set-header Access-Control-Allow-Origin "http://localhost:3000"' in haproxy_cfg
+    assert 'http-after-response set-header Access-Control-Expose-Headers "X-Request-ID"' in haproxy_cfg
+    assert 'http-after-response set-header Vary "Origin"' in haproxy_cfg
+
+    # Verify the full config matches expected
+    assert haproxy_cfg == Functions.load(
+        os.path.join(os.path.dirname(os.path.realpath(__file__)), "./expected/static-cors.txt"))
+
 # test_processor_static()
