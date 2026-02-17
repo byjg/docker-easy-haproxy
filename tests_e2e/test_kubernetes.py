@@ -893,6 +893,44 @@ def wait_for_easyhaproxy_discovery(kubectl_cmd: str, expected_host: str, timeout
     return True
 
 
+def wait_for_json_response(host: str, extra_headers: list = None, timeout: int = 30) -> dict:
+    """
+    Wait until the given host returns a valid JSON response via HAProxy.
+
+    Retries until JSON is parseable or timeout is reached.
+    Returns the parsed JSON dict, or raises AssertionError with debug info.
+    """
+    start = time.time()
+    last_stdout = ""
+    last_stderr = ""
+    last_returncode = None
+
+    while time.time() - start < timeout:
+        cmd = ["curl", "-s", "-H", f"Host: {host}", f"http://localhost:{HTTP_PORT}"]
+        if extra_headers:
+            for h in extra_headers:
+                cmd += ["-H", h]
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            last_returncode = result.returncode
+            last_stdout = result.stdout
+            last_stderr = result.stderr
+            if result.returncode == 0 and result.stdout.strip():
+                try:
+                    return json.loads(result.stdout)
+                except json.JSONDecodeError:
+                    pass
+        except Exception:
+            pass
+        time.sleep(1)
+
+    raise AssertionError(
+        f"No valid JSON response from '{host}' within {timeout}s. "
+        f"Last returncode={last_returncode}, "
+        f"stdout={repr(last_stdout)}, stderr={repr(last_stderr)}"
+    )
+
+
 # =============================================================================
 # Test: service.yml - Basic Service
 # =============================================================================
@@ -1665,19 +1703,8 @@ class TestCloudflare:
         assert wait_for_easyhaproxy_discovery(kubectl, "myapp.example.local", timeout=30), \
             "EasyHAProxy did not become ready for myapp.example.local within 30 seconds"
 
-        # Test HTTP request
-        result = subprocess.run(
-            ["curl", "-s", "-H", "Host: myapp.example.local",
-             f"http://localhost:{HTTP_PORT}"],
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
-
-        assert result.returncode == 0, f"Curl failed with return code {result.returncode}"
-
-        # Parse JSON response
-        data = json.loads(result.stdout)
+        # Wait for a valid JSON response (retries until backend is ready)
+        data = wait_for_json_response("myapp.example.local", timeout=30)
 
         # Verify JSON structure
         assert "headers" in data, "Response should contain 'headers' field"
@@ -1692,22 +1719,13 @@ class TestCloudflare:
         assert wait_for_easyhaproxy_discovery(kubectl, "myapp.example.local", timeout=30), \
             "EasyHAProxy did not become ready within 30 seconds"
 
-        # Send request with CF-Connecting-IP header
+        # Send request with CF-Connecting-IP header, wait for valid JSON response
         test_ip = "203.0.113.50"
-        result = subprocess.run(
-            ["curl", "-s",
-             "-H", "Host: myapp.example.local",
-             "-H", f"CF-Connecting-IP: {test_ip}",
-             f"http://localhost:{HTTP_PORT}"],
-            capture_output=True,
-            text=True,
-            timeout=10
+        data = wait_for_json_response(
+            "myapp.example.local",
+            extra_headers=[f"CF-Connecting-IP: {test_ip}"],
+            timeout=30
         )
-
-        assert result.returncode == 0, f"Curl failed"
-
-        # Parse JSON response from header-echo server
-        data = json.loads(result.stdout)
 
         # VERIFY: X-Forwarded-For was set to the CF-Connecting-IP value
         # This proves the Cloudflare plugin actually works, not just that config exists
