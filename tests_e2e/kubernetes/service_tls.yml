@@ -12,7 +12,7 @@
 # ```bash
 # # 1. Ensure EasyHAProxy is installed in your cluster
 # kubectl create namespace easyhaproxy
-# kubectl apply -f https://raw.githubusercontent.com/byjg/docker-easy-haproxy/5.0.0/deploy/kubernetes/easyhaproxy-daemonset.yml
+# kubectl apply -f https://raw.githubusercontent.com/byjg/docker-easy-haproxy/6.0.0/deploy/kubernetes/easyhaproxy-daemonset.yml
 #
 # # 2. Label the node where EasyHAProxy will run
 # kubectl label nodes <node-name> "easyhaproxy/node=master"

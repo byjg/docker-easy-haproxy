@@ -147,6 +147,8 @@ NEXT_CHART_VERSION=$(IFS='.'; echo "${_parts[*]}")
 sed -i -E "s/^version: .*/version: $NEXT_CHART_VERSION/" "$CHART_FILE"
 sed -i -E "s/helm\\.sh\\/chart: easyhaproxy-[0-9\\.]+/helm.sh\\/chart: easyhaproxy-$NEXT_CHART_VERSION/" deploy/kubernetes/easyhaproxy-*.yml
 
+uv sync --dev
+
 echo "Done. Updated appVersion to $NEW_VERSION and chart version to $NEXT_CHART_VERSION."
 echo "Next steps:"
 echo "  1) git status (review changes)"

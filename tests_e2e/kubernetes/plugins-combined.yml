@@ -15,7 +15,7 @@
 # ```bash
 # # 1. Ensure EasyHAProxy is installed in your cluster
 # kubectl create namespace easyhaproxy
-# kubectl apply -f https://raw.githubusercontent.com/byjg/docker-easy-haproxy/5.0.0/deploy/kubernetes/easyhaproxy-daemonset.yml
+# kubectl apply -f https://raw.githubusercontent.com/byjg/docker-easy-haproxy/6.0.0/deploy/kubernetes/easyhaproxy-daemonset.yml
 #
 # # 2. Generate JWT keys (idempotent - skips if exists)
 # [ -f jwt_private.pem ] || openssl genrsa -out jwt_private.pem 2048

@@ -33,7 +33,7 @@ And then deploy the EasyHAProxy stack:
 ```yaml
 services:
   haproxy:
-    image: byjg/easy-haproxy:5.0.0
+    image: byjg/easy-haproxy:6.0.0
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     deploy:
