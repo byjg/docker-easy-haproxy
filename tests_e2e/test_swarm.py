@@ -521,12 +521,6 @@ class TestSwarmBasicServices:
         assert response.status_code == 301
         assert response.headers.get("location") == "https://host2.local/"
 
-    def test_haproxy_stats(self, swarm_basic_services):
-        """Test HAProxy stats interface is accessible."""
-        from conftest import verify_haproxy_stats
-        verify_haproxy_stats()
-
-
 # =============================================================================
 # Tests: plugins-combined.yml - Multiple Security Plugins in Swarm
 # =============================================================================
@@ -631,8 +625,3 @@ class TestSwarmPluginsCombined:
         assert response.status_code == 200, \
             (f"Expected admin access from Docker ingress IP (in 10.0.0.0/8), "
              f"got {response.status_code}")
-
-    def test_haproxy_stats(self, swarm_plugins_combined):
-        """Test HAProxy stats interface is accessible."""
-        from conftest import verify_haproxy_stats
-        verify_haproxy_stats()

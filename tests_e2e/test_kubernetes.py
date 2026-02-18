@@ -860,10 +860,9 @@ def wait_for_easyhaproxy_discovery(kubectl_cmd: str, expected_host: str, timeout
 
         time.sleep(1)
 
-    # Step 4: Simple connectivity check to HAProxy
-    print(f"  → Testing connectivity to HAProxy...")
-    retries = 3
-    for attempt in range(retries):
+    # Step 4: Poll until the backend returns 200 (not just any response)
+    print(f"  → Waiting for backend to return 200...")
+    while time.time() - start_time < timeout:
         try:
             result = subprocess.run(
                 ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}",
@@ -873,17 +872,15 @@ def wait_for_easyhaproxy_discovery(kubectl_cmd: str, expected_host: str, timeout
                 timeout=5
             )
             http_code = result.stdout.strip()
-            # Accept 200, 503 (backend may not be ready yet), or any response that proves HAProxy is responding
-            if http_code and http_code != "000":
-                print(f"  ✓ HAProxy is responding (HTTP {http_code})")
-                # Give HAProxy a moment to stabilize after configuration reload
-                time.sleep(2)
+            if http_code == "200":
+                print(f"  ✓ Backend is ready (HTTP 200)")
                 return True
+            if http_code and http_code != "000":
+                print(f"  … Backend not ready yet (HTTP {http_code}), retrying...")
         except Exception:
             pass
 
-        if attempt < retries - 1:
-            time.sleep(1)
+        time.sleep(1)
 
     # Check if we timed out
     if time.time() - start_time >= timeout:
