@@ -9,6 +9,16 @@ on:
     tags: [ '*.*.*' ]
   pull_request:
     branches: [ master ]
+  workflow_dispatch:  # Allow manual trigger
+    inputs:
+      push:
+        description: 'Push image to registry'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
 
 env:
   # github.repository as <account>/<repo>
