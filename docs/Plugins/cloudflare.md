@@ -17,11 +17,11 @@ Cloudflare replaces the visitor's IP with its own. This plugin restores the orig
 
 ## Configuration Options
 
-| Option            | Description                              | Default                           |
-|-------------------|------------------------------------------|-----------------------------------|
-| `enabled`         | Enable/disable plugin                    | `true`                            |
-| `use_builtin_ips` | Use built-in Cloudflare IP ranges        | `true`                            |
-| `ip_list_path`    | Path to Cloudflare IP list               | `/etc/haproxy/cloudflare_ips.lst` |
+| Option            | Description                              | Default                               |
+|-------------------|------------------------------------------|---------------------------------------|
+| `enabled`         | Enable/disable plugin                    | `true`                                |
+| `use_builtin_ips` | Use built-in Cloudflare IP ranges        | `true`                                |
+| `ip_list_path`    | Path to Cloudflare IP list               | `/etc/easyhaproxy/cloudflare_ips.lst` |
 
 ## Configuration Examples
 
@@ -55,7 +55,7 @@ kind: Ingress
 metadata:
   annotations:
     easyhaproxy.plugins: "cloudflare"
-    easyhaproxy.plugin.cloudflare.ip_list_path: "/etc/haproxy/cloudflare_ips.lst"
+    easyhaproxy.plugin.cloudflare.ip_list_path: "/etc/easyhaproxy/cloudflare_ips.lst"
 spec:
   rules:
     - host: example.com
@@ -72,7 +72,7 @@ spec:
 ### Static YAML Configuration
 
 ```yaml
-# /etc/haproxy/static/config.yaml
+# /etc/easyhaproxy/static/config.yaml
 plugins:
   config:
     cloudflare:
@@ -84,11 +84,11 @@ plugins:
 
 Configure Cloudflare plugin defaults for all domains:
 
-| Environment Variable                            | Config Key        | Type     | Default                           | Description                           |
-|-------------------------------------------------|-------------------|----------|-----------------------------------|---------------------------------------|
-| `EASYHAPROXY_PLUGIN_CLOUDFLARE_ENABLED`         | `enabled`         | boolean  | `true`                            | Enable/disable plugin for all domains |
-| `EASYHAPROXY_PLUGIN_CLOUDFLARE_USE_BUILTIN_IPS` | `use_builtin_ips` | boolean  | `true`                            | Use built-in Cloudflare IP ranges     |
-| `EASYHAPROXY_PLUGIN_CLOUDFLARE_IP_LIST_PATH`    | `ip_list_path`    | string   | `/etc/haproxy/cloudflare_ips.lst` | Path to Cloudflare IP list file       |
+| Environment Variable                            | Config Key        | Type     | Default                               | Description                           |
+|-------------------------------------------------|-------------------|----------|---------------------------------------|---------------------------------------|
+| `EASYHAPROXY_PLUGIN_CLOUDFLARE_ENABLED`         | `enabled`         | boolean  | `true`                                | Enable/disable plugin for all domains |
+| `EASYHAPROXY_PLUGIN_CLOUDFLARE_USE_BUILTIN_IPS` | `use_builtin_ips` | boolean  | `true`                                | Use built-in Cloudflare IP ranges     |
+| `EASYHAPROXY_PLUGIN_CLOUDFLARE_IP_LIST_PATH`    | `ip_list_path`    | string   | `/etc/easyhaproxy/cloudflare_ips.lst` | Path to Cloudflare IP list file       |
 
 **Note:** Environment variables set defaults for ALL domains. To enable/disable per-domain, use container labels or Kubernetes annotations.
 
@@ -96,7 +96,7 @@ Configure Cloudflare plugin defaults for all domains:
 
 ```haproxy
 # Cloudflare - Restore original visitor IP
-acl from_cloudflare src -f /etc/haproxy/cloudflare_ips.lst
+acl from_cloudflare src -f /etc/easyhaproxy/cloudflare_ips.lst
 http-request set-header X-Forwarded-For %[req.hdr(CF-Connecting-IP)] if from_cloudflare
 ```
 
@@ -114,7 +114,7 @@ The plugin includes the current Cloudflare IP ranges (22 ranges total):
 - 2400:cb00::/32, 2606:4700::/32, 2803:f800::/32, 2405:b500::/32
 - 2405:8100::/32, 2a06:98c0::/29, 2c0f:f248::/32
 
-These ranges are automatically written to `/etc/haproxy/cloudflare_ips.lst` during each discovery cycle.
+These ranges are automatically written to `/etc/easyhaproxy/cloudflare_ips.lst` during each discovery cycle.
 
 ## Important Notes
 

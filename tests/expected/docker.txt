@@ -1,0 +1,111 @@
+global
+    log stdout  format raw  local0  info
+    maxconn 2000
+
+    # intermediate configuration
+    ssl-default-bind-ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305
+    ssl-default-bind-ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
+    ssl-default-bind-options prefer-client-ciphers no-sslv3 no-tlsv10 no-tlsv11 no-tls-tickets
+
+    ssl-default-server-ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305
+    ssl-default-server-ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
+    ssl-default-server-options no-sslv3 no-tlsv10 no-tlsv11 no-tls-tickets
+
+
+defaults
+    log global
+    unique-id-format %{+X}o\ %ci:%cp_%fi:%fp_%Ts_%rt:%pid
+    unique-id-header X-Edge-Request-ID
+    option httplog
+
+    timeout connect    3s
+    timeout client    10s
+    timeout server    10m
+
+
+frontend stats
+    bind *:1936
+    mode http
+    http-request use-service prometheus-exporter if { path /metrics }
+    stats enable
+    stats hide-version
+    stats realm Haproxy\ Statistics
+    stats uri /
+    default_backend srv_stats
+
+backend srv_stats
+    mode http
+    server Local 127.0.0.1:1936
+
+frontend http_in_443
+    bind *:443  ssl crt /etc/easyhaproxy/certs/certbot/ alpn h2,http/1.1 crt /etc/easyhaproxy/certs/haproxy/ alpn h2,http/1.1
+    mode http
+
+    acl is_rule_hostssl_local_443_1 hdr(host) -i hostssl.local
+    acl is_rule_hostssl_local_443_2 hdr(host) -i hostssl.local:443
+    use_backend srv_hostssl_local_443 if is_rule_hostssl_local_443_1 OR is_rule_hostssl_local_443_2
+
+    acl is_rule_host2_local_443_1 hdr(host) -i host2.local
+    acl is_rule_host2_local_443_2 hdr(host) -i host2.local:443
+    use_backend srv_host2_local_443 if is_rule_host2_local_443_1 OR is_rule_host2_local_443_2
+
+backend srv_hostssl_local_443
+    balance roundrobin
+    mode http
+    option forwardfor
+    http-request set-header X-Forwarded-Port %[dst_port]
+    http-request add-header X-Forwarded-Proto https if { ssl_fc }
+    http-request set-header X-Forwarded-Host %[req.hdr(Host)]
+    http-request set-header X-Request-ID %[uuid()]
+    server srv-0 test2_processor_docker:8080 check weight 1
+backend srv_host2_local_443
+    balance roundrobin
+    mode http
+    option forwardfor
+    http-request set-header X-Forwarded-Port %[dst_port]
+    http-request add-header X-Forwarded-Proto https if { ssl_fc }
+    http-request set-header X-Forwarded-Host %[req.hdr(Host)]
+    http-request set-header X-Request-ID %[uuid()]
+    server srv-0 test_processor_docker:9000 check weight 1
+
+frontend http_in_80
+    bind *:80
+    mode http
+
+    acl is_rule_host1_local_80_1 hdr(host) -i host1.local
+    acl is_rule_host1_local_80_2 hdr(host) -i host1.local:80
+    use_backend srv_host1_local_80 if is_rule_host1_local_80_1 OR is_rule_host1_local_80_2
+
+backend srv_host1_local_80
+    balance roundrobin
+    mode http
+    option forwardfor
+    http-request set-header X-Forwarded-Port %[dst_port]
+    http-request add-header X-Forwarded-Proto https if { ssl_fc }
+    http-request set-header X-Forwarded-Host %[req.hdr(Host)]
+    http-request set-header X-Request-ID %[uuid()]
+    server srv-0 test_processor_docker:8080 check weight 1
+
+frontend http_in_90
+    bind *:90
+    mode http
+
+    acl is_rule_host2_local_90_1 hdr(host) -i host2.local
+    acl is_rule_host2_local_90_2 hdr(host) -i host2.local:90
+    acl is_certbot_host2_local_90 path_beg /.well-known/acme-challenge/
+    use_backend certbot_backend if is_certbot_host2_local_90 is_rule_host2_local_90_1 OR is_certbot_host2_local_90 is_rule_host2_local_90_2
+    use_backend srv_host2_local_90 if is_rule_host2_local_90_1 OR is_rule_host2_local_90_2
+
+backend srv_host2_local_90
+    balance roundrobin
+    mode http
+    option forwardfor
+    http-request set-header X-Forwarded-Port %[dst_port]
+    http-request add-header X-Forwarded-Proto https if { ssl_fc }
+    http-request set-header X-Forwarded-Host %[req.hdr(Host)]
+    http-request set-header X-Request-ID %[uuid()]
+    server srv-0 test_processor_docker:9000 check weight 1
+
+backend certbot_backend
+    mode http
+    server certbot 127.0.0.1:2080

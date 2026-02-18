@@ -1,0 +1,14 @@
+{{- if .Values.ingressClass.create -}}
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: easyhaproxy
+  labels:
+    {{- include "easyhaproxy.labels" . | nindent 4 }}
+  {{- with .Values.ingressClass.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  controller: byjg.com/easyhaproxy
+{{- end }}

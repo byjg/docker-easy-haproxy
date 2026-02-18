@@ -1,5 +1,5 @@
 ---
-sidebar_position: 15
+sidebar_position: 16
 ---
 
 # Plugin Development Guide
@@ -101,7 +101,13 @@ Execute **once per discovered domain/host**.
    ├─ Calls plugin.configure(config) for each plugin
    └─ Validates configuration (plugin responsibility)
 
-3. EXECUTION PHASE (per discovery cycle)
+3. INITIALIZE PHASE
+   ├─ Calls plugin.initialize() for each plugin
+   ├─ Plugins request file system resources (directories, files)
+   ├─ PluginManager processes resource requests
+   └─ Creates directories and files as needed
+
+4. EXECUTION PHASE (per discovery cycle)
    ├─ GLOBAL PLUGINS
    │  └─ Executes all global plugins once
    │
@@ -109,9 +115,11 @@ Execute **once per discovered domain/host**.
       └─ For each discovered domain:
          └─ Executes all domain plugins
 
-4. RESULT PROCESSING
+5. RESULT PROCESSING
    ├─ Collects PluginResult from each plugin
-   ├─ Injects haproxy_config into generated config
+   ├─ Injects haproxy_config into backend sections
+   ├─ Injects global_configs into global section
+   ├─ Injects defaults_configs into defaults section
    ├─ Applies modified_easymapping if provided
    └─ Logs metadata for debugging
 ```
@@ -119,7 +127,7 @@ Execute **once per discovered domain/host**.
 ### Plugin Loading Order
 
 1. **Builtin plugins** - Loaded from `/src/plugins/builtin/`
-2. **External plugins** - Loaded from `/etc/haproxy/plugins/`
+2. **External plugins** - Loaded from `/etc/easyhaproxy/plugins/`
 
 Plugins are discovered automatically by filename (`*.py` excluding `__*.py`).
 
@@ -152,10 +160,10 @@ HAProxy Reload
 
 ### Step 1: Create Plugin File
 
-Create a new Python file in `/etc/haproxy/plugins/` (or builtin location for core plugins):
+Create a new Python file in `/etc/easyhaproxy/plugins/` (or builtin location for core plugins):
 
 ```python
-# /etc/haproxy/plugins/my_plugin.py
+# /etc/easyhaproxy/plugins/my_plugin.py
 
 import os
 import sys
@@ -164,7 +172,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from plugins import PluginInterface, PluginType, PluginContext, PluginResult
-from functions import loggerEasyHaproxy
+from functions import logger_easyhaproxy
 
 
 class MyPlugin(PluginInterface):
@@ -240,7 +248,7 @@ services:
 **Via YAML configuration:**
 
 ```yaml
-# /etc/haproxy/static/config.yaml
+# /etc/easyhaproxy/static/config.yaml
 plugins:
   enabled: [my_plugin]
   config:
@@ -306,6 +314,18 @@ class PluginInterface(ABC):
         """
         pass
 
+    def initialize(self) -> InitializationResult:
+        """
+        Initialize plugin resources (new in v2.0)
+
+        Optional method to request file system resources.
+        Default implementation returns empty result (no-op).
+
+        Returns:
+            InitializationResult with resource requests
+        """
+        return InitializationResult()
+
     @abstractmethod
     def process(self, context: PluginContext) -> PluginResult:
         """
@@ -328,6 +348,7 @@ class PluginInterface(ABC):
 **Methods:**
 
 - `configure(config)` - Receives plugin configuration during initialization
+- `initialize()` - **[New in v2.0]** Request file system resources (optional)
 - `process(context)` - Main execution logic, returns `PluginResult`
 
 ### PluginType
@@ -390,6 +411,71 @@ def process(self, context: PluginContext) -> PluginResult:
     custom_label = context.host_config.get("custom_label", "default")
 ```
 
+### ResourceRequest
+
+**[New in v2.0]** Request for file system resources during plugin initialization.
+
+```python
+@dataclass
+class ResourceRequest:
+    """Request for file system resources"""
+    resource_type: str  # "directory" or "file"
+    path: str
+    content: str | None = None
+    overwrite: bool = False
+```
+
+**Fields:**
+
+- `resource_type` - Type of resource: `"directory"` or `"file"`
+- `path` - Absolute path to create
+- `content` - File content (only for `resource_type="file"`)
+- `overwrite` - Whether to overwrite existing files (default: False)
+
+**Example:**
+
+```python
+ResourceRequest(
+    resource_type="directory",
+    path="/etc/easyhaproxy/plugin_data"
+)
+
+ResourceRequest(
+    resource_type="file",
+    path="/etc/easyhaproxy/plugin_config.txt",
+    content="config data",
+    overwrite=True
+)
+```
+
+### InitializationResult
+
+**[New in v2.0]** Plugin initialization result with resource requests.
+
+```python
+@dataclass
+class InitializationResult:
+    """Plugin initialization result with resource requests"""
+    resources: list[ResourceRequest] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
+```
+
+**Fields:**
+
+- `resources` - List of ResourceRequest objects
+- `metadata` - Optional metadata about initialization
+
+**Example:**
+
+```python
+def initialize(self) -> InitializationResult:
+    return InitializationResult(
+        resources=[
+            ResourceRequest(resource_type="directory", path="/etc/easyhaproxy/jwt_keys")
+        ]
+    )
+```
+
 ### PluginResult
 
 Plugin execution result containing configuration and metadata.
@@ -401,6 +487,8 @@ class PluginResult:
     haproxy_config: str = ""                     # HAProxy config snippet to inject
     modified_easymapping: Optional[list] = None  # Modified easymapping structure
     metadata: Dict[str, Any] = field(default_factory=dict)  # Plugin metadata for logging
+    global_configs: list[str] = field(default_factory=list)  # [New] Global-level configs
+    defaults_configs: list[str] = field(default_factory=list)  # [New] Defaults-level configs
 ```
 
 **Fields:**
@@ -408,11 +496,13 @@ class PluginResult:
 - `haproxy_config` - HAProxy configuration snippet (injected into backend/frontend)
 - `modified_easymapping` - Modified easymapping structure (optional, advanced use)
 - `metadata` - Dictionary with debugging/logging information
+- `global_configs` - **[New in v2.0]** List of global-level HAProxy configs (e.g., fcgi-app definitions)
+- `defaults_configs` - **[New in v2.0]** List of defaults-level HAProxy configs (e.g., log-format)
 
 **Examples:**
 
 ```python
-# Simple config injection
+# Simple config injection (backend-level)
 return PluginResult(
     haproxy_config="http-request deny deny_status 403"
 )
@@ -427,6 +517,22 @@ return PluginResult(
     }
 )
 
+# With global-level config (new in v2.0)
+return PluginResult(
+    haproxy_config="use-fcgi-app fcgi_example_com",
+    global_configs=[
+        "fcgi-app fcgi_example_com\n    docroot /etc/easyhaproxy/www"
+    ]
+)
+
+# With defaults-level config (new in v2.0)
+return PluginResult(
+    haproxy_config="acl from_cloudflare src -f /etc/easyhaproxy/cloudflare_ips.lst",
+    defaults_configs=[
+        'log-format "%{+Q}[var(txn.real_ip)]:-/%ci:%cp [%tr] %ft %b/%s"'
+    ]
+)
+
 # No operation (plugin disabled or no action needed)
 return PluginResult()
 ```
@@ -439,12 +545,13 @@ Manages plugin loading, configuration, and execution.
 class PluginManager:
     """Manages plugin loading, configuration, and execution"""
 
-    def __init__(self, plugins_dir: str = "/etc/haproxy/plugins", abort_on_error: bool = False):
+    def __init__(self, plugins_dir: str | None = None, abort_on_error: bool = False):
         """
         Initialize the plugin manager
 
         Args:
-            plugins_dir: Directory containing plugin files
+            plugins_dir: Directory containing plugin files (defaults to
+                        EASYHAPROXY_PLUGINS_DIR env var or /etc/easyhaproxy/plugins)
             abort_on_error: If True, abort on plugin errors; if False, log and continue
         """
 
@@ -454,12 +561,19 @@ class PluginManager:
     def configure_plugins(self, plugins_config: dict) -> None:
         """Configure all loaded plugins with their settings"""
 
+    def initialize_plugins(self) -> None:
+        """[New in v2.0] Initialize all plugins and process resource requests"""
+
     def execute_global_plugins(self, context: PluginContext, enabled_list: Optional[List[str]] = None) -> List[PluginResult]:
         """Execute all global plugins"""
 
     def execute_domain_plugins(self, context: PluginContext, enabled_list: Optional[List[str]] = None) -> List[PluginResult]:
         """Execute all domain plugins for a specific domain"""
 ```
+
+**Environment Variables:**
+
+- `EASYHAPROXY_PLUGINS_DIR` - Override plugin directory (default: `/etc/easyhaproxy/plugins`)
 
 **Note:** You typically don't interact with PluginManager directly when writing plugins. It's used by EasyHAProxy core.
 
@@ -598,7 +712,7 @@ The plugin creates:
 
 Configuration:
     - enabled: Enable/disable the plugin (default: true)
-    - document_root: Document root path (default: /var/www/html)
+    - document_root: Document root path (default: /etc/easyhaproxy/www)
     - script_filename: Pattern for SCRIPT_FILENAME (default: %[path])
     - index_file: Default index file (default: index.php)
     - path_info: Enable PATH_INFO support (default: true)
@@ -608,7 +722,7 @@ Example YAML config:
     plugins:
       fastcgi:
         enabled: true
-        document_root: /var/www/html
+        document_root: /etc/easyhaproxy/www
         index_file: index.php
         path_info: true
 
@@ -626,7 +740,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from plugins import PluginInterface, PluginType, PluginContext, PluginResult
-from functions import loggerEasyHaproxy
+from functions import logger_easyhaproxy
 
 
 class FastcgiPlugin(PluginInterface):
@@ -634,7 +748,7 @@ class FastcgiPlugin(PluginInterface):
 
     def __init__(self):
         self.enabled = True
-        self.document_root = "/var/www/html"
+        self.document_root = "/etc/easyhaproxy/www"
         self.script_filename = "%[path]"
         self.index_file = "index.php"
         self.path_info = True
@@ -720,11 +834,10 @@ class FastcgiPlugin(PluginInterface):
 
         fcgi_app_definition = "\n".join(fcgi_app_lines)
 
-        # Build metadata - store fcgi_app_definition to be extracted and added to global configs
+        # Build metadata
         metadata = {
             "domain": context.domain,
             "fcgi_app_name": fcgi_app_name,
-            "fcgi_app_definition": fcgi_app_definition,  # For top-level injection
             "document_root": self.document_root,
             "index_file": self.index_file,
             "path_info": self.path_info,
@@ -734,7 +847,8 @@ class FastcgiPlugin(PluginInterface):
         return PluginResult(
             haproxy_config=backend_config,  # use-fcgi-app directive for the backend
             modified_easymapping=None,
-            metadata=metadata
+            metadata=metadata,
+            global_configs=[fcgi_app_definition]  # For top-level injection (new in v2.0)
         )
 ```
 
@@ -771,7 +885,7 @@ Example YAML config:
         algorithm: RS256
         issuer: https://myaccount.auth0.com/
         audience: https://api.mywebsite.com
-        pubkey_path: /etc/haproxy/jwt_keys/pubkey.pem
+        pubkey_path: /etc/easyhaproxy/jwt_keys/pubkey.pem
         paths:
           - /api/admin
           - /api/sensitive
@@ -782,7 +896,7 @@ Example Container Label:
     easyhaproxy.http.plugin.jwt_validator.algorithm: RS256
     easyhaproxy.http.plugin.jwt_validator.issuer: https://auth.example.com/
     easyhaproxy.http.plugin.jwt_validator.audience: https://api.example.com
-    easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+    easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/easyhaproxy/jwt_keys/api_pubkey.pem
     easyhaproxy.http.plugin.jwt_validator.paths: /api/admin,/api/sensitive
     easyhaproxy.http.plugin.jwt_validator.only_paths: true
 """
@@ -794,8 +908,15 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from plugins import PluginInterface, PluginType, PluginContext, PluginResult
-from functions import loggerEasyHaproxy
+from plugins import (
+    InitializationResult,
+    PluginInterface,
+    PluginType,
+    PluginContext,
+    PluginResult,
+    ResourceRequest
+)
+from functions import Functions, logger_easyhaproxy
 
 
 class JwtValidatorPlugin(PluginInterface):
@@ -810,6 +931,8 @@ class JwtValidatorPlugin(PluginInterface):
         self.pubkey = None  # Public key content (alternative to pubkey_path)
         self.paths = []  # List of paths that require JWT validation
         self.only_paths = False  # If true, only specified paths are accessible
+        # Make JWT_KEYS_DIR configurable via environment variable
+        self.jwt_keys_dir = os.getenv("EASYHAPROXY_JWT_KEYS_DIR", "/etc/easyhaproxy/jwt_keys")
 
     @property
     def name(self) -> str:
@@ -874,6 +997,19 @@ class JwtValidatorPlugin(PluginInterface):
         if "only_paths" in config:
             self.only_paths = str(config["only_paths"]).lower() in ["true", "1", "yes"]
 
+    def initialize(self) -> InitializationResult:
+        """
+        Initialize plugin resources - create JWT keys directory (new in v2.0)
+
+        Returns:
+            InitializationResult with directory creation request
+        """
+        return InitializationResult(
+            resources=[
+                ResourceRequest(resource_type="directory", path=self.jwt_keys_dir)
+            ]
+        )
+
     def process(self, context: PluginContext) -> PluginResult:
         """
         Generate HAProxy config to validate JWT tokens
@@ -893,9 +1029,17 @@ class JwtValidatorPlugin(PluginInterface):
         elif self.pubkey:
             # Generate path for pubkey based on domain
             domain_safe = context.domain.replace(".", "_").replace(":", "_")
-            pubkey_file = f"/etc/haproxy/jwt_keys/{domain_safe}_pubkey.pem"
+            pubkey_file = f"{self.jwt_keys_dir}/{domain_safe}_pubkey.pem"
+
+            # Write the public key file (defensive - normally created by initialize())
+            try:
+                os.makedirs(self.jwt_keys_dir, exist_ok=True)
+                Functions.save(pubkey_file, self.pubkey)
+                logger_easyhaproxy.debug(f"Wrote JWT public key to {pubkey_file} for domain {context.domain}")
+            except (PermissionError, OSError) as e:
+                logger_easyhaproxy.debug(f"Could not write JWT public key file: {e}")
         else:
-            loggerEasyHaproxy.warning(f"JWT validator plugin for {context.domain}: No pubkey or pubkey_path configured")
+            logger_easyhaproxy.warning(f"JWT validator plugin for {context.domain}: No pubkey or pubkey_path configured")
             return PluginResult()
 
         # Build HAProxy configuration
@@ -1021,7 +1165,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from plugins import PluginInterface, PluginType, PluginContext, PluginResult
-from functions import loggerEasyHaproxy
+from functions import logger_easyhaproxy
 
 
 class CleanupPlugin(PluginInterface):
@@ -1057,7 +1201,7 @@ class CleanupPlugin(PluginInterface):
             try:
                 self.max_idle_time = int(config["max_idle_time"])
             except ValueError:
-                loggerEasyHaproxy.warning(f"Invalid max_idle_time value: {config['max_idle_time']}, using default")
+                logger_easyhaproxy.warning(f"Invalid max_idle_time value: {config['max_idle_time']}, using default")
 
         if "cleanup_temp_files" in config:
             self.cleanup_temp_files = str(config["cleanup_temp_files"]).lower() in ["true", "1", "yes"]
@@ -1095,15 +1239,15 @@ class CleanupPlugin(PluginInterface):
                             if file_age > self.max_idle_time:
                                 os.remove(filepath)
                                 cleanup_actions.append(f"Removed old temp file: {filepath}")
-                                loggerEasyHaproxy.debug(f"Cleanup plugin: Removed {filepath}")
+                                logger_easyhaproxy.debug(f"Cleanup plugin: Removed {filepath}")
                         except Exception as e:
-                            loggerEasyHaproxy.warning(f"Failed to remove temp file {filepath}: {e}")
+                            logger_easyhaproxy.warning(f"Failed to remove temp file {filepath}: {e}")
                 except Exception as e:
-                    loggerEasyHaproxy.warning(f"Failed to cleanup {temp_dir}: {e}")
+                    logger_easyhaproxy.warning(f"Failed to cleanup {temp_dir}: {e}")
 
         # Log cleanup summary
         if cleanup_actions:
-            loggerEasyHaproxy.info(f"Cleanup plugin: Performed {len(cleanup_actions)} cleanup action(s)")
+            logger_easyhaproxy.info(f"Cleanup plugin: Performed {len(cleanup_actions)} cleanup action(s)")
 
         return PluginResult(
             haproxy_config="",  # No HAProxy config needed for cleanup
@@ -1117,9 +1261,104 @@ class CleanupPlugin(PluginInterface):
 
 ---
 
+## Environment Variables
+
+**New in v2.0:** Plugins can use environment variables for configuration.
+
+### Core Environment Variables
+
+- `EASYHAPROXY_PLUGINS_DIR` - Override plugin directory (default: `/etc/easyhaproxy/plugins`)
+- `EASYHAPROXY_PLUGINS_ENABLED` - Comma-separated list of enabled plugins
+- `EASYHAPROXY_PLUGINS_ABORT_ON_ERROR` - Abort on plugin errors (default: `false`)
+
+### Plugin-Specific Environment Variables
+
+- `EASYHAPROXY_PLUGIN_<PLUGIN_NAME>_<CONFIG_KEY>` - Configure plugin settings
+
+**Example:**
+```bash
+EASYHAPROXY_PLUGINS_ENABLED=jwt_validator,cloudflare
+EASYHAPROXY_PLUGIN_JWT_VALIDATOR_ALGORITHM=RS256
+EASYHAPROXY_PLUGIN_JWT_VALIDATOR_ISSUER=https://auth.example.com/
+EASYHAPROXY_JWT_KEYS_DIR=/custom/path/jwt_keys  # Plugin-defined env var
+```
+
+### Plugin Resource Directories
+
+**New in v2.0:** Plugins can make their resource directories configurable via environment variables.
+
+**Example:**
+```python
+class MyPlugin(PluginInterface):
+    def __init__(self):
+        # Make resource directory configurable
+        self.data_dir = os.getenv("EASYHAPROXY_MY_PLUGIN_DATA_DIR", "/etc/easyhaproxy/my_plugin_data")
+
+    def initialize(self) -> InitializationResult:
+        return InitializationResult(
+            resources=[
+                ResourceRequest(resource_type="directory", path=self.data_dir)
+            ]
+        )
+```
+
+---
+
 ## Best Practices
 
-### 1. Error Handling
+### 1. Use Plugin Initialization for Resource Setup
+
+**[New in v2.0]** Use the `initialize()` method to request file system resources.
+
+**Do:**
+```python
+def initialize(self) -> InitializationResult:
+    return InitializationResult(
+        resources=[
+            ResourceRequest(resource_type="directory", path=self.data_dir)
+        ]
+    )
+
+def process(self, context: PluginContext) -> PluginResult:
+    # Directory already exists, just use it
+    filepath = os.path.join(self.data_dir, "data.txt")
+    with open(filepath, 'w') as f:
+        f.write("data")
+```
+
+**Don't:**
+```python
+def process(self, context: PluginContext) -> PluginResult:
+    # Creating directories in process() is inefficient
+    os.makedirs(self.data_dir, exist_ok=True)  # Called on every execution!
+    filepath = os.path.join(self.data_dir, "data.txt")
+```
+
+### 2. Use Typed Result Fields for Config Injection
+
+**[New in v2.0]** Use `global_configs` and `defaults_configs` fields instead of metadata.
+
+**Do:**
+```python
+return PluginResult(
+    haproxy_config="use-fcgi-app fcgi_example",
+    global_configs=["fcgi-app fcgi_example\n    docroot /var/www"],
+    defaults_configs=['log-format "..."']
+)
+```
+
+**Don't:**
+```python
+# Deprecated: Don't put config in metadata
+return PluginResult(
+    haproxy_config="use-fcgi-app fcgi_example",
+    metadata={
+        "fcgi_app_definition": "fcgi-app fcgi_example\n    docroot /var/www"  # Wrong!
+    }
+)
+```
+
+### 3. Error Handling
 
 Always handle errors gracefully to avoid breaking HAProxy configuration.
 
@@ -1130,7 +1369,7 @@ def configure(self, config: dict) -> None:
         try:
             self.port = int(config["port"])
         except ValueError:
-            loggerEasyHaproxy.warning(f"Invalid port value: {config['port']}, using default")
+            logger_easyhaproxy.warning(f"Invalid port value: {config['port']}, using default")
             self.port = 8080
 ```
 
@@ -1140,7 +1379,7 @@ def configure(self, config: dict) -> None:
     self.port = int(config["port"])  # Crashes if not an integer!
 ```
 
-### 2. Configuration Validation
+### 4. Configuration Validation
 
 Validate configuration during `configure()` phase, not during `process()`.
 
@@ -1153,7 +1392,7 @@ def configure(self, config: dict) -> None:
 
         # Validate IPs
         if not self.allowed_ips:
-            loggerEasyHaproxy.warning("IP whitelist plugin: No valid IPs configured")
+            logger_easyhaproxy.warning("IP whitelist plugin: No valid IPs configured")
             self.enabled = False
 ```
 
@@ -1165,7 +1404,7 @@ def process(self, context: PluginContext) -> PluginResult:
         raise ValueError("No IPs configured")
 ```
 
-### 3. Use Metadata for Debugging
+### 5. Use Metadata for Debugging
 
 Include useful debugging information in metadata.
 
@@ -1182,7 +1421,7 @@ return PluginResult(
 )
 ```
 
-### 4. Handle Boolean Configuration
+### 6. Handle Boolean Configuration
 
 Support multiple boolean formats (true/false, 1/0, yes/no).
 
@@ -1192,7 +1431,7 @@ def configure(self, config: dict) -> None:
         self.enabled = str(config["enabled"]).lower() in ["true", "1", "yes"]
 ```
 
-### 5. Support Multiple Configuration Formats
+### 7. Support Multiple Configuration Formats
 
 Support both list and comma-separated string formats for lists.
 
@@ -1209,7 +1448,7 @@ def configure(self, config: dict) -> None:
             self.paths = []
 ```
 
-### 6. Use Descriptive Names
+### 8. Use Descriptive Names
 
 Use clear, descriptive names for plugins, configuration keys, and ACLs.
 
@@ -1233,7 +1472,7 @@ def name(self) -> str:
 acl p1 path_beg /api  # What is p1?
 ```
 
-### 7. Document Your Plugin
+### 9. Document Your Plugin
 
 Include comprehensive docstrings with configuration examples.
 
@@ -1259,7 +1498,7 @@ Example Container Label:
 """
 ```
 
-### 8. Return Empty Result When Disabled
+### 10. Return Empty Result When Disabled
 
 Always check `enabled` flag and return empty result early.
 
@@ -1271,27 +1510,27 @@ def process(self, context: PluginContext) -> PluginResult:
     # Plugin logic here...
 ```
 
-### 9. Use Logger Appropriately
+### 11. Use Logger Appropriately
 
 Use appropriate log levels for different messages.
 
 ```python
-from functions import loggerEasyHaproxy
+from functions import logger_easyhaproxy
 
 # For debugging
-loggerEasyHaproxy.debug(f"Processing domain: {context.domain}")
+logger_easyhaproxy.debug(f"Processing domain: {context.domain}")
 
 # For informational messages
-loggerEasyHaproxy.info(f"Loaded plugin configuration: {self.name}")
+logger_easyhaproxy.info(f"Loaded plugin configuration: {self.name}")
 
 # For warnings (non-fatal issues)
-loggerEasyHaproxy.warning(f"Invalid configuration value, using default")
+logger_easyhaproxy.warning(f"Invalid configuration value, using default")
 
 # For errors (fatal issues)
-loggerEasyHaproxy.error(f"Failed to load required file: {filepath}")
+logger_easyhaproxy.error(f"Failed to load required file: {filepath}")
 ```
 
-### 10. Make Domain-Safe Identifiers
+### 12. Make Domain-Safe Identifiers
 
 Replace special characters when generating HAProxy identifiers.
 
@@ -1446,7 +1685,7 @@ services:
       - "443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./my_plugin.py:/etc/haproxy/plugins/my_plugin.py
+      - ./my_plugin.py:/etc/easyhaproxy/plugins/my_plugin.py
     environment:
       - EASYHAPROXY_DISCOVER=docker
 ```
@@ -1468,7 +1707,7 @@ Expected output:
 **Verify generated configuration:**
 
 ```bash
-docker-compose exec haproxy cat /etc/haproxy/haproxy.cfg | grep -A 5 "My Plugin"
+docker-compose exec haproxy cat /etc/easyhaproxy/haproxy/haproxy.cfg | grep -A 5 "My Plugin"
 ```
 
 ---
@@ -1483,13 +1722,13 @@ docker-compose exec haproxy cat /etc/haproxy/haproxy.cfg | grep -A 5 "My Plugin"
 
 1. **File not in plugins directory**
    ```bash
-   ls -la /etc/haproxy/plugins/
+   ls -la /etc/easyhaproxy/plugins/
    # Ensure my_plugin.py exists
    ```
 
 2. **Invalid Python syntax**
    ```bash
-   python3 -m py_compile /etc/haproxy/plugins/my_plugin.py
+   python3 -m py_compile /etc/easyhaproxy/plugins/my_plugin.py
    # Check for syntax errors
    ```
 
@@ -1575,7 +1814,7 @@ docker-compose exec haproxy cat /etc/haproxy/haproxy.cfg | grep -A 5 "My Plugin"
 1. **Invalid HAProxy syntax in generated config**
    ```bash
    # Test configuration manually:
-   haproxy -c -f /etc/haproxy/haproxy.cfg
+   haproxy -c -f /etc/easyhaproxy/haproxy/haproxy.cfg
    ```
 
 2. **Missing quotes or escaping**
@@ -1611,8 +1850,8 @@ docker-compose exec haproxy cat /etc/haproxy/haproxy.cfg | grep -A 5 "My Plugin"
 2. **Add debug statements**
    ```python
    def process(self, context: PluginContext) -> PluginResult:
-       loggerEasyHaproxy.debug(f"Plugin {self.name} processing domain: {context.domain}")
-       loggerEasyHaproxy.debug(f"Plugin config: enabled={self.enabled}, setting={self.my_setting}")
+       logger_easyhaproxy.debug(f"Plugin {self.name} processing domain: {context.domain}")
+       logger_easyhaproxy.debug(f"Plugin config: enabled={self.enabled}, setting={self.my_setting}")
        # ... rest of plugin logic
    ```
 
@@ -1630,7 +1869,7 @@ docker-compose exec haproxy cat /etc/haproxy/haproxy.cfg | grep -A 5 "My Plugin"
            # Risky operation
            result = self.do_something_risky()
        except Exception as e:
-           loggerEasyHaproxy.error(f"Plugin {self.name} error: {str(e)}")
+           logger_easyhaproxy.error(f"Plugin {self.name} error: {str(e)}")
            return PluginResult()  # Return empty result on error
    ```
 
@@ -1668,7 +1907,7 @@ Share your plugin as a single `.py` file:
 
 ```bash
 # Users copy the file to their plugins directory:
-cp my_plugin.py /etc/haproxy/plugins/
+cp my_plugin.py /etc/easyhaproxy/plugins/
 ```
 
 **Advantages:**
@@ -1696,7 +1935,7 @@ my-easyhaproxy-plugin/
 **Installation:**
 ```bash
 # Users download and install:
-wget https://raw.githubusercontent.com/user/my-plugin/main/my_plugin.py -O /etc/haproxy/plugins/my_plugin.py
+wget https://raw.githubusercontent.com/user/my-plugin/main/my_plugin.py -O /etc/easyhaproxy/plugins/my_plugin.py
 ```
 
 #### Option 3: Docker Image with Plugin
@@ -1710,7 +1949,7 @@ FROM byjg/easy-haproxy:latest
 COPY my_plugin.py /app/src/plugins/builtin/
 
 # Optional: Add default configuration
-COPY plugin_config.yaml /etc/haproxy/static/config.yaml
+COPY plugin_config.yaml /etc/easyhaproxy/static/config.yaml
 ```
 
 **Build and distribute:**
@@ -1738,7 +1977,7 @@ Brief description of what your plugin does.
 
 ### Docker
 \`\`\`bash
-wget https://example.com/my_plugin.py -O /etc/haproxy/plugins/my_plugin.py
+wget https://example.com/my_plugin.py -O /etc/easyhaproxy/plugins/my_plugin.py
 \`\`\`
 
 ### Kubernetes

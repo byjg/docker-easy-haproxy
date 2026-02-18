@@ -1,5 +1,5 @@
 ---
-sidebar_position: 10
+sidebar_position: 11
 ---
 
 # SSL - Automatic Certificate Management Environment (ACME)
@@ -33,7 +33,7 @@ At a high level, ACME with Easy HAProxy works in two stages:
      - Manually setting `EASYHAPROXY_CERTBOT_SERVER` (and `EASYHAPROXY_CERTBOT_EAB_KID` / `EASYHAPROXY_CERTBOT_EAB_HMAC_KEY` when your CA requires EAB).
    - Always set your contact email via `EASYHAPROXY_CERTBOT_EMAIL`.
    - Ensure ports 80 and 443 are publicly reachable on the EasyHAProxy host.
-   - Persist the folder `/certs/certbot` on a durable volume so issued/renewed certificates survive container restarts and avoid hitting CA rate limits.
+   - Persist the folder `/etc/easyhaproxy/certs/certbot` on a durable volume so issued/renewed certificates survive container restarts and avoid hitting CA rate limits.
    - Challenge method is HTTP-01 only; EasyHAProxy configures a standalone Certbot responder internally.
 
 2. Enable ACME per domain (per service/app)
@@ -44,7 +44,7 @@ At a high level, ACME with Easy HAProxy works in two stages:
 What happens under the hood
 - When a labeled domain is detected and a certificate is needed, EasyHAProxy runs Certbot with `--preferred-challenges http` and a standalone responder bound to internal port 2080.
 - HAProxy temporarily routes `/.well-known/acme-challenge/` for that domain to the Certbot responder, allowing the CA to validate via HTTP-01.
-- On success, EasyHAProxy merges the issued cert and key and stores them under `/certs/certbot` (one PEM per domain), then reloads HAProxy to serve HTTPS for that domain.
+- On success, EasyHAProxy merges the issued cert and key and stores them under `/etc/easyhaproxy/certs/certbot` (one PEM per domain), then reloads HAProxy to serve HTTPS for that domain.
 - Certificates are monitored and renewed automatically before expiry.
 
 Tips
@@ -54,18 +54,20 @@ Tips
 
 ## Environment Variables
 
-To enable the ACME protocol we need to enable Certbot in EasyHAProxy by setting up to the following environment variables:
+To enable the ACME protocol we need to enable Certbot in EasyHAProxy by setting up the following environment variables:
 
 | Environment Variable                     | Required? | Description                                                                                                                      |
 |------------------------------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------|
-| EASYHAPROXY_CERTBOT_EMAIL                | YES       | Your email in the certificate authority.                                                                                         |
-| EASYHAPROXY_CERTBOT_AUTOCONFIG           | -         | Will use pre-sets for your Certificate Authority (CA). See table below.                                                          |
-| EASYHAPROXY_CERTBOT_SERVER               | -         | The ACME Endpoint of your certificate authority. If you use AUTOCONFIG, it is set automatically. See table below.                |
+| EASYHAPROXY_CERTBOT_EMAIL                | **YES**   | Your email for the certificate authority. Required for certificate issuance.                                                     |
+| EASYHAPROXY_CERTBOT_AUTOCONFIG           | **YES\*** | Pre-configured settings for your Certificate Authority (CA). See table below. **Required if CERTBOT_SERVER is not set.**        |
+| EASYHAPROXY_CERTBOT_SERVER               | **YES\*** | The ACME endpoint URL of your certificate authority. **Required if AUTOCONFIG is not set.** Auto-set when using AUTOCONFIG.     |
 | EASYHAPROXY_CERTBOT_EAB_KID              | -         | External Account Binding (EAB) Key Identifier (KID) provided by your certificate authority. Some CA require it. See table below. |
 | EASYHAPROXY_CERTBOT_EAB_HMAC_KEY         | -         | External Account Binding (EAB) HMAC Key provided by your certificate authority. Some CA require it. See table below.             |
 | EASYHAPROXY_CERTBOT_RETRY_COUNT          | -         | Wait 'n' requests before retrying issue invalid requests. Default 60.                                                            |
 | EASYHAPROXY_CERTBOT_PREFERRED_CHALLENGES | -         | The preferred challenges for Certbot. Available: `http`                                                                          |
 | EASYHAPROXY_CERTBOT_MANUAL_AUTH_HOOK     | -         | The path to a script that will be executed (default: None)                                                                       |
+
+**\*Important:** You must set **either** `EASYHAPROXY_CERTBOT_AUTOCONFIG` **or** `EASYHAPROXY_CERTBOT_SERVER` (not both). Using `AUTOCONFIG` is recommended as it automatically configures the server URL for popular certificate authorities.
 
 ## Auto Config Certificate Authority (CA)
 
@@ -105,7 +107,7 @@ docker run \
     -e EASYHAPROXY_CERTBOT_EMAIL=john@doe.com \
     -p 80:80 \
     -p 443:443 \
-    -v /path/to/guest/certbot/certs:/certs/certbot \
+    -v /path/to/guest/certbot/certs:/etc/easyhaproxy/certs/certbot \
     ... \
     byjg/easy-haproxy
 ```
@@ -118,7 +120,7 @@ docker run \
 
 :::danger Important: Persist Certbot Certificates
 To avoid hitting rate limits and certificate issuing problems:
-- **You must persist** the container folder `/certs/certbot` outside the container
+- **You must persist** the container folder `/etc/easyhaproxy/certs/certbot` outside the container
 - **Never delete or modify** its contents manually
 - If you don't persist this folder, or if you delete/modify its contents, certificate issuing may not work properly and you may hit rate limits
 ::: 
@@ -146,6 +148,147 @@ docker run \
 - Your container **must** be configured to listen on port 80 (`easyhaproxy.<definition>.port=80`). The CA will not issue certificates if using another port, and EasyHAProxy will fail silently.
 - Do not set port 443 for the container when using ACME, because EasyHAProxy will create the HTTPS binding automatically once the certificate is issued.
 :::
+
+## Complete Docker Compose Example
+
+Here's a complete `docker-compose.yml` showing proper ACME configuration:
+
+```yaml
+services:
+  easyhaproxy:
+    image: byjg/easy-haproxy:6.0.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # REQUIRED: Persist Certbot certificates (ACME)
+      - certs_certbot:/etc/easyhaproxy/certs/certbot
+      # OPTIONAL: For manual certificates (see SSL documentation)
+      - certs_haproxy:/etc/easyhaproxy/certs/haproxy
+    environment:
+      # Service discovery
+      EASYHAPROXY_DISCOVER: docker
+      EASYHAPROXY_LABEL_PREFIX: easyhaproxy
+
+      # ACME/Certbot Configuration (Method 1: Recommended)
+      EASYHAPROXY_CERTBOT_EMAIL: your-email@example.com
+      EASYHAPROXY_CERTBOT_AUTOCONFIG: letsencrypt
+
+      # ACME/Certbot Configuration (Method 2: Manual)
+      # EASYHAPROXY_CERTBOT_EMAIL: your-email@example.com
+      # EASYHAPROXY_CERTBOT_SERVER: https://acme-v02.api.letsencrypt.org/directory
+
+      # Other settings
+      EASYHAPROXY_SSL_MODE: "default"
+      HAPROXY_CUSTOMERRORS: "true"
+      HAPROXY_USERNAME: admin
+      HAPROXY_PASSWORD: password
+      HAPROXY_STATS_PORT: 1936
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+      - "1936:1936/tcp"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-u", "admin:password", "http://localhost:1936"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+  # Example backend service with ACME enabled
+  myapp:
+    image: nginx:alpine
+    labels:
+      easyhaproxy.http.host: example.com
+      easyhaproxy.http.port: 80
+      easyhaproxy.http.localport: 80
+      easyhaproxy.http.certbot: "true"  # Enable ACME for this domain
+
+volumes:
+  certs_certbot:
+    # This volume MUST be persisted to avoid rate limits
+  certs_haproxy:
+    # Optional: only needed if using manual certificates
+```
+
+## Certificate Storage Paths
+
+EasyHAProxy uses different paths for different certificate types:
+
+| Path                             | Purpose                             | When to Mount                                |
+|----------------------------------|-------------------------------------|----------------------------------------------|
+| `/etc/easyhaproxy/certs/certbot` | ACME/Certbot automatic certificates | **Required** when using ACME                 |
+| `/etc/easyhaproxy/certs/haproxy` | Manual/custom certificates          | Optional - only if using custom certificates |
+
+Both volumes can be mounted simultaneously. Per-domain certificate selection:
+- If a domain has `certbot=true` label, ACME certificate is used
+- Otherwise, manual certificate from `/etc/easyhaproxy/certs/haproxy` is used (if present)
+
+## Troubleshooting
+
+### Warning: "ACME environment not ready: ACME server not configured"
+
+**Cause:** You set `EASYHAPROXY_CERTBOT_EMAIL` but forgot to configure the ACME server.
+
+**Solution:** Add one of these to your environment variables:
+
+```yaml
+# Option 1: Use AUTOCONFIG (recommended)
+EASYHAPROXY_CERTBOT_AUTOCONFIG: letsencrypt
+
+# Option 2: Set server manually
+EASYHAPROXY_CERTBOT_SERVER: https://acme-v02.api.letsencrypt.org/directory
+```
+
+### Certificates Not Being Issued
+
+**Common causes:**
+1. Port 80 is not publicly accessible
+2. DNS doesn't point to your server
+3. Container label missing `certbot=true`
+4. Container port is not 80 (`easyhaproxy.<definition>.port` must be 80)
+5. Rate limits hit (check `/etc/easyhaproxy/certs/certbot` volume)
+
+**Debug steps:**
+```bash
+# Check EasyHAProxy logs
+docker logs easyhaproxy
+
+# Check if Certbot volume is persisted
+docker volume inspect certs_certbot
+
+# Verify port 80 is accessible
+curl -I http://your-domain.com/.well-known/acme-challenge/test
+```
+
+### Rate Limit Errors
+
+If you hit Let's Encrypt rate limits:
+- Wait for the limit window to reset (usually 1 week)
+- Use staging server for testing: `EASYHAPROXY_CERTBOT_AUTOCONFIG: letsencrypt_test`
+- Ensure `/etc/easyhaproxy/certs/certbot` volume is properly persisted
+- See: https://letsencrypt.org/docs/rate-limits/
+
+### Using Both ACME and Manual Certificates
+
+You can use both simultaneously:
+1. Mount both volumes (`certs_certbot` and `certs_haproxy`)
+2. Use `certbot=true` label for domains that should use ACME
+3. Omit the label for domains using manual certificates
+
+Example:
+```yaml
+services:
+  # This service uses ACME
+  app1:
+    labels:
+      easyhaproxy.http.host: auto.example.com
+      easyhaproxy.http.certbot: "true"
+
+  # This service uses manual certificate
+  app2:
+    labels:
+      easyhaproxy.http.host: manual.example.com
+      # No certbot label - will use /etc/easyhaproxy/certs/haproxy/manual.example.com.pem
+```
 
 ----
 [Open source ByJG](http://opensource.byjg.com)

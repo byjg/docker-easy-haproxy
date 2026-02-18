@@ -1,0 +1,148 @@
+# ==============================================================================
+# E2E Test: ACME/Certbot with Pebble Test Server
+# ==============================================================================
+#
+# WHAT THIS TESTS:
+# - HAProxy routing of /.well-known/acme-challenge/ to certbot backend
+# - Certbot HTTP-01 challenge completion with Pebble ACME server
+# - Certificate issuance and storage in /etc/easyhaproxy/certs/live/{domain}/
+# - HTTPS serving with issued certificate
+# - Full end-to-end ACME protocol flow
+#
+# ABOUT PEBBLE:
+# Pebble is Let's Encrypt's official ACME test server (RFC 8555 compliant)
+# - Runs locally without internet access
+# - No rate limits or DNS requirements
+# - Issues test certificates (not trusted by browsers)
+# - Perfect for integration testing
+#
+# HOW TO RUN (via pytest):
+# ```bash
+# cd tests_e2e
+# pytest test_docker_compose.py::TestACME -v
+# ```
+#
+# MANUAL TESTING:
+# ```bash
+# cd tests_e2e/docker
+# docker compose -f docker-compose-acme-e2e.yml up --build
+#
+# # Wait 10-15 seconds for certificate issuance
+# # Check logs
+# docker compose -f docker-compose-acme-e2e.yml logs haproxy
+#
+# # Verify certificate was issued
+# ls -la ../../certs/live/test.local/
+#
+# # Test HTTPS (will show certificate warning - expected for test certs)
+# curl -k https://localhost/ -H "Host: test.local"
+#
+# # Cleanup
+# docker compose -f docker-compose-acme-e2e.yml down
+# ```
+#
+# ==============================================================================
+
+services:
+  # Pebble ACME Server - Let's Encrypt test environment
+  pebble:
+    image: ghcr.io/letsencrypt/pebble:latest
+    command: -config /test/my-pebble-config.json
+    environment:
+      # Speed up validation (no artificial delays)
+      PEBBLE_VA_NOSLEEP: 1
+      # Actually perform challenge validation (not always valid)
+      PEBBLE_VA_ALWAYS_VALID: 0
+    volumes:
+      # Custom config to use port 80 for validation
+      - ./pebble-config.json:/test/my-pebble-config.json:ro
+    ports:
+      # ACME API endpoint
+      - "14000:14000"
+      # Management API (optional)
+      - "15000:15000"
+    networks:
+      - acme-test
+
+  # Pebble health check sidecar
+  pebble_health:
+    image: curlimages/curl:8.6.0
+    depends_on:
+      - pebble
+    healthcheck:
+      test: ["CMD", "curl", "-skf", "https://pebble:14000/dir"]
+      interval: 1s
+      timeout: 3s
+      start_period: 5s  # Sufficient time for CI environments
+      retries: 20        # Enough retries for slower CI
+    networks:
+      - acme-test
+    restart: "no"
+    command: ["tail", "-f", "/dev/null"]
+
+  # Backend web server
+  backend:
+    image: byjg/static-httpserver
+    labels:
+      easyhaproxy.http.host: test.local
+      easyhaproxy.http.localport: 8080
+      easyhaproxy.http.certbot: "true"
+      easyhaproxy.http.clone_to_ssl: "true"
+      easyhaproxy.http.redirect_ssl: "true"
+    networks:
+      - acme-test
+
+  # EasyHAProxy with Certbot
+  haproxy:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    depends_on:
+      pebble_health:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-u", "admin:password", "http://localhost:1936"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    environment:
+      EASYHAPROXY_DISCOVER: docker
+      HAPROXY_CUSTOMERRORS: "true"
+
+      # Certbot configuration pointing to Pebble
+      EASYHAPROXY_CERTBOT_EMAIL: test@example.com
+      EASYHAPROXY_CERTBOT_SERVER: https://pebble:14000/dir
+
+      # Trust Pebble's CA certificate
+      REQUESTS_CA_BUNDLE: /etc/ssl/certs/pebble-ca.pem
+
+      # Reduce certbot timeout for faster tests
+      EASYHAPROXY_CERTBOT_TIMEOUT: 30
+
+      # Enable debug logging for troubleshooting
+      EASYHAPROXY_DEBUG: "false"
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Certificate storage (Docker volume for clean test isolation)
+      - certbot-certs:/etc/easyhaproxy/certs
+      # Pebble CA certificate (downloaded during test session)
+      - ./pebble-ca.pem:/etc/ssl/certs/pebble-ca.pem:ro
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+    networks:
+      acme-test:
+        aliases:
+          # Allow Pebble to reach HAProxy via test.local for challenge validation
+          - test.local
+
+networks:
+  acme-test:
+    driver: bridge
+
+volumes:
+  certbot-certs:

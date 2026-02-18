@@ -10,7 +10,7 @@ The plugin creates:
 
 Configuration:
     - enabled: Enable/disable the plugin (default: true)
-    - document_root: Document root path (default: /var/www/html)
+    - document_root: Document root path (default: /etc/easyhaproxy/www)
     - script_filename: Pattern for SCRIPT_FILENAME (default: %[path])
     - index_file: Default index file (default: index.php)
     - path_info: Enable PATH_INFO support (default: true)
@@ -39,11 +39,12 @@ Example Kubernetes Annotation:
 import os
 import sys
 
+from functions import Consts
+
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from plugins import PluginInterface, PluginType, PluginContext, PluginResult
-from functions import loggerEasyHaproxy
+from plugins import PluginContext, PluginInterface, PluginResult, PluginType
 
 
 class FastcgiPlugin(PluginInterface):
@@ -51,7 +52,7 @@ class FastcgiPlugin(PluginInterface):
 
     def __init__(self):
         self.enabled = True
-        self.document_root = "/var/www/html"
+        self.document_root = Consts.base_path + "/www"
         self.script_filename = "%[path]"
         self.index_file = "index.php"
         self.path_info = True
@@ -124,7 +125,7 @@ class FastcgiPlugin(PluginInterface):
 
         # PATH_INFO support
         if self.path_info:
-            fcgi_app_lines.append(f"    path-info ^(/.+\\.php)(/.*)?$")
+            fcgi_app_lines.append("    path-info ^(/.+\\.php)(/.*)?$")
 
         # Set SCRIPT_FILENAME if customized
         if self.script_filename and self.script_filename != "%[path]":
@@ -137,11 +138,10 @@ class FastcgiPlugin(PluginInterface):
 
         fcgi_app_definition = "\n".join(fcgi_app_lines)
 
-        # Build metadata - store fcgi_app_definition to be extracted and added to global configs
+        # Build metadata
         metadata = {
             "domain": context.domain,
             "fcgi_app_name": fcgi_app_name,
-            "fcgi_app_definition": fcgi_app_definition,  # For top-level injection
             "document_root": self.document_root,
             "index_file": self.index_file,
             "path_info": self.path_info,
@@ -151,5 +151,6 @@ class FastcgiPlugin(PluginInterface):
         return PluginResult(
             haproxy_config=backend_config,  # use-fcgi-app directive for the backend
             modified_easymapping=None,
-            metadata=metadata
+            metadata=metadata,
+            global_configs=[fcgi_app_definition]  # For top-level injection
         )

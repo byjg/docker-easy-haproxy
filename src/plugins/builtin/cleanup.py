@@ -21,16 +21,16 @@ Example Environment Variable:
     EASYHAPROXY_PLUGIN_CLEANUP_MAX_IDLE_TIME=600
 """
 
+import glob
 import os
 import sys
-import glob
 import time
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from plugins import PluginInterface, PluginType, PluginContext, PluginResult
-from functions import loggerEasyHaproxy
+from functions import logger_easyhaproxy
+from plugins import PluginContext, PluginInterface, PluginResult, PluginType
 
 
 class CleanupPlugin(PluginInterface):
@@ -66,7 +66,7 @@ class CleanupPlugin(PluginInterface):
             try:
                 self.max_idle_time = int(config["max_idle_time"])
             except ValueError:
-                loggerEasyHaproxy.warning(f"Invalid max_idle_time value: {config['max_idle_time']}, using default")
+                logger_easyhaproxy.warning(f"Invalid max_idle_time value: {config['max_idle_time']}, using default")
 
         if "cleanup_temp_files" in config:
             self.cleanup_temp_files = str(config["cleanup_temp_files"]).lower() in ["true", "1", "yes"]
@@ -104,15 +104,15 @@ class CleanupPlugin(PluginInterface):
                             if file_age > self.max_idle_time:
                                 os.remove(filepath)
                                 cleanup_actions.append(f"Removed old temp file: {filepath}")
-                                loggerEasyHaproxy.debug(f"Cleanup plugin: Removed {filepath}")
+                                logger_easyhaproxy.debug(f"Cleanup plugin: Removed {filepath}")
                         except Exception as e:
-                            loggerEasyHaproxy.warning(f"Failed to remove temp file {filepath}: {e}")
+                            logger_easyhaproxy.warning(f"Failed to remove temp file {filepath}: {e}")
                 except Exception as e:
-                    loggerEasyHaproxy.warning(f"Failed to cleanup {temp_dir}: {e}")
+                    logger_easyhaproxy.warning(f"Failed to cleanup {temp_dir}: {e}")
 
         # Log cleanup summary
         if cleanup_actions:
-            loggerEasyHaproxy.info(f"Cleanup plugin: Performed {len(cleanup_actions)} cleanup action(s)")
+            logger_easyhaproxy.info(f"Cleanup plugin: Performed {len(cleanup_actions)} cleanup action(s)")
 
         return PluginResult(
             haproxy_config="",  # No HAProxy config needed for cleanup

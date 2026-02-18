@@ -20,7 +20,7 @@ Automatically generates HAProxy `fcgi-app` configuration that defines required C
 | Option            | Description                             | Default                            |
 |-------------------|-----------------------------------------|------------------------------------|
 | `enabled`         | Enable/disable plugin                   | `true`                             |
-| `document_root`   | Document root path                      | `/var/www/html`                    |
+| `document_root`   | Document root path                      | `/etc/easyhaproxy/www`             |
 | `script_filename` | Custom pattern for SCRIPT_FILENAME      | `%[path]` (uses HAProxy's default) |
 | `index_file`      | Default index file                      | `index.php`                        |
 | `path_info`       | Enable PATH_INFO support                | `true`                             |
@@ -40,10 +40,10 @@ services:
       easyhaproxy.http.localport: 9000
       easyhaproxy.http.proto: fcgi
       easyhaproxy.http.plugins: fastcgi
-      easyhaproxy.http.plugin.fastcgi.document_root: /var/www/html
+      easyhaproxy.http.plugin.fastcgi.document_root: /etc/easyhaproxy/www
       easyhaproxy.http.plugin.fastcgi.index_file: index.php
     volumes:
-      - ./app:/var/www/html
+      - ./app:/etc/easyhaproxy/www
 ```
 
 ### Docker/Docker Compose (Unix socket)
@@ -57,10 +57,10 @@ services:
       easyhaproxy.http.socket: /run/php/php-fpm.sock
       easyhaproxy.http.proto: fcgi
       easyhaproxy.http.plugins: fastcgi
-      easyhaproxy.http.plugin.fastcgi.document_root: /var/www/html
+      easyhaproxy.http.plugin.fastcgi.document_root: /etc/easyhaproxy/www
       easyhaproxy.http.plugin.fastcgi.index_file: index.php
     volumes:
-      - ./app:/var/www/html
+      - ./app:/etc/easyhaproxy/www
       - /run/php:/run/php
 ```
 
@@ -82,7 +82,7 @@ kind: Ingress
 metadata:
   annotations:
     easyhaproxy.plugins: "fastcgi"
-    easyhaproxy.plugin.fastcgi.document_root: "/var/www/html"
+    easyhaproxy.plugin.fastcgi.document_root: "/etc/easyhaproxy/www"
     easyhaproxy.plugin.fastcgi.index_file: "index.php"
 spec:
   rules:
@@ -100,7 +100,7 @@ spec:
 ### Static YAML Configuration
 
 ```yaml
-# /etc/haproxy/static/config.yaml
+# /etc/easyhaproxy/static/config.yaml
 easymapping:
   - host: phpapp.local
     port: 80
@@ -110,7 +110,7 @@ easymapping:
       - fastcgi
     plugin_config:
       fastcgi:
-        document_root: /var/www/html
+        document_root: /etc/easyhaproxy/www
         index_file: index.php
         path_info: true
 ```
@@ -122,7 +122,7 @@ Configure FastCGI plugin defaults for all domains:
 | Environment Variable                         | Config Key        | Type     | Default         | Description                           |
 |----------------------------------------------|-------------------|----------|-----------------|---------------------------------------|
 | `EASYHAPROXY_PLUGIN_FASTCGI_ENABLED`         | `enabled`         | boolean  | `true`          | Enable/disable plugin for all domains |
-| `EASYHAPROXY_PLUGIN_FASTCGI_DOCUMENT_ROOT`   | `document_root`   | string   | `/var/www/html` | Document root path                    |
+| `EASYHAPROXY_PLUGIN_FASTCGI_DOCUMENT_ROOT`   | `document_root`   | string   | `/etc/easyhaproxy/www` | Document root path                    |
 | `EASYHAPROXY_PLUGIN_FASTCGI_SCRIPT_FILENAME` | `script_filename` | string   | `%[path]`       | Custom pattern for SCRIPT_FILENAME    |
 | `EASYHAPROXY_PLUGIN_FASTCGI_INDEX_FILE`      | `index_file`      | string   | `index.php`     | Default index file                    |
 | `EASYHAPROXY_PLUGIN_FASTCGI_PATH_INFO`       | `path_info`       | boolean  | `true`          | Enable PATH_INFO support              |
@@ -136,7 +136,7 @@ The plugin generates a top-level `fcgi-app` section and a `use-fcgi-app` directi
 ```haproxy
 # Top-level fcgi-app definition (added after defaults, before frontends/backends)
 fcgi-app fcgi_phpapp_local
-    docroot /var/www/html
+    docroot /etc/easyhaproxy/www
     index index.php
     path-info ^(/.+\.php)(/.*)?$
 

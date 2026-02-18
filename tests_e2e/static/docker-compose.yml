@@ -1,0 +1,129 @@
+# ==============================================================================
+# EXAMPLE: Static Configuration Mode
+# ==============================================================================
+#
+# WHAT THIS DEMONSTRATES:
+# - EasyHAProxy using static YAML configuration (no service discovery)
+# - Useful for non-containerized backends, VMs, or bare metal servers
+# - Configuration via /etc/easyhaproxy/static/config.yml
+#
+# REQUIREMENTS (run these first):
+# ```bash
+# # Generate SSL certificates
+# cd ../.. && ./tests_e2e/generate-keys.sh && cd tests_e2e/static
+#
+# # Add to /etc/hosts (idempotent)
+# grep -q "host1.local" /etc/hosts || echo "127.0.0.1 host1.local" | sudo tee -a /etc/hosts
+#
+# # Copy a configuration file (choose one):
+# cp conf/config-basic.yml conf/config.yml              # Basic HTTP→HTTPS redirect
+# # OR
+# cp conf/config-certbot.yml conf/config.yml            # Let's Encrypt (requires public domain)
+# # OR
+# cp conf/config-deny-pages.yml conf/config.yml         # Block specific paths
+# # OR
+# cp conf/config-jwt-validator.yml conf/config.yml      # JWT authentication
+# ```
+#
+# HOW TO START:
+# ```bash
+# # Start backend container
+# docker run -d --name container -p 8080:8080 byjg/static-httpserver
+#
+# # Start EasyHAProxy
+# docker compose up -d
+# ```
+#
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Test HTTPS
+# curl -k -H "Host: host1.local" https://127.0.0.1/
+# # Expected: 200 OK with "Hello from Static HTTP Server!"
+#
+# # Test HTTP redirect (if using basic config)
+# curl -I -H "Host: host1.local" http://127.0.0.1
+# # Expected: HTTP/1.1 301 Moved Permanently
+#
+# # View HAProxy stats
+# # URL: http://localhost:1936
+# # Username: admin
+# # Password: password
+# ```
+#
+# CLEAN UP:
+# ```bash
+# docker compose down
+# docker stop container && docker rm container
+# ```
+#
+# ==============================================================================
+
+services:
+  haproxy:
+    image: byjg/easy-haproxy:local
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    volumes:
+      - ./conf/:/etc/easyhaproxy/static/
+      - ../static/host1.local.pem:/etc/easyhaproxy/certs/haproxy/host1.local.pem:ro
+      - ../docker/jwt_pubkey.pem:/etc/easyhaproxy/jwt_keys/api_pubkey.pem:ro
+      - ../docker/jwt_pubkey.pem:/etc/easyhaproxy/jwt_keys/admin_pubkey.pem:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      EASYHAPROXY_DISCOVER: static
+      HAPROXY_USERNAME: admin
+      HAPROXY_PASSWORD: password
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+      - "1936:1936/tcp"
+
+  # Main container for basic tests
+  container:
+    image: byjg/static-httpserver
+    container_name: container
+
+  # Containers for deny-pages tests
+  webapp1:
+    image: byjg/static-httpserver
+    container_name: webapp1
+    environment:
+      TITLE: "WebApp 1"
+
+  wordpress:
+    image: byjg/static-httpserver
+    container_name: wordpress
+    environment:
+      TITLE: "WordPress Site"
+
+  publicsite:
+    image: byjg/static-httpserver
+    container_name: publicsite
+    environment:
+      TITLE: "Public Site"
+
+  # Containers for JWT validator tests
+  api-server:
+    image: byjg/static-httpserver
+    container_name: api-server
+    environment:
+      TITLE: "Protected API"
+
+  internal-api:
+    image: byjg/static-httpserver
+    container_name: internal-api
+    environment:
+      TITLE: "Internal API"
+
+  admin-api:
+    image: byjg/static-httpserver
+    container_name: admin-api
+    environment:
+      TITLE: "Admin API"
+
+  website:
+    image: byjg/static-httpserver
+    container_name: website
+    environment:
+      TITLE: "Public Website"

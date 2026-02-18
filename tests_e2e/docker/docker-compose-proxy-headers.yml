@@ -1,0 +1,46 @@
+# ==============================================================================
+# E2E TEST: Proxy Headers Verification
+# ==============================================================================
+#
+# WHAT THIS DEMONSTRATES:
+# - All 5 standard proxy headers are set correctly
+# - X-Forwarded-For: Client IP address
+# - X-Forwarded-Port: Port HAProxy received request on
+# - X-Forwarded-Proto: Protocol (http or https)
+# - X-Forwarded-Host: Original Host header from client
+# - X-Request-ID: Unique request identifier (UUID)
+# - HAProxy logs contain unique-id for request correlation
+#
+# ==============================================================================
+
+services:
+  haproxy:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    image: byjg/easy-haproxy:local
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-u", "admin:password", "http://localhost:1936"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    environment:
+      EASYHAPROXY_DISCOVER: docker
+      HAPROXY_USERNAME: admin
+      HAPROXY_PASSWORD: password
+      HAPROXY_STATS_PORT: 1936
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+      - "1936:1936/tcp"
+
+  # Header echo server for testing - responds with all received headers
+  webapp:
+    build: ../fixtures/header-echo
+    labels:
+      easyhaproxy.http.host: test.local
+      easyhaproxy.http.port: 80
+      easyhaproxy.http.localport: 8080

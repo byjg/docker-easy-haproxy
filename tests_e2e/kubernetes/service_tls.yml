@@ -1,0 +1,143 @@
+# ==============================================================================
+# EXAMPLE: TLS/SSL Kubernetes Ingress
+# ==============================================================================
+#
+# WHAT THIS DEMONSTRATES:
+# - HTTPS/TLS configuration with custom certificates
+# - Kubernetes TLS secrets for SSL certificates
+# - Complete deployment + service + secret + ingress with TLS
+# - Using pre-generated test certificates
+#
+# REQUIREMENTS (run these first):
+# ```bash
+# # 1. Ensure EasyHAProxy is installed in your cluster
+# kubectl create namespace easyhaproxy
+# kubectl apply -f https://raw.githubusercontent.com/byjg/docker-easy-haproxy/6.0.0/deploy/kubernetes/easyhaproxy-daemonset.yml
+#
+# # 2. Label the node where EasyHAProxy will run
+# kubectl label nodes <node-name> "easyhaproxy/node=master"
+#
+# # 3. Add to /etc/hosts for local testing (idempotent)
+# grep -q "host2.local" /etc/hosts || echo "<node-ip> host2.local" | sudo tee -a /etc/hosts
+#
+# # Note: This example uses embedded test certificates
+# # For production, create your own secret:
+# # kubectl create secret tls host2-tls --cert=cert.crt --key=cert.key
+# ```
+#
+# HOW TO START:
+# ```bash
+# kubectl apply -f service_tls.yml
+# ```
+#
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Check resources are created
+# kubectl get deployment,service,ingress,secret tls-example
+# kubectl get secret host2-tls
+#
+# # Test HTTPS (using port-forward)
+# kubectl port-forward -n easyhaproxy deployment/easyhaproxy 8443:443
+# curl -k -H "Host: host2.local" https://localhost:8443
+# # Expected: 200 OK with "My Host Example"
+#
+# # Verify certificate
+# openssl s_client -showcerts -connect localhost:8443 -servername host2.local < /dev/null
+# # Expected: Certificate for host2.local
+# ```
+#
+# CLEAN UP:
+# ```bash
+# kubectl delete -f service_tls.yml
+# ```
+#
+# ==============================================================================
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tls-example
+  namespace: default
+spec:
+  # Use ingressClassName instead of the deprecated annotation
+  # For backward compatibility, annotation kubernetes.io/ingress.class is still supported
+  ingressClassName: easyhaproxy
+  tls:
+  - hosts:
+      - host2.local
+    secretName: host2-tls
+  rules:
+  - host: host2.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: tls-example
+            port:
+              number: 8080
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: host2-tls
+  namespace: default
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURxVENDQXBHZ0F3SUJBZ0lVSWQ1Yjl0OXVxSDc4ZzAyRXpiV0Y2RktWdzNnd0RRWUpLb1pJaHZjTkFRRUwKQlFBd1pERUxNQWtHQTFVRUJoTUNRbEl4RnpBVkJnTlZCQWdNRGxKcGJ5QmtaU0JLWVc1bGFYSnZNUmN3RlFZRApWUVFIREE1U2FXOGdaR1VnU21GdVpXbHliekVOTUFzR0ExVUVDZ3dFUVVOTlJURVVNQklHQTFVRUF3d0xhRzl6CmRESXViRzlqWVd3d0hoY05Nakl3T0RFMU1EUXlOekExV2hjTk1qTXdPREUxTURReU56QTFXakJrTVFzd0NRWUQKVlFRR0V3SkNVakVYTUJVR0ExVUVDQXdPVW1sdklHUmxJRXBoYm1WcGNtOHhGekFWQmdOVkJBY01EbEpwYnlCawpaU0JLWVc1bGFYSnZNUTB3Q3dZRFZRUUtEQVJCUTAxRk1SUXdFZ1lEVlFRRERBdG9iM04wTWk1c2IyTmhiRENDCkFTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBTVNLdnJPYWhhdkNYbnZTRjUxMzFocG8KNms2NUM1N2pnUlE4NEZhRGo1TWJKT1ZsWVFWRnRNRzBYT2s3YStoaDV2MWZlNHdIMFI3STZGRG8wVjlzUytzcwprbzVic0VsYzF4WWxnNUhidUtxODl2UlNLZzZFRGx6dHgzQktiaTkxMlBtdDV2RkdOSjE2emN3NzdEVXJRSVhvCjRJL2I0YTNwbUJpV2o0M05vVElybVNXSHRzR3d3T2ozaUR2U3dlcWRZWEpJcjNocEhINXU2cG9oakRvUXZxRHoKSzZNdThwNm1oQ1VLTnM3S0ZKbk5Jbk5HMjVvUVQ2TzBuNE9HdG1nUmpMV29wZEVuT2hNa0tzZklvSTFYdGxYQgpMQkR2N2h1SUNrM3Q1eXd0ZkNReU8wOWtYN2xGSWdkNXJuNytNandINVdOZXFiUUp4dWFxam9YUW5OWlVnVXNDCkF3RUFBYU5UTUZFd0hRWURWUjBPQkJZRUZOaE1CRzhxNmEraUsybkVDd1ZUbjZCOUVYWk9NQjhHQTFVZEl3UVkKTUJhQUZOaE1CRzhxNmEraUsybkVDd1ZUbjZCOUVYWk9NQThHQTFVZEV3RUIvd1FGTUFNQkFmOHdEUVlKS29aSQpodmNOQVFFTEJRQURnZ0VCQUptdWR2eDgrcDVpSVVzVDhmbS9mYlZNMERBNnFXQUxEWVVKblRuM2o2THE0dnBmClBGQytxMUxtdVdmQlFNeXFLckhyUDNlNDkzRWN0WG9pU0taTzZpTjVkVkpJdXIwMk9qR3VpQUVjc1l1WTFuTG4KczlwaWlJK1VFd3hINnV4MU5hSFVuenNXYXVvQnZSaHpqWHZPNlNBVlNaSllhOWRZNW1pelhrbER5RE51RzVVMApsWHY5ZWdNR0JzeTBkRzZlRlhrVTVDUGR4V1U1NDB5STJzQ3RTQWo3eitXUlVENWs3Z0o3dFZvWTMvL2pIUVpHCjVTVFRtbTV0OWtwSVpUV2twdHlKb3M5b1pKRllNSVhxVzJGYzZ0eUxacFJwMzFSNzh0RHM2RVRJa1RvRGMwUlIKano2NnRoNkhJK1psZ0lCUWh3MDkraFlBaEJEZTkrRG1kL1N6UVpjPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0t
+  tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2d0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktrd2dnU2xBZ0VBQW9JQkFRREVpcjZ6bW9XcndsNTcKMGhlZGQ5WWFhT3BPdVF1ZTQ0RVVQT0JXZzQrVEd5VGxaV0VGUmJUQnRGenBPMnZvWWViOVgzdU1COUVleU9oUQo2TkZmYkV2ckxKS09XN0JKWE5jV0pZT1IyN2lxdlBiMFVpb09oQTVjN2Nkd1NtNHZkZGo1cmVieFJqU2RlczNNCk8rdzFLMENGNk9DUDIrR3Q2WmdZbG8rTnphRXlLNWtsaDdiQnNNRG85NGc3MHNIcW5XRnlTSzk0YVJ4K2J1cWEKSVl3NkVMNmc4eXVqTHZLZXBvUWxDamJPeWhTWnpTSnpSdHVhRUUranRKK0RoclpvRVl5MXFLWFJKem9USkNySAp5S0NOVjdaVndTd1E3KzRiaUFwTjdlY3NMWHdrTWp0UFpGKzVSU0lIZWE1Ky9qSThCK1ZqWHFtMENjYm1xbzZGCjBKeldWSUZMQWdNQkFBRUNnZ0VCQUtjZWl0VlJPUVE1ZS9teFJSOUNmSzFzTkgvSDNOZTMvMVBrQjZYSXJGYWIKcUIzZXZFYXRaT3VvbjdBNk5LRWVUamwzN1NlK3BkU1ZaT1VYY3FDL0J6YnJhWnJlMytFaHJrcElqNzJBcFYrWQoyaXdaaVdWYWFKUWdJNHVaM21OQXc4UmFXSnNqNVMxYTlJOExET2lRNUlaNDVDbXZBQkRQSmVNU2N2SlN2UlJZCmU1TjBMNnN0cVM3WitJb3lHVktVZnAxaU5PMFl5eXdPVWlTa0lSWGdzY3VSWFpHWXBpR1BvbXNKK0pzMWVqelcKanlTdGxaSkVyNEwxMjg1ckdQcm1IcWpUd0ZkK2hHODBXYzQxNzl4TCtXUkU2SEJFVVpTaXk5NWZlNmtjUEhYWApCZ2lWWXRjRkttaUJpMmRUYnhsNGU5NHV0MjM5aTBIdGxKMVpKdExoK0JFQ2dZRUE4YTI5OEsyelhrSG9zeGhOCnRSckg3WGZNUFRrSEREZDNyeE0yMUxUK2ZJWHFpbkdVcDlMWWFEY2JqdVRQczhlMzN1S01kN1I2UTQweDg5eVcKSVhOa2EvVkwwUFhVZVY2N2FDVkxMcWdYRExHdWRsdUppbkgwWHZtSTBDbUJlY0ZTTXFJRm1RbGdxRVJvR0dzMwpVTWFjMHA4NzZUNFhrR1FRSmRmNjJiRnBFNFVDZ1lFQTBEQkgwUERsT3B3WGNjRGdYck1mYXlyOEhBaEkrRzVSCnlXUS8vOWlpcnRVODNjaHdJV3draDUzZUxMTXpMZ2RxSm5QaVd5YVVXNUJxem1ZdUQyM25oeGNRN1BOZElxT08KSDFzRTZ6cUxOc2h2NDZ0NVFLbGgxUTRxamQ3VXF0Z3JTclk2M1JYSkNNV1R3bk5NZURMdGo4Z2FLYmprckczUgpCTTJpbGR0NlVvOENnWUJYN05EVWxpMVNsb0gxWGxzdkQwNDdTOEZIYU03eWw5OTRGM0owVW1EZnBzemNqMVA0CjlwRjY0TW1xNC8zWXQwbGkwbU11VGIvSmdiM3hyWWdGSlhrY2VjS2FoRVZIM3JvcHVwK3Vtc0xBQUlpclVNUXEKVlNrRndKMFF0bmovZGVEVXdQTnVhT1g4Y2Q2NU81Q0ZWNnpJUjl4QkVERDhmQnNQMlpMT3ptZWZEUUtCZ1FERgptMjR2VnRoZC8xY0pkQ2dEKzBWeE5ZWERIZUlWWExGbzFTMGlMWUNOTG4zdGpabFJRQktVWHpaSmUzYXkwL3JmCnNOTkQ3YVNZSE1Za1R6eWRESmJjMVBvTnp4bXlEVWlUWHBPV3F5VUV4TS9mYkIxVlVQRTVoNDdBeHFkWjJvR04KRXRkZ2pwTVpMbUNJQzJTa0dzTCszTkpvazhVS0hkcHVFcm1tUUlNazVRS0JnUUNnRVdjWXRMWEMzWURZTUZkSQpVZ2NUZWJGcVNzM21MWWd1YjF4ZWtXM0lYUjJ5b200VjVmUVRMaUY3WWZuMmRwRFc0SWNNVTBVSkZZVnNVbGhLCmFHdGV0NFZtNU5uOCtNZ2hvdDV5QWpxTzl5QVVhdWI3d2dpZktJZTk5dFFLZDh1WnlDdkowaGh2bUREU2Z4NG0KQi9URWlGQU85OXlGNDlpU3hFVlNBUzZwcVE9PQotLS0tLUVORCBQUklWQVRFIEtFWS0tLS0t
+type: kubernetes.io/tls
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tls-example
+  namespace: default
+spec:
+  ports:
+  - name: http
+    port: 8080
+  selector:
+    app: tls-example
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tls-example
+  namespace: default
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: tls-example
+  template:
+    metadata:
+      labels:
+        app: tls-example
+    spec:
+      containers:
+        - name: tls-example
+          image: byjg/static-httpserver
+          ports:
+            - containerPort: 8080
+          resources:
+            limits:
+              cpu: '0.05'
+              memory: '20Mi'
+            requests:
+              cpu: '0.05'
+              memory: '20Mi'
+          env:
+            - name: TITLE
+              value: "My Host Example"

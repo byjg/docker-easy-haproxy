@@ -72,7 +72,7 @@ spec:
 ### Static YAML Configuration
 
 ```yaml
-# /etc/haproxy/static/config.yaml
+# /etc/easyhaproxy/static/config.yaml
 easymapping:
   - host: admin.example.com
     port: 443

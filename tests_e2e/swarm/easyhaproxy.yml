@@ -1,0 +1,88 @@
+# ==============================================================================
+# EXAMPLE: EasyHAProxy for Docker Swarm
+# ==============================================================================
+#
+# WHAT THIS DEMONSTRATES:
+# - EasyHAProxy running in Swarm mode with service discovery
+# - HAProxy stats interface
+# - Let's Encrypt/Certbot support
+# - Shared overlay network for services
+#
+# REQUIREMENTS (run these first):
+# ```bash
+# # Initialize Docker Swarm (if not already initialized)
+# docker swarm init
+#
+# # Create overlay network (idempotent)
+# docker network ls | grep -q easyhaproxy || docker network create --driver overlay --attachable easyhaproxy
+#
+# # Edit this file and change:
+# # Line 18: EASYHAPROXY_CERTBOT_EMAIL to your email
+# ```
+#
+# HOW TO START:
+# ```bash
+# docker stack deploy -c easyhaproxy.yml easyhaproxy
+# ```
+#
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Check stack is deployed
+# docker stack ls
+# # Expected: easyhaproxy stack listed
+#
+# # Check service is running
+# docker service ls
+# # Expected: easyhaproxy_haproxy with 1/1 replicas
+#
+# # View HAProxy stats
+# # URL: http://localhost:1936
+# # Username: admin
+# # Password: password
+#
+# # Check logs
+# docker service logs -f easyhaproxy_haproxy
+# ```
+#
+# CLEAN UP:
+# ```bash
+# docker stack rm easyhaproxy
+# ```
+#
+# ==============================================================================
+
+
+services:
+  haproxy:
+    image: byjg/easy-haproxy:local
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./certs:/certs/haproxy
+      - certs_certbot:/certs/certbot
+    deploy:
+      replicas: 1
+    environment:
+      EASYHAPROXY_DISCOVER: swarm
+      EASYHAPROXY_REFRESH_CONF: "2"
+      EASYHAPROXY_SSL_MODE: "loose"
+      EASYHAPROXY_CERTBOT_EMAIL: changeme@example.org
+      HAPROXY_CUSTOMERRORS: "true"
+      HAPROXY_USERNAME: admin
+      HAPROXY_PASSWORD: password
+      HAPROXY_STATS_PORT: 1936
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+      - "1936:1936/tcp"
+    networks:
+      - easyhaproxy
+
+networks:
+  easyhaproxy:
+    external: true
+
+volumes:
+  certs_certbot:
+  #   external: true
+  # certs_haproxy:
+  #   external: true

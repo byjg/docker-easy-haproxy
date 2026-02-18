@@ -28,7 +28,7 @@ Prevents disk space issues by automatically cleaning up temporary files created 
 ### Static YAML Configuration
 
 ```yaml
-# /etc/haproxy/static/config.yaml
+# /etc/easyhaproxy/static/config.yaml
 plugins:
   enabled: [cleanup]
   config:
@@ -53,7 +53,7 @@ Configure the Cleanup plugin globally:
 ### Custom Idle Time (1 hour)
 
 ```yaml
-# /etc/haproxy/static/config.yaml
+# /etc/easyhaproxy/static/config.yaml
 plugins:
   enabled: [cleanup]
   config:

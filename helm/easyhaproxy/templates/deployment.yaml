@@ -77,4 +77,18 @@ spec:
             {{- if .Values.easyhaproxy.certbot.email }}
             - name: EASYHAPROXY_CERTBOT_EMAIL
               value: {{ .Values.easyhaproxy.certbot.email }}
-            {{ end }}
+            {{- end }}
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: EASYHAPROXY_UPDATE_INGRESS_STATUS
+              value: {{ .Values.ingressStatus.enabled | quote }}
+            - name: EASYHAPROXY_DEPLOYMENT_MODE
+              value: {{ .Values.ingressStatus.deploymentMode | quote }}
+            {{- if .Values.ingressStatus.externalHostname }}
+            - name: EASYHAPROXY_EXTERNAL_HOSTNAME
+              value: {{ .Values.ingressStatus.externalHostname | quote }}
+            {{- end }}
+            - name: EASYHAPROXY_STATUS_UPDATE_INTERVAL
+              value: {{ .Values.ingressStatus.updateInterval | quote }}

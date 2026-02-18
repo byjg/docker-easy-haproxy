@@ -1,11 +1,16 @@
 services:
   easyhaproxy:
-    image: byjg/easy-haproxy:5.0.0
+    image: byjg/easy-haproxy:6.0.0
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - certs_certbot:/certs/certbot
-      - certs_haproxy:/certs/haproxy
-
+      - certs_certbot:/etc/easyhaproxy/certs/certbot
+      - certs_haproxy:/etc/easyhaproxy/certs/haproxy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-u", "admin:password", "http://localhost:1936"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
     environment:
       EASYHAPROXY_DISCOVER: docker
       EASYHAPROXY_LABEL_PREFIX: easyhaproxy
@@ -15,21 +20,19 @@ services:
       HAPROXY_USERNAME: admin
       HAPROXY_PASSWORD: password
       HAPROXY_STATS_PORT: 1936
+      HAPROXY_STATS_CORS_ORIGIN: "http://localhost:8080"
 
     ports:
       - "80:80/tcp"
       - "443:443/tcp"
       - "1936:1936/tcp"
 
-    networks:
-      - easyhaproxy
-
 volumes:
   certs_certbot:
-    external: true
+#    external: true
   certs_haproxy:
-    external: true
+#    external: true
 
 networks:
   easyhaproxy:
-    external: true
+#    external: true

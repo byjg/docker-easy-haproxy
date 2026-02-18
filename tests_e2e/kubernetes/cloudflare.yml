@@ -1,0 +1,140 @@
+# ==============================================================================
+# EXAMPLE: Cloudflare IP Restoration Plugin for Kubernetes
+# ==============================================================================
+#
+# WHAT THIS DEMONSTRATES:
+# - Restoring original visitor IPs when behind Cloudflare CDN
+# - Using ConfigMaps to mount Cloudflare IP ranges
+# - Detecting requests from Cloudflare IP ranges
+# - Accurate client IP logging for applications behind Cloudflare
+#
+# REQUIREMENTS (run these first):
+# ```bash
+# # 1. Ensure EasyHAProxy is installed in your cluster
+# kubectl create namespace easyhaproxy
+# kubectl apply -f https://raw.githubusercontent.com/byjg/docker-easy-haproxy/6.0.0/deploy/kubernetes/easyhaproxy-daemonset.yml
+#
+# # 2. Download Cloudflare IP ranges
+# curl -s https://www.cloudflare.com/ips-v4 > cloudflare_ips.lst
+# curl -s https://www.cloudflare.com/ips-v6 >> cloudflare_ips.lst
+#
+# # 3. Create ConfigMap with Cloudflare IPs
+# kubectl create configmap cloudflare-ips \
+#   --from-file=cloudflare_ips.lst=cloudflare_ips.lst \
+#   -n easyhaproxy
+#
+# # 4. Mount the ConfigMap in EasyHAProxy deployment:
+# # Edit your EasyHAProxy deployment and add:
+# #   volumeMounts:
+# #     - name: cloudflare-ips
+# #       mountPath: /etc/easyhaproxy/cloudflare_ips.lst
+# #       subPath: cloudflare_ips.lst
+# #   volumes:
+# #     - name: cloudflare-ips
+# #       configMap:
+# #         name: cloudflare-ips
+# ```
+#
+# HOW TO START:
+# ```bash
+# kubectl apply -f cloudflare.yml
+# ```
+#
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Check resources are created
+# kubectl get deployment,service,ingress -l app=webapp
+#
+# # Test via port-forward
+# kubectl port-forward -n easyhaproxy deployment/easyhaproxy 8080:80
+# curl -H "Host: myapp.example.local" http://localhost:8080
+# # Expected: 200 OK with JSON response containing headers, client_ip, and x_forwarded_for
+#
+# # Test IP translation with CF-Connecting-IP header
+# curl -H "Host: myapp.example.local" -H "CF-Connecting-IP: 1.2.3.4" http://localhost:8080
+# # Expected: x_forwarded_for should be "1.2.3.4"
+# ```
+#
+# CLEAN UP:
+# ```bash
+# kubectl delete -f cloudflare.yml
+# ```
+#
+# ==============================================================================
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp-service
+  namespace: default
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+    app: webapp
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp
+  namespace: default
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: webapp
+  template:
+    metadata:
+      labels:
+        app: webapp
+    spec:
+      containers:
+      - name: webapp
+        image: header-echo-server:test
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: '0.1'
+            memory: '64Mi'
+          requests:
+            cpu: '0.05'
+            memory: '32Mi'
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    # Enable Cloudflare plugin with built-in IPs
+    easyhaproxy.plugins: "cloudflare"
+
+    # Optional: Provide custom IP list as base64-encoded text (takes precedence over built-in IPs)
+    # This is more Kubernetes-native than mounting ConfigMaps/files
+    # Example IPs: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.1
+    # How to create: printf "10.0.0.0/8\n172.16.0.0/12\n192.168.0.0/16\n127.0.0.1" | base64 -w 0
+    # easyhaproxy.plugin.cloudflare.ip_list: "MTAuMC4wLjAvOAoxNzIuMTYuMC4wLzEyCjE5Mi4xNjguMC4wLzE2CjEyNy4wLjAuMQ=="
+
+    # Optional: Specify custom IP list file path (only used if ip_list is not provided)
+    # easyhaproxy.plugin.cloudflare.ip_list_path: "/etc/easyhaproxy/cloudflare_ips.lst"
+  name: webapp-ingress-cloudflare
+  namespace: default
+spec:
+  # Use ingressClassName instead of the deprecated annotation
+  # For backward compatibility, annotation kubernetes.io/ingress.class is still supported
+  ingressClassName: easyhaproxy
+  rules:
+  - host: myapp.example.local
+    http:
+      paths:
+      - backend:
+          service:
+            name: webapp-service
+            port:
+              number: 8080
+        pathType: ImplementationSpecific

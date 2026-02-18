@@ -1,0 +1,10 @@
+{
+    "192.168.1.30": {
+        "easyhaproxy.http.host": "multi.example.com",
+        "easyhaproxy.http.port": "80",
+        "easyhaproxy.http.localport": "8080",
+        "easyhaproxy.http.plugins": "cloudflare,deny_pages",
+        "easyhaproxy.http.plugin.deny_pages.paths": "/admin,/private",
+        "easyhaproxy.http.plugin.deny_pages.status_code": "403"
+    }
+}

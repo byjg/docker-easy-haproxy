@@ -1,0 +1,13 @@
+stats:
+  username: admin
+  password: test123
+  port: 1936
+
+customerrors: true
+
+containers:
+  "host1.com:80":
+    ip: ["webapp:8080"]
+
+  "host2.com:80":
+    ip: ["webapp:8080"]  # Same container as host1

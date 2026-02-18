@@ -54,7 +54,7 @@ EasyHAProxy follows [Semantic Versioning](https://semver.org/):
   - **MINOR**: New features, plugin additions, backward-compatible changes
   - **PATCH**: Bug fixes, documentation updates, minor improvements
 
-**Current Version:** `5.0.0` (as of Chart.yaml)
+**Current Version:** `6.0.0` (as of Chart.yaml)
 
 ## Automated Release (Recommended)
 
@@ -80,7 +80,7 @@ The automated release process is triggered by pushing a semantic version tag.
    ```bash
    make build
    # Or manually:
-   docker build -t byjg/easy-haproxy:local -f build/Dockerfile .
+   docker build -t byjg/easy-haproxy:local -f deploy/docker/Dockerfile .
    ```
 
 ### Step 2: Bump Versions (script + PR)
@@ -329,6 +329,7 @@ helm show chart byjg/easyhaproxy
 
 | Version | Release Date | Type  | Highlights                                                                                                                            |
 |---------|--------------|-------|---------------------------------------------------------------------------------------------------------------------------------------|
+| 6.0.0   | 2026-XX-XX   | Major | Python module refactoring (one-class-per-file), IngressClassName support (spec.ingressClassName + deprecated annotation fallback), modernized build system (uv/pyproject.toml), improved version management and release tooling, GitHub Actions workflow_dispatch push control |
 | 5.0.0   | 2025-12-04   | Major | Plugin framework (builtin plugins: JWT, FastCGI, Cloudflare, IP whitelist, deny pages, cleanup), docs restructure, examples refreshed |
 | 4.6.0   | 2024-11-27   | Minor | FastCGI plugin, JWT enhancements                                                                                                      |
 | 4.5.0   | 2024-XX-XX   | Minor | Previous release                                                                                                                      |

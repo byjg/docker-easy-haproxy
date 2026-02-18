@@ -1,0 +1,99 @@
+# ==============================================================================
+# EXAMPLE: Let's Encrypt SSL with ACME/Certbot
+# ==============================================================================
+#
+# WHAT THIS DEMONSTRATES:
+# - Automatic SSL certificate generation using Let's Encrypt
+# - HTTP-01 ACME challenge protocol
+# - Certificate persistence across container restarts
+# - Auto-renewal of certificates
+#
+# REQUIREMENTS (run these first):
+# ```bash
+# # You MUST have:
+# # - A public IP address pointing to your machine
+# # - Ports 80 and 443 open in your firewall
+# # - A valid domain name with DNS configured
+#
+# # Edit this file and change:
+# # - Line 21: EASYHAPROXY_CERTBOT_EMAIL to your email
+# # - Line 36: easyhaproxy.http.host to your real domain
+#
+# # Create certs directory
+# mkdir -p ./certs
+# ```
+#
+# HOW TO START:
+# ```bash
+# docker compose -f docker-compose-acme.yml up -d
+# ```
+#
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Check logs for certificate issuance
+# docker compose -f docker-compose-acme.yml logs -f haproxy
+# # Look for: "Successfully received certificate"
+#
+# # Test HTTPS with real domain (replace test.xpto.us with your domain)
+# curl https://test.xpto.us/
+# # Expected: 200 OK with valid SSL certificate
+#
+# # Verify certificate
+# openssl s_client -showcerts -connect test.xpto.us:443 < /dev/null | grep "Issuer:"
+# # Expected: Issuer: C = US, O = Let's Encrypt
+#
+# # Check certificate files
+# ls -la ./certs/
+# # Expected: Your domain certificate files
+# ```
+#
+# CLEAN UP:
+# ```bash
+# docker compose -f docker-compose-acme.yml down
+# # Keep certificates:
+# # docker compose -f docker-compose-acme.yml down
+# # Remove certificates too:
+# # docker compose -f docker-compose-acme.yml down && rm -rf ./certs
+# ```
+#
+# ==============================================================================
+
+services:
+  haproxy:
+    image: byjg/easy-haproxy:6.0.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Persist the CERTBOT to avoid re-challenge when the server restarts
+      - ./certs:/etc/easyhaproxy/certs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-u", "admin:password", "http://localhost:1936"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    environment:
+      EASYHAPROXY_DISCOVER: docker
+      HAPROXY_CUSTOMERRORS: "true"
+      HAPROXY_USERNAME: admin
+      HAPROXY_PASSWORD: password
+      HAPROXY_STATS_PORT: 1936
+      # SETUP THE EMAIL for CertBot
+      EASYHAPROXY_CERTBOT_EMAIL: user@example.com
+      # Let's encrypt don´t need AUTOCONFIG, just email.
+      # If you want other, please refer to the documentation
+      # EASYHAPROXY_CERTBOT_AUTOCONFIG: zerossl
+
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+      - "1936:1936/tcp"
+
+  container:
+    image: byjg/static-httpserver
+    labels:
+      # Setup here the domain will have the SSL issued
+      easyhaproxy.http.redirect_ssl: true
+      easyhaproxy.http.host: test.xpto.us
+      easyhaproxy.http.localport: 8080
+      easyhaproxy.http.certbot: true
+

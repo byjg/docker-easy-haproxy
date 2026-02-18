@@ -6,12 +6,21 @@ __pycache__
 .pytest_cache
 *.pyc
 .env
-/examples/static/conf/config.yml
-/examples/docker/certs/haproxy/.place_holder_cert.pem
-/examples/static/host1.local.pem
-/examples/swarm/certs/host1.local.pem
-/examples/docker/host2.local.pem
-/examples/swarm/certs/host2.local.pem
-/examples/docker/jwt_private.pem
-/examples/docker/jwt_pubkey.pem
-/examples/docker/cloudflare_ips.lst
+
+# uv
+.venv/
+
+# Build artifacts
+dist/
+*.egg-info/
+
+/tests_e2e/static/conf/config.yml
+/tests_e2e/docker/certs/haproxy/.place_holder_cert.pem
+/tests_e2e/static/host1.local.pem
+/tests_e2e/swarm/certs/host1.local.pem
+/tests_e2e/docker/host2.local.pem
+/tests_e2e/swarm/certs/host2.local.pem
+/tests_e2e/docker/jwt_private.pem
+/tests_e2e/docker/jwt_pubkey.pem
+/tests_e2e/docker/cloudflare_ips.lst
+/tests_e2e/docker/pebble-ca.pem

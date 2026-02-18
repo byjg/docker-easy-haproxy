@@ -1,0 +1,76 @@
+# JWT Validator Plugin Configuration Example
+#
+# Demonstrates:
+# - JWT token validation for API protection
+# - Different JWT configurations per domain
+# - Optional issuer/audience validation
+#
+# Prerequisites:
+# 1. Generate RSA key pair:
+#    openssl genrsa -out jwt_private.pem 2048
+#    openssl rsa -in jwt_private.pem -pubout -out jwt_pubkey.pem
+#
+# 2. Mount public keys:
+#    -v ./jwt_pubkey.pem:/etc/easyhaproxy/jwt_keys/api_pubkey.pem:ro
+#    -v ./jwt_pubkey2.pem:/etc/easyhaproxy/jwt_keys/admin_pubkey.pem:ro
+#
+# 3. Mount this config:
+#    -v ./conf/config-jwt-validator.yml:/etc/easyhaproxy/static/config.yml
+#
+# 4. Test:
+#    # Without token - should fail
+#    curl http://api.local/users
+#    # Response: Missing Authorization HTTP header
+#
+#    # With valid token - should succeed
+#    curl -H "Authorization: Bearer eyJhbGc..." http://api.local/users
+
+stats:
+  username: admin
+  password: password
+  port: 1936
+
+customerrors: true
+
+containers:
+  # Public API with full JWT validation
+  "api.local:80":
+    ip: ["api-server:8080"]
+    plugins: [jwt_validator]
+    plugin:
+      jwt_validator:
+        algorithm: RS256
+        issuer: https://auth.example.com/
+        audience: https://api.example.com
+        pubkey_path: /etc/easyhaproxy/jwt_keys/api_pubkey.pem
+
+  # Internal API - validate signature only (no issuer/audience check)
+  "internal-api.local:80":
+    ip: ["internal-api:3000"]
+    plugins: [jwt_validator]
+    plugin:
+      jwt_validator:
+        algorithm: RS256
+        # No issuer/audience = skip those validations
+        pubkey_path: /etc/easyhaproxy/jwt_keys/api_pubkey.pem
+
+  # Admin API - different issuer and key
+  "admin-api.local:80":
+    ip: ["admin-api:4000"]
+    plugins: [jwt_validator, deny_pages]  # Also block internal paths
+    plugin:
+      jwt_validator:
+        algorithm: RS256
+        issuer: https://admin-auth.example.com/
+        audience: https://admin.example.com
+        pubkey_path: /etc/easyhaproxy/jwt_keys/admin_pubkey.pem
+      deny_pages:
+        paths:
+          - /internal
+          - /debug
+        status_code: 403
+
+  # Public website - no JWT required
+  "website.local:80":
+    ip: ["website:8080"]
+    # No plugins = public access

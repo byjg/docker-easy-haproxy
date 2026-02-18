@@ -1,0 +1,27 @@
+stats:
+  username: admin
+  password: test123
+  port: 1936         # Optional (default 1936)
+
+customerrors: true   # Optional (default false)
+
+certbot:
+  email: test@example.com
+
+containers:
+  "host1.com.br:80":
+    ip: ["container:5000"]
+    certbot: true
+
+  "host2.com.br:80":
+    ip: ["other:3000"]
+
+  "www.host1.com.br:80":
+    redirect: "http://host1.com.br"
+
+  "host1.com.br:443":
+    ip: ["container:80"]
+    ssl: true
+
+  "host3.com.br:8080":
+    ip: ["domain:8181"]

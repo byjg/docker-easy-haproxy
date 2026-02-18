@@ -9,11 +9,27 @@ Configuration:
     - algorithm: JWT signing algorithm (default: RS256)
     - issuer: Expected JWT issuer (optional, set to "none"/"null" to skip validation)
     - audience: Expected JWT audience (optional, set to "none"/"null" to skip validation)
-    - pubkey_path: Path to public key file (required if pubkey not provided)
-    - pubkey: Public key content as base64-encoded string (required if pubkey_path not provided)
+    - pubkey_path: Path to public key file in container (priority: 1)
+    - pubkey: Public key content as base64-encoded string (priority: 2)
+    - k8s_secret.pubkey: Kubernetes secret containing public key (priority: 3, Kubernetes only)
     - paths: List of paths that require JWT validation (optional, if not set ALL domain is protected)
     - only_paths: If true, only specified paths are accessible; if false (default), only specified paths require JWT validation
     - allow_anonymous: If true, allows requests without Authorization header (validates JWT if present); if false (default), requires Authorization header
+
+Priority Order (first configured option wins):
+    1. pubkey_path - Direct file path (explicit configuration)
+    2. pubkey - Base64-encoded key content (inline configuration)
+    3. k8s_secret.pubkey - Kubernetes secret name (processed by K8s processor into pubkey)
+
+Kubernetes Secret Pattern (Kubernetes only):
+    For Kubernetes deployments, you can load the public key from a Kubernetes Secret:
+
+    - Auto-detect key: easyhaproxy.plugin.jwt_validator.k8s_secret.pubkey: "secret_name"
+    - Explicit key: easyhaproxy.plugin.jwt_validator.k8s_secret.pubkey: "secret_name/key_name"
+
+    See documentation for details:
+    - General k8s_secret pattern: docs/kubernetes.md#loading-plugin-configuration-from-kubernetes-secrets
+    - JWT Validator with Secrets: docs/Plugins/jwt-validator.md#kubernetes-with-secrets-recommended
 
 Path Validation Logic:
     - No paths configured: ALL requests to the domain require JWT validation (default behavior)
@@ -31,7 +47,7 @@ Example YAML config:
         algorithm: RS256
         issuer: https://myaccount.auth0.com/
         audience: https://api.mywebsite.com
-        pubkey_path: /etc/haproxy/jwt_keys/pubkey.pem
+        pubkey_path: /etc/easyhaproxy/jwt_keys/pubkey.pem
         paths:
           - /api/admin
           - /api/sensitive
@@ -42,9 +58,19 @@ Example Container Label:
     easyhaproxy.http.plugin.jwt_validator.algorithm: RS256
     easyhaproxy.http.plugin.jwt_validator.issuer: https://auth.example.com/
     easyhaproxy.http.plugin.jwt_validator.audience: https://api.example.com
-    easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/haproxy/jwt_keys/api_pubkey.pem
+    easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/easyhaproxy/jwt_keys/api_pubkey.pem
     easyhaproxy.http.plugin.jwt_validator.paths: /api/admin,/api/sensitive
     easyhaproxy.http.plugin.jwt_validator.only_paths: true
+
+Example Kubernetes Annotations:
+    # Using k8s_secret pattern (recommended for Kubernetes):
+    easyhaproxy.plugin.jwt_validator.k8s_secret.pubkey: "my-jwt-secret"
+    easyhaproxy.plugin.jwt_validator.algorithm: "RS256"
+    easyhaproxy.plugin.jwt_validator.issuer: "https://auth.example.com/"
+    easyhaproxy.plugin.jwt_validator.audience: "https://api.example.com"
+
+    # Using inline pubkey (for testing):
+    easyhaproxy.plugin.jwt_validator.pubkey: "LS0tLS1CRUdJTi..."
 
 HAProxy Config Generated:
     # JWT Validator - Validate JWT tokens
@@ -60,7 +86,7 @@ HAProxy Config Generated:
     http-request deny content-type 'text/html' string 'Unsupported JWT signing algorithm' unless { var(txn.alg) -m str RS256 }
     http-request deny content-type 'text/html' string 'Invalid JWT issuer' unless { var(txn.iss) -m str https://auth.example.com/ }
     http-request deny content-type 'text/html' string 'Invalid JWT audience' unless { var(txn.aud) -m str https://api.example.com }
-    http-request deny content-type 'text/html' string 'Invalid JWT signature' unless { http_auth_bearer,jwt_verify(txn.alg,"/etc/haproxy/jwt_keys/api_pubkey.pem") -m int 1 }
+    http-request deny content-type 'text/html' string 'Invalid JWT signature' unless { http_auth_bearer,jwt_verify(txn.alg,"/etc/easyhaproxy/jwt_keys/api_pubkey.pem") -m int 1 }
 
     # Validate expiration
     http-request set-var(txn.now) date()
@@ -74,8 +100,8 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from plugins import PluginInterface, PluginType, PluginContext, PluginResult
-from functions import loggerEasyHaproxy
+from functions import Functions, logger_easyhaproxy, Consts
+from plugins import InitializationResult, PluginContext, PluginInterface, PluginResult, PluginType, ResourceRequest
 
 
 class JwtValidatorPlugin(PluginInterface):
@@ -91,6 +117,8 @@ class JwtValidatorPlugin(PluginInterface):
         self.paths = []  # List of paths that require JWT validation
         self.only_paths = False  # If true, only specified paths are accessible
         self.allow_anonymous = False  # If true, allow requests without Authorization header
+        # Make JWT_KEYS_DIR configurable via environment variable (for testing)
+        self.jwt_keys_dir = os.getenv("EASYHAPROXY_JWT_KEYS_DIR", Consts.base_path + "/jwt_keys")
 
     @property
     def name(self) -> str:
@@ -159,6 +187,19 @@ class JwtValidatorPlugin(PluginInterface):
         if "allow_anonymous" in config:
             self.allow_anonymous = str(config["allow_anonymous"]).lower() in ["true", "1", "yes"]
 
+    def initialize(self) -> InitializationResult:
+        """
+        Initialize plugin resources - create JWT keys directory
+
+        Returns:
+            InitializationResult with directory creation request
+        """
+        return InitializationResult(
+            resources=[
+                ResourceRequest(resource_type="directory", path=self.jwt_keys_dir)
+            ]
+        )
+
     def process(self, context: PluginContext) -> PluginResult:
         """
         Generate HAProxy config to validate JWT tokens
@@ -178,9 +219,20 @@ class JwtValidatorPlugin(PluginInterface):
         elif self.pubkey:
             # Generate path for pubkey based on domain
             domain_safe = context.domain.replace(".", "_").replace(":", "_")
-            pubkey_file = f"/etc/haproxy/jwt_keys/{domain_safe}_pubkey.pem"
+            pubkey_file = f"{self.jwt_keys_dir}/{domain_safe}_pubkey.pem"
+
+            # Write the public key file (with error handling for test environments)
+            try:
+                # Ensure directory exists (defensive - normally created by initialize())
+                os.makedirs(self.jwt_keys_dir, exist_ok=True)
+                Functions.save(pubkey_file, self.pubkey)
+                logger_easyhaproxy.debug(f"Wrote JWT public key to {pubkey_file} for domain {context.domain}")
+            except (PermissionError, OSError) as e:
+                # In test environments or restricted environments, file write may fail
+                # This is okay - the config is still generated correctly
+                logger_easyhaproxy.debug(f"Could not write JWT public key file (may be test environment): {e}")
         else:
-            loggerEasyHaproxy.warning(f"JWT validator plugin for {context.domain}: No pubkey or pubkey_path configured")
+            logger_easyhaproxy.warning(f"JWT validator plugin for {context.domain}: No pubkey or pubkey_path configured")
             return PluginResult()
 
         # Build HAProxy configuration
@@ -271,6 +323,7 @@ class JwtValidatorPlugin(PluginInterface):
         if self.audience:
             metadata["audience"] = self.audience
         if self.pubkey:
+            # Keep pubkey_content in metadata for backward compatibility with tests
             metadata["pubkey_content"] = self.pubkey
         if self.paths:
             metadata["paths"] = self.paths

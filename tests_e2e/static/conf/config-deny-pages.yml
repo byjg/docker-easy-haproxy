@@ -1,0 +1,71 @@
+# Deny Pages Plugin Configuration Example
+#
+# Demonstrates:
+# - Global plugin configuration (applies to all domains)
+# - Per-domain plugin override (custom settings per host)
+#
+# To use:
+# 1. Update container names and ports
+# 2. Mount this config: -v ./conf/config-deny-pages.yml:/etc/easyhaproxy/static/config.yml
+# 3. Test blocked paths:
+#    curl http://host1.local/admin        # Should return 404
+#    curl http://host2.local/wp-admin     # Should return 403 (different config)
+
+stats:
+  username: admin
+  password: password
+  port: 1936
+
+customerrors: true
+
+# Global plugin configuration
+# This applies to ALL domains unless overridden
+plugins:
+  enabled:
+    - deny_pages
+
+  config:
+    deny_pages:
+      # Global default: block common admin paths with 404
+      paths:
+        - /admin
+        - /.env
+        - /config
+      status_code: 404  # Hide existence of these paths
+
+containers:
+  # Domain 1: Uses global deny_pages configuration
+  "host1.local:80":
+    ip: ["webapp1:8080"]
+    # No plugins specified = uses global configuration
+
+  # Domain 2: WordPress site with custom blocked paths
+  "host2.local:80":
+    ip: ["wordpress:80"]
+    # Override global plugin configuration for this domain
+    plugins: [deny_pages]
+    plugin:
+      deny_pages:
+        paths:
+          - /wp-admin
+          - /wp-login.php
+          - /xmlrpc.php
+          - /wp-config.php
+        status_code: 403  # Return forbidden instead of 404
+
+  # Domain 3: Public site with stricter blocking
+  "host3.local:80":
+    ip: ["publicsite:3000"]
+    plugins: [deny_pages]
+    plugin:
+      deny_pages:
+        paths:
+          - /admin
+          - /administrator
+          - /manager
+          - /phpmyadmin
+          - /.git
+          - /.env
+          - /config
+          - /backup
+        status_code: 404

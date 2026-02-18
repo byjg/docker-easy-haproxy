@@ -25,19 +25,28 @@ global
 
 defaults
     log global
+    unique-id-format %{+X}o\ %ci:%cp_%fi:%fp_%Ts_%rt:%pid
+    unique-id-header X-Edge-Request-ID
     option httplog
 
     timeout connect    3s
     timeout client    10s
     timeout server    10m
 {% if data["customerrors"] %}
-    errorfile 400 /etc/haproxy/errors-custom/400.http
-    errorfile 403 /etc/haproxy/errors-custom/403.http
-    errorfile 408 /etc/haproxy/errors-custom/408.http
-    errorfile 500 /etc/haproxy/errors-custom/500.http
-    errorfile 502 /etc/haproxy/errors-custom/502.http
-    errorfile 503 /etc/haproxy/errors-custom/503.http
-    errorfile 504 /etc/haproxy/errors-custom/504.http
+    errorfile 400 /etc/easyhaproxy/haproxy/errors-custom/400.http
+    errorfile 403 /etc/easyhaproxy/haproxy/errors-custom/403.http
+    errorfile 408 /etc/easyhaproxy/haproxy/errors-custom/408.http
+    errorfile 500 /etc/easyhaproxy/haproxy/errors-custom/500.http
+    errorfile 502 /etc/easyhaproxy/haproxy/errors-custom/502.http
+    errorfile 503 /etc/easyhaproxy/haproxy/errors-custom/503.http
+    errorfile 504 /etc/easyhaproxy/haproxy/errors-custom/504.http
+{% endif %}
+{% if defaults_plugin_configs %}
+
+    # Defaults Plugin Configurations
+{% for config in defaults_plugin_configs %}
+    {{ config }}
+{% endfor %}
 {% endif %}
 
 {% if global_plugin_configs %}
@@ -53,6 +62,23 @@ frontend stats
     bind *:{{ data_stats["port"] | default(1936) }}
     mode http
     http-request use-service prometheus-exporter if { path /metrics }
+{%- if data_stats["cors_origin"] | default("") != "" %}
+
+    # CORS for stats dashboard (only for configured origin)
+    acl from_ui hdr(Origin) -i {{ data_stats["cors_origin"] }}
+    acl preflight method OPTIONS
+
+    # Preflight response
+    http-request return status 204 hdr "Access-Control-Allow-Origin" "%[req.hdr(Origin)]" hdr "Access-Control-Allow-Methods" "GET, OPTIONS" hdr "Access-Control-Allow-Headers" "Authorization, Content-Type" hdr "Access-Control-Max-Age" "86400" hdr "Vary" "Origin" if from_ui preflight
+
+    # Actual response headers
+    http-after-response set-header Access-Control-Allow-Origin "{{ data_stats["cors_origin"] }}"
+    http-after-response set-header Access-Control-Allow-Methods "GET, OPTIONS"
+    http-after-response set-header Access-Control-Allow-Headers "Authorization, Content-Type"
+    http-after-response set-header Access-Control-Expose-Headers "X-Request-ID"
+    http-after-response set-header Vary "Origin"
+{% endif %}
+
     stats enable
     stats hide-version
     stats realm Haproxy\ Statistics
@@ -92,6 +118,8 @@ backend srv_{{ host }}
     option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
+    http-request set-header X-Forwarded-Host %[req.hdr(Host)]
+    http-request set-header X-Request-ID %[uuid()]
         {% elif mode == "tcp" %}
     option tcp-check
     tcp-check connect{{ " ssl" if o["ssl-check"] == "ssl" }}
