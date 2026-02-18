@@ -476,7 +476,7 @@ class KubernetesFixture:
             )
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def k8s_service(kind_cluster) -> Generator[str, None, None]:
     """Fixture for service.yml"""
     kubectl_cmd = kind_cluster["kubectl"]
@@ -486,7 +486,7 @@ def k8s_service(kind_cluster) -> Generator[str, None, None]:
     fixture.delete()
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def k8s_ip_whitelist(kind_cluster) -> Generator[str, None, None]:
     """Fixture for ip-whitelist.yml"""
     kubectl_cmd = kind_cluster["kubectl"]
@@ -496,7 +496,7 @@ def k8s_ip_whitelist(kind_cluster) -> Generator[str, None, None]:
     fixture.delete()
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def k8s_service_tls(kind_cluster) -> Generator[str, None, None]:
     """Fixture for service_tls.yml with generated certificates"""
     kubectl_cmd = kind_cluster["kubectl"]
@@ -573,7 +573,7 @@ def k8s_service_tls(kind_cluster) -> Generator[str, None, None]:
         )
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def k8s_jwt_validator_secret(kind_cluster) -> Generator[dict, None, None]:
     """Fixture for jwt-validator-secret-example.yml with generated JWT keys"""
     if not JWT_AVAILABLE:
@@ -665,7 +665,7 @@ def k8s_jwt_validator_secret(kind_cluster) -> Generator[dict, None, None]:
     )
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def k8s_cloudflare(kind_cluster, kind_cmd) -> Generator[str, None, None]:
     """Fixture for cloudflare.yml with base64-encoded IP list"""
     kubectl_cmd = kind_cluster["kubectl"]

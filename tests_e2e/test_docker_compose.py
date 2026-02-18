@@ -121,7 +121,7 @@ def create_cloudflare_ips_file():
     _cloudflare_ips_created = True
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def docker_compose_basic_ssl() -> Generator[None, None, None]:
     """Fixture for docker-compose.yml (Basic SSL)"""
     fixture = DockerComposeFixture(str(DOCKER_DIR / "docker-compose.yml"))
@@ -130,7 +130,7 @@ def docker_compose_basic_ssl() -> Generator[None, None, None]:
     fixture.down()
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def docker_compose_jwt_validator() -> Generator[None, None, None]:
     """Fixture for docker-compose-jwt-validator.yml"""
     fixture = DockerComposeFixture(str(DOCKER_DIR / "docker-compose-jwt-validator.yml"))
@@ -139,7 +139,7 @@ def docker_compose_jwt_validator() -> Generator[None, None, None]:
     fixture.down()
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def docker_compose_multi_containers() -> Generator[None, None, None]:
     """Fixture for docker-compose-multi-containers.yml"""
     fixture = DockerComposeFixture(str(DOCKER_DIR / "docker-compose-multi-containers.yml"))
@@ -148,7 +148,7 @@ def docker_compose_multi_containers() -> Generator[None, None, None]:
     fixture.down()
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def docker_compose_php_fpm() -> Generator[None, None, None]:
     """Fixture for docker-compose-php-fpm.yml"""
     fixture = DockerComposeFixture(str(DOCKER_DIR / "docker-compose-php-fpm.yml"))
@@ -157,7 +157,7 @@ def docker_compose_php_fpm() -> Generator[None, None, None]:
     fixture.down()
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def docker_compose_plugins_combined() -> Generator[None, None, None]:
     """Fixture for docker-compose-plugins-combined.yml"""
     # Create cloudflare_ips.lst (required by this compose file)
@@ -169,7 +169,7 @@ def docker_compose_plugins_combined() -> Generator[None, None, None]:
     fixture.down()
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def docker_compose_ip_whitelist() -> Generator[None, None, None]:
     """Fixture for docker-compose-ip-whitelist.yml"""
     fixture = DockerComposeFixture(str(DOCKER_DIR / "docker-compose-ip-whitelist.yml"))
@@ -178,7 +178,7 @@ def docker_compose_ip_whitelist() -> Generator[None, None, None]:
     fixture.down()
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def docker_compose_cloudflare() -> Generator[None, None, None]:
     """Fixture for docker-compose-cloudflare.yml"""
     # Create cloudflare_ips.lst (required by this compose file)
@@ -751,7 +751,7 @@ class TestCloudflare:
 # Test: docker-compose-changed-label.yml - Custom Label Prefix
 # =============================================================================
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def docker_compose_changed_label() -> Generator[None, None, None]:
     """Fixture for docker-compose-changed-label.yml"""
     fixture = DockerComposeFixture(str(DOCKER_DIR / "docker-compose-changed-label.yml"))
@@ -843,7 +843,7 @@ class TestChangedLabel:
 # Test: docker-compose-acme-e2e.yml - ACME/Certbot with Pebble
 # =============================================================================
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def docker_compose_acme() -> Generator[None, None, None]:
     """Fixture for docker-compose-acme-e2e.yml - ACME/Certbot E2E test"""
     volume_name = "docker_certbot-certs"

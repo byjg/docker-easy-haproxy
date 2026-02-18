@@ -69,6 +69,7 @@ markers = [
     "static: marks tests for static configuration mode",
     "acme: marks tests for certbot/acme",
     "proxy_headers: marks tests for proxy headers",
+    "swarm: marks tests for Docker Swarm mode",
 ]
 
 [tool.ruff]

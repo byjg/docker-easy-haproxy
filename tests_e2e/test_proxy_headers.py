@@ -36,7 +36,7 @@ BASE_DIR = Path(__file__).parent.absolute()
 DOCKER_DIR = BASE_DIR / "docker"
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def docker_compose_proxy_headers() -> Generator[None, None, None]:
     """Fixture for testing proxy headers with header-echo server"""
     fixture = DockerComposeFixture(str(DOCKER_DIR / "docker-compose-proxy-headers.yml"))
