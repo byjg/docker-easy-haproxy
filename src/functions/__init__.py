@@ -354,8 +354,12 @@ class DaemonizeHAProxy:
         self.thread = Process(target=self.__start, args=())
         self.thread.start()
 
+    @staticmethod
+    def get_haproxy_bin() -> str:
+        return shutil.which('haproxy') or '/usr/sbin/haproxy'
+
     def get_haproxy_command(self, action, pid_file="/run/haproxy.pid"):
-        haproxy_bin = shutil.which('haproxy') or '/usr/sbin/haproxy'
+        haproxy_bin = DaemonizeHAProxy.get_haproxy_bin()
         custom_config_files = ""
         if len(list(self.get_custom_config_files().keys())) != 0:
             custom_config_files = f"-f {self.custom_config_folder}"

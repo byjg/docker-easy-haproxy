@@ -12,8 +12,6 @@ __pycache__
 
 # Build artifacts
 dist/
-build/
-!build/assets/
 *.egg-info/
 
 /tests_e2e/static/conf/config.yml

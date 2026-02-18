@@ -24,6 +24,7 @@ openssl req -x509 -nodes -days 3650 -newkey rsa:4096 \
     -keyout "$SCRIPT_DIR/static/host1.local.pem" \
     -out "$SCRIPT_DIR/static/host1.local.pem" \
     -subj "/C=US/ST=State/L=City/O=Organization/CN=host1.local"
+chmod 644 "$SCRIPT_DIR/static/host1.local.pem"
 
 # Copy to swarm directory
 cp "$SCRIPT_DIR/static/host1.local.pem" "$SCRIPT_DIR/swarm/certs/host1.local.pem"
@@ -40,6 +41,7 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
     -keyout "$SCRIPT_DIR/docker/host2.local.pem" \
     -out "$SCRIPT_DIR/docker/host2.local.pem" \
     -subj "/C=US/ST=State/L=City/O=Organization/CN=host2.local"
+chmod 644 "$SCRIPT_DIR/docker/host2.local.pem"
 
 # Copy to swarm directory
 cp "$SCRIPT_DIR/docker/host2.local.pem" "$SCRIPT_DIR/swarm/certs/host2.local.pem"
@@ -55,9 +57,11 @@ echo "Generating JWT RSA key pair (2048-bit)..."
 
 # Generate private key
 openssl genrsa -out "$SCRIPT_DIR/docker/jwt_private.pem" 2048
+chmod 644 "$SCRIPT_DIR/docker/jwt_private.pem"
 
 # Extract public key
 openssl rsa -in "$SCRIPT_DIR/docker/jwt_private.pem" -pubout -out "$SCRIPT_DIR/docker/jwt_pubkey.pem"
+chmod 644 "$SCRIPT_DIR/docker/jwt_pubkey.pem"
 
 echo "✓ Created JWT key pair (2048-bit)"
 echo "  - $SCRIPT_DIR/docker/jwt_private.pem (private key)"
@@ -72,6 +76,7 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
     -keyout "$SCRIPT_DIR/docker/certs/haproxy/.place_holder_cert.pem" \
     -out "$SCRIPT_DIR/docker/certs/haproxy/.place_holder_cert.pem" \
     -subj "/C=US/ST=State/L=City/O=Organization/CN=placeholder"
+chmod 644 "$SCRIPT_DIR/docker/certs/haproxy/.place_holder_cert.pem"
 
 echo "✓ Created placeholder certificate"
 echo "  - $SCRIPT_DIR/docker/certs/haproxy/.place_holder_cert.pem"

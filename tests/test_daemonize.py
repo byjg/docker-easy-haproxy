@@ -3,6 +3,8 @@ from functions import Consts
 
 from functions import DaemonizeHAProxy
 
+BIN = DaemonizeHAProxy.get_haproxy_bin()
+
 
 def test_daemonize_haproxy():
     daemon = DaemonizeHAProxy()
@@ -16,12 +18,12 @@ def test_daemonize_haproxy_check_config():
 def test_daemonize_haproxy_get_haproxy_command_start():
     daemon = DaemonizeHAProxy()
     command = daemon.get_haproxy_command(DaemonizeHAProxy.HAPROXY_START)
-    assert command == f"/usr/sbin/haproxy -W -f {Consts.haproxy_config}  -p /run/haproxy.pid -S /var/run/haproxy.sock"
+    assert command == f"{BIN} -W -f {Consts.haproxy_config}  -p /run/haproxy.pid -S /var/run/haproxy.sock"
 
 def test_daemonize_haproxy_get_haproxy_command_reload_nopid():
     daemon = DaemonizeHAProxy()
     command = daemon.get_haproxy_command(DaemonizeHAProxy.HAPROXY_RELOAD)
-    assert command == f"/usr/sbin/haproxy -W -f {Consts.haproxy_config}  -p /run/haproxy.pid -S /var/run/haproxy.sock"
+    assert command == f"{BIN} -W -f {Consts.haproxy_config}  -p /run/haproxy.pid -S /var/run/haproxy.sock"
 
 def test_daemonize_haproxy_get_haproxy_command_reload_pidinvalid():
     daemon = DaemonizeHAProxy()
@@ -29,7 +31,7 @@ def test_daemonize_haproxy_get_haproxy_command_reload_pidinvalid():
         with open("/tmp/temp.pid", 'w') as file:
             file.write("-1001")
         command = daemon.get_haproxy_command(DaemonizeHAProxy.HAPROXY_RELOAD, "/tmp/temp.pid")
-        assert command == f"/usr/sbin/haproxy -W -f {Consts.haproxy_config}  -p /tmp/temp.pid -S /var/run/haproxy.sock"
+        assert command == f"{BIN} -W -f {Consts.haproxy_config}  -p /tmp/temp.pid -S /var/run/haproxy.sock"
     finally:
         assert not os.path.exists("/tmp/temp.pid")
 
@@ -39,7 +41,7 @@ def test_daemonize_haproxy_get_haproxy_command_reload_existing_pin():
         with open("/tmp/temp.pid", 'w') as file:
             file.write("1")
         command = daemon.get_haproxy_command(DaemonizeHAProxy.HAPROXY_RELOAD, "/tmp/temp.pid")
-        assert command == f"/usr/sbin/haproxy -W -f {Consts.haproxy_config}  -p /tmp/temp.pid -x /var/run/haproxy.sock -sf 1"
+        assert command == f"{BIN} -W -f {Consts.haproxy_config}  -p /tmp/temp.pid -x /var/run/haproxy.sock -sf 1"
     finally:
         assert os.path.exists("/tmp/temp.pid")
         os.unlink("/tmp/temp.pid")
@@ -55,4 +57,4 @@ def test_daemonize_haproxy2_check_config():
 def test_daemonize_haproxy2_get_haproxy_command_start():
     daemon = DaemonizeHAProxy(os.path.abspath(os.path.dirname(__file__))  + '/fixtures')
     command = daemon.get_haproxy_command(DaemonizeHAProxy.HAPROXY_START)
-    assert command == f"/usr/sbin/haproxy -W -f {Consts.haproxy_config} -f {os.path.dirname(__file__)}/fixtures -p /run/haproxy.pid -S /var/run/haproxy.sock"
+    assert command == f"{BIN} -W -f {Consts.haproxy_config} -f {os.path.dirname(__file__)}/fixtures -p /run/haproxy.pid -S /var/run/haproxy.sock"
