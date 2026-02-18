@@ -437,12 +437,12 @@ class ResourceRequest:
 ```python
 ResourceRequest(
     resource_type="directory",
-    path="/etc/haproxy/plugin_data"
+    path="/etc/easyhaproxy/plugin_data"
 )
 
 ResourceRequest(
     resource_type="file",
-    path="/etc/haproxy/plugin_config.txt",
+    path="/etc/easyhaproxy/plugin_config.txt",
     content="config data",
     overwrite=True
 )
@@ -471,7 +471,7 @@ class InitializationResult:
 def initialize(self) -> InitializationResult:
     return InitializationResult(
         resources=[
-            ResourceRequest(resource_type="directory", path="/etc/haproxy/jwt_keys")
+            ResourceRequest(resource_type="directory", path="/etc/easyhaproxy/jwt_keys")
         ]
     )
 ```
@@ -932,7 +932,7 @@ class JwtValidatorPlugin(PluginInterface):
         self.paths = []  # List of paths that require JWT validation
         self.only_paths = False  # If true, only specified paths are accessible
         # Make JWT_KEYS_DIR configurable via environment variable
-        self.jwt_keys_dir = os.getenv("EASYHAPROXY_JWT_KEYS_DIR", "/etc/haproxy/jwt_keys")
+        self.jwt_keys_dir = os.getenv("EASYHAPROXY_JWT_KEYS_DIR", "/etc/easyhaproxy/jwt_keys")
 
     @property
     def name(self) -> str:
@@ -1292,7 +1292,7 @@ EASYHAPROXY_JWT_KEYS_DIR=/custom/path/jwt_keys  # Plugin-defined env var
 class MyPlugin(PluginInterface):
     def __init__(self):
         # Make resource directory configurable
-        self.data_dir = os.getenv("EASYHAPROXY_MY_PLUGIN_DATA_DIR", "/etc/haproxy/my_plugin_data")
+        self.data_dir = os.getenv("EASYHAPROXY_MY_PLUGIN_DATA_DIR", "/etc/easyhaproxy/my_plugin_data")
 
     def initialize(self) -> InitializationResult:
         return InitializationResult(

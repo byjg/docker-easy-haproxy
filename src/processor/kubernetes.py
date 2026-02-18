@@ -264,16 +264,17 @@ class Kubernetes(ProcessorInterface):
 
             ssl_hosts = []
 
-            certbot = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.certbot")
-            redirect_ssl = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.redirect_ssl")
-            redirect = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.redirect")
-            mode = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.mode")
-            listen_port = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.listen_port", 80)
-            plugins = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.plugins")
+            annotations = ingress.metadata.annotations or {}
+            certbot = self._check_annotation(annotations, "easyhaproxy.certbot")
+            redirect_ssl = self._check_annotation(annotations, "easyhaproxy.redirect_ssl")
+            redirect = self._check_annotation(annotations, "easyhaproxy.redirect")
+            mode = self._check_annotation(annotations, "easyhaproxy.mode")
+            listen_port = self._check_annotation(annotations, "easyhaproxy.listen_port", 80)
+            plugins = self._check_annotation(annotations, "easyhaproxy.plugins")
 
             # Extract plugin-specific configurations
             plugin_annotations = {}
-            for annotation_key, annotation_value in ingress.metadata.annotations.items():
+            for annotation_key, annotation_value in annotations.items():
                 if annotation_key.startswith("easyhaproxy.plugin."):
                     plugin_annotations[annotation_key] = annotation_value
 

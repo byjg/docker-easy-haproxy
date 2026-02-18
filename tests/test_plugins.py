@@ -652,12 +652,12 @@ class TestJwtValidatorPlugin:
             "algorithm": "RS512",
             "issuer": "https://auth.example.com/",
             "audience": "https://api.example.com",
-            "pubkey_path": "/etc/haproxy/keys/api.pem"
+            "pubkey_path": "/etc/easyhaproxy/keys/api.pem"
         })
         assert plugin.algorithm == "RS512"
         assert plugin.issuer == "https://auth.example.com/"
         assert plugin.audience == "https://api.example.com"
-        assert plugin.pubkey_path == "/etc/haproxy/keys/api.pem"
+        assert plugin.pubkey_path == "/etc/easyhaproxy/keys/api.pem"
 
         # Test empty values skip validation (use fresh plugin)
         plugin2 = JwtValidatorPlugin()
@@ -672,7 +672,7 @@ class TestJwtValidatorPlugin:
         plugin2b = JwtValidatorPlugin()
         plugin2b.configure({
             "algorithm": "RS256",
-            "pubkey_path": "/etc/haproxy/keys/api.pem"
+            "pubkey_path": "/etc/easyhaproxy/keys/api.pem"
         })
         assert plugin2b.issuer is None
         assert plugin2b.audience is None

@@ -50,7 +50,7 @@
 # # Expected: 200 OK with "App Behind Cloudflare"
 #
 # # Check HAProxy config includes Cloudflare IPs
-# docker exec $(docker ps -q -f name=easyhaproxy_haproxy) cat /etc/haproxy/haproxy.cfg | grep -A 5 "cloudflare"
+# docker exec $(docker ps -q -f name=easyhaproxy_haproxy) cat /etc/easyhaproxy/haproxy/haproxy.cfg | grep -A 5 "cloudflare"
 # # Expected: ACL rules for Cloudflare IP ranges
 # ```
 #
@@ -75,7 +75,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     configs:
       - source: cloudflare_ips
-        target: /etc/haproxy/cloudflare_ips.lst
+        target: /etc/easyhaproxy/cloudflare_ips.lst
     deploy:
       replicas: 1
       placement:
@@ -109,7 +109,7 @@ services:
         easyhaproxy.http.plugins: "cloudflare"
 
         # Optional: Specify custom IP list path
-        # easyhaproxy.http.plugin.cloudflare.ip_list_path: "/etc/haproxy/cloudflare_ips.lst"
+        # easyhaproxy.http.plugin.cloudflare.ip_list_path: "/etc/easyhaproxy/cloudflare_ips.lst"
     networks:
       - easyhaproxy
 

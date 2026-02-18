@@ -38,7 +38,7 @@ class PluginManager:
         builtin_dir = os.path.join(os.path.dirname(__file__), "builtin")
         self._load_plugins_from_directory(builtin_dir, "builtin")
 
-        # Load external plugins from /etc/haproxy/plugins
+        # Load external plugins from /etc/easyhaproxy/plugins
         if os.path.exists(self.plugins_dir):
             self._load_plugins_from_directory(self.plugins_dir, "external")
         else:

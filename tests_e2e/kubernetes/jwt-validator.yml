@@ -43,7 +43,7 @@
 # # Edit your EasyHAProxy deployment and add:
 # #   volumeMounts:
 # #     - name: jwt-keys
-# #       mountPath: /etc/haproxy/jwt_keys
+# #       mountPath: /etc/easyhaproxy/jwt_keys
 # #   volumes:
 # #     - name: jwt-keys
 # #       configMap:

@@ -83,7 +83,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     configs:
       - source: jwt_api_pubkey
-        target: /etc/haproxy/jwt_keys/api_pubkey.pem
+        target: /etc/easyhaproxy/jwt_keys/api_pubkey.pem
     deploy:
       replicas: 1
       placement:
@@ -119,7 +119,7 @@ services:
         easyhaproxy.http.plugin.jwt_validator.algorithm: "RS256"
         easyhaproxy.http.plugin.jwt_validator.issuer: "https://auth.example.com/"
         easyhaproxy.http.plugin.jwt_validator.audience: "https://api.example.com"
-        easyhaproxy.http.plugin.jwt_validator.pubkey_path: "/etc/haproxy/jwt_keys/api_pubkey.pem"
+        easyhaproxy.http.plugin.jwt_validator.pubkey_path: "/etc/easyhaproxy/jwt_keys/api_pubkey.pem"
     networks:
       - easyhaproxy
 
