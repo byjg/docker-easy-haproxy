@@ -24,8 +24,6 @@ All EasyHAProxy files are organized under `/etc/easyhaproxy/`. This can be custo
 │   ├── conf.d/                         # 📦 Base image
 │   │   ├── README.md
 │   │   └── *.cfg                       # User-provided custom configs
-│   ├── dhparam                         # 📦 Base image - DH params 2048-bit
-│   ├── dhparam-1024                    # 📦 Base image - DH params 1024-bit
 │   └── errors-custom/                  # 📦 Base image
 │       ├── 400.http                    # Bad Request
 │       ├── 403.http                    # Forbidden

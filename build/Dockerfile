@@ -34,8 +34,6 @@ USER root
 
 RUN apk add --no-cache certbot openssl bash curl su-exec \
     && mkdir -p /etc/easyhaproxy/haproxy \
-    && openssl dhparam -out /etc/easyhaproxy/haproxy/dhparam 2048 \
-    && openssl dhparam -out /etc/easyhaproxy/haproxy/dhparam-1024 1024 \
     && mkdir -p /etc/easyhaproxy/certs/certbot /etc/easyhaproxy/certs/haproxy \
     && openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
         -keyout /tmp/placeholder.key \
