@@ -60,12 +60,23 @@ _cloudflare_config_created = False
 def ensure_haproxy_image():
     """Build byjg/easy-haproxy:local from source at the start of the test session.
 
-    Always builds on the first call so tests run against the current codebase,
-    never a stale image left over from a previous session or docker compose run.
+    If the image already exists (e.g. pre-built by a CI step), the build is
+    skipped so that CI can control how/when the image is built without the
+    pytest session re-triggering a potentially slow or hanging `docker build`.
     Subsequent calls within the same session are no-ops (image already built).
     """
     global _swarm_image_built
     if _swarm_image_built:
+        return
+
+    # Skip build if image already exists (e.g. pre-built in CI)
+    inspect = subprocess.run(
+        ["docker", "image", "inspect", "byjg/easy-haproxy:local"],
+        capture_output=True,
+    )
+    if inspect.returncode == 0:
+        print("\n  ✓ byjg/easy-haproxy:local already exists, skipping build")
+        _swarm_image_built = True
         return
 
     project_root = BASE_DIR.parent

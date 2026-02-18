@@ -148,6 +148,14 @@ jobs:
           export PATH="$HOME/.local/bin:$PATH"
           uv sync --group dev
 
+      - name: Clean Docker build cache
+        run: docker builder prune -af
+
+      - name: Build Docker image
+        env:
+          DOCKER_BUILDKIT: "0"
+        run: docker build -t byjg/easy-haproxy:local -f deploy/docker/Dockerfile .
+
       - name: Run Swarm E2E tests
         run: |
           export PATH="$HOME/.local/bin:$PATH"
