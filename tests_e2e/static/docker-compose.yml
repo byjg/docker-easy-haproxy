@@ -63,7 +63,7 @@ services:
     image: byjg/easy-haproxy:local
     build:
       context: ../..
-      dockerfile: build/Dockerfile
+      dockerfile: deploy/docker/Dockerfile
     volumes:
       - ./conf/:/etc/easyhaproxy/static/
       - ../static/host1.local.pem:/etc/easyhaproxy/certs/haproxy/host1.local.pem:ro

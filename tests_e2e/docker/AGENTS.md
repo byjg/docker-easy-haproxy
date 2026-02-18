@@ -13,6 +13,6 @@
 
 1. Investigate the source code in src/*
 2. Try to fix it. 
-3. After the code is changed, build it again: `docker build -t byjg/easy-haproxy:5.0.0 -f build/Dockerfile --no-cache .` and start the tests again.
+3. After the code is changed, build it again: `docker build -t byjg/easy-haproxy:5.0.0 -f deploy/docker/Dockerfile --no-cache .` and start the tests again.
 
 

@@ -20,6 +20,7 @@ services:
       HAPROXY_USERNAME: admin
       HAPROXY_PASSWORD: password
       HAPROXY_STATS_PORT: 1936
+      HAPROXY_STATS_CORS_ORIGIN: "http://localhost:8080"
 
     ports:
       - "80:80/tcp"

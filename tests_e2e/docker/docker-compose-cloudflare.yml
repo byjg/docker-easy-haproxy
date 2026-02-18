@@ -48,7 +48,7 @@ services:
   haproxy:
     build:
       context: ../..
-      dockerfile: build/Dockerfile
+      dockerfile: deploy/docker/Dockerfile
     image: byjg/easy-haproxy:local
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock

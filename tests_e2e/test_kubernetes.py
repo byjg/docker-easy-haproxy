@@ -326,7 +326,7 @@ nodes:
     project_root = BASE_DIR.parent
     subprocess.run(
         ["docker", "build", "-t", "byjg/easy-haproxy:local",
-         "-f", str(project_root / "build" / "Dockerfile"),
+         "-f", str(project_root / "deploy" / "docker" / "Dockerfile"),
          str(project_root)],
         check=True,
         capture_output=True,

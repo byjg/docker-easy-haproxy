@@ -96,7 +96,7 @@ services:
   haproxy:
     build:
       context: ../..
-      dockerfile: build/Dockerfile
+      dockerfile: deploy/docker/Dockerfile
     depends_on:
       pebble_health:
         condition: service_healthy

@@ -109,7 +109,7 @@ echo -e "${GREEN}✓ kind cluster '${CLUSTER_NAME}' is ready${NC}"
 # Build and load local EasyHAProxy image
 echo -e "${BLUE}[4/9] Building local EasyHAProxy image (may take 30-60s)...${NC}"
 docker build -t byjg/easy-haproxy:local \
-    -f "${PROJECT_ROOT}/build/Dockerfile" \
+    -f "${PROJECT_ROOT}/deploy/docker/Dockerfile" \
     "${PROJECT_ROOT}"
 
 echo -e "${BLUE}[5/9] Loading image into kind cluster (may take 10-20s)...${NC}"

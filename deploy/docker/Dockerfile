@@ -43,8 +43,7 @@ RUN apk add --no-cache certbot openssl bash curl su-exec \
     && cat /tmp/placeholder.crt /tmp/placeholder.key > /etc/easyhaproxy/certs/haproxy/placeholder.pem \
     && rm /tmp/placeholder.key /tmp/placeholder.crt
 
-COPY build/assets /
-COPY build/entrypoint.sh /entrypoint.sh
+COPY deploy/docker/assets /
 COPY --from=builder /scripts /scripts
 
 RUN chmod +x /entrypoint.sh \

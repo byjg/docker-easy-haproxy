@@ -80,7 +80,7 @@ The automated release process is triggered by pushing a semantic version tag.
    ```bash
    make build
    # Or manually:
-   docker build -t byjg/easy-haproxy:local -f build/Dockerfile .
+   docker build -t byjg/easy-haproxy:local -f deploy/docker/Dockerfile .
    ```
 
 ### Step 2: Bump Versions (script + PR)
