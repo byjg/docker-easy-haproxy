@@ -96,25 +96,8 @@ def create_cloudflare_ips_file():
     if _cloudflare_ips_created and cloudflare_ips_path.exists() and cloudflare_ips_path.is_file():
         return
 
-    # Download Cloudflare IPv4 ranges
-    subprocess.run(
-        ["curl", "-s", "https://www.cloudflare.com/ips-v4"],
-        stdout=open(cloudflare_ips_path, 'w'),
-        check=True
-    )
-    with open(cloudflare_ips_path, 'a') as f:
-        f.write("\n")
-
-    # Download Cloudflare IPv6 ranges
-    subprocess.run(
-        ["curl", "-s", "https://www.cloudflare.com/ips-v6"],
-        stdout=open(cloudflare_ips_path, 'a'),
-        check=True
-    )
-
     # Add Docker private network range so HAProxy treats test requests as from Cloudflare
     with open(cloudflare_ips_path, 'a') as f:
-        f.write("\n")
         f.write("172.16.0.0/12\n")  # Docker bridge networks are typically in this range
 
     # Mark as created for this test session

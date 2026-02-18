@@ -239,19 +239,9 @@ def create_cloudflare_config():
         temp_path = Path(f.name)
 
     try:
-        subprocess.run(
-            ["curl", "-s", "https://www.cloudflare.com/ips-v4"],
-            stdout=open(temp_path, "w"), check=True
-        )
-        with open(temp_path, "a") as f:
-            f.write("\n")
-        subprocess.run(
-            ["curl", "-s", "https://www.cloudflare.com/ips-v6"],
-            stdout=open(temp_path, "a"), check=True
-        )
         # Add Docker ingress range so test requests appear to come from Cloudflare
         with open(temp_path, "a") as f:
-            f.write("\n10.0.0.0/8\n")
+            f.write("10.0.0.0/8\n")
 
         create_swarm_config("cloudflare_ips", temp_path)
         _cloudflare_config_created = True
