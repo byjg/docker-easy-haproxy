@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "easymapping"
+name = "easyhaproxy"
 version = "5.0.0"
 description = "HAProxy label based routing with service discovery for Docker, Swarm, and Kubernetes"
 readme = "README.md"
@@ -44,10 +44,10 @@ dev = [
 ]
 
 [project.scripts]
-easy-haproxy = "main:main"
+easy-haproxy = "easyhaproxy.main:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/easymapping", "src/functions", "src/processor", "src/plugins", "src/templates"]
+packages = ["src/easyhaproxy", "src/easymapping", "src/functions", "src/processor", "src/plugins", "src/templates"]
 
 [tool.hatch.build.targets.wheel.sources]
 "src" = ""

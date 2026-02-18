@@ -27,7 +27,7 @@ WORKDIR /scripts
 COPY build/assets /
 
 COPY pyproject.toml uv.lock LICENSE README.md /scripts/
-COPY src/ /scripts/
+COPY src/ /scripts/src/
 COPY tests/ /scripts/tests/
 
 RUN cd /scripts && uv sync --frozen
@@ -36,4 +36,4 @@ RUN apk del .build-deps
 
 RUN cd /scripts && uv run pytest -s -vv tests/ && uv sync --no-dev
 
-CMD ["uv", "run", "python", "-u", "/scripts/main.py"]
+CMD ["/scripts/.venv/bin/easy-haproxy"]

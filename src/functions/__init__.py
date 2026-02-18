@@ -1,11 +1,13 @@
 import logging
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 import time
 from datetime import datetime
 from multiprocessing import Process
+from pathlib import Path
 from typing import Final
 
 import psutil
@@ -291,7 +293,13 @@ class Consts:
     def base_path(cls):
         """Base directory for all EasyHAProxy files."""
         if cls._base_path is None:
-            cls._base_path = os.getenv("EASYHAPROXY_BASE_PATH", "/etc/easyhaproxy")
+            if os.getenv("EASYHAPROXY_BASE_PATH"):
+                default = os.getenv("EASYHAPROXY_BASE_PATH")
+            elif os.getuid() == 0:
+                default = "/etc/easyhaproxy"
+            else:
+                default = str(Path.home() / "easyhaproxy")
+            cls._base_path = default
         return cls._base_path
 
     @classmethod
@@ -347,17 +355,18 @@ class DaemonizeHAProxy:
         self.thread.start()
 
     def get_haproxy_command(self, action, pid_file="/run/haproxy.pid"):
+        haproxy_bin = shutil.which('haproxy') or '/usr/sbin/haproxy'
         custom_config_files = ""
         if len(list(self.get_custom_config_files().keys())) != 0:
             custom_config_files = f"-f {self.custom_config_folder}"
 
         if action == DaemonizeHAProxy.HAPROXY_START or not os.path.exists(pid_file):
-            return f"/usr/sbin/haproxy -W -f {Consts.haproxy_config} {custom_config_files} -p {pid_file} -S /var/run/haproxy.sock"
+            return f"{haproxy_bin} -W -f {Consts.haproxy_config} {custom_config_files} -p {pid_file} -S /var/run/haproxy.sock"
         else:
             return_code, output = Functions().run_bash(logger_haproxy, f"cat {pid_file}", log_output=False)
             pid = "".join(output).rstrip()
             if psutil.pid_exists(int(pid)):
-                return f"/usr/sbin/haproxy -W -f {Consts.haproxy_config} {custom_config_files} -p {pid_file} -x /var/run/haproxy.sock -sf {pid}"
+                return f"{haproxy_bin} -W -f {Consts.haproxy_config} {custom_config_files} -p {pid_file} -x /var/run/haproxy.sock -sf {pid}"
             else:
                 os.unlink(pid_file)
                 logger_haproxy.warning(

@@ -350,7 +350,7 @@ wheels = [
 ]
 
 [[package]]
-name = "easymapping"
+name = "easyhaproxy"
 version = "5.0.0"
 source = { editable = "." }
 dependencies = [
