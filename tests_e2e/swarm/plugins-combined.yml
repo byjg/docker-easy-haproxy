@@ -109,6 +109,7 @@ services:
           - node.role == manager
     environment:
       EASYHAPROXY_DISCOVER: swarm
+      EASYHAPROXY_REFRESH_CONF: "2"
       EASYHAPROXY_SSL_MODE: "loose"
       HAPROXY_CUSTOMERRORS: "true"
       HAPROXY_USERNAME: admin
@@ -127,7 +128,7 @@ services:
     environment:
       TITLE: "Public Website"
     deploy:
-      replicas: 4
+      replicas: 1
       labels:
         easyhaproxy.http.host: "website.example.com"
         easyhaproxy.http.port: "80"
@@ -146,7 +147,7 @@ services:
     environment:
       TITLE: "Protected API"
     deploy:
-      replicas: 6
+      replicas: 1
       labels:
         easyhaproxy.http.host: "api.example.com"
         easyhaproxy.http.port: "80"
@@ -173,7 +174,7 @@ services:
     environment:
       TITLE: "Admin Panel"
     deploy:
-      replicas: 2
+      replicas: 1
       labels:
         easyhaproxy.http.host: "admin.example.com"
         easyhaproxy.http.port: "80"

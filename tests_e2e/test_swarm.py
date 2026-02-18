@@ -192,7 +192,7 @@ def wait_for_http(
         except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
             pass
 
-        time.sleep(3)
+        time.sleep(1)
 
     return False
 
@@ -271,8 +271,8 @@ class SwarmFixture:
         self.stack_name = stack_name
         self.timeout = timeout
 
-    def up(self):
-        """Deploy the stack and wait for all services to be running."""
+    def deploy(self):
+        """Issue `docker stack deploy` for each file without waiting for replicas."""
         for stack_file in self.stack_files:
             name = Path(stack_file).name
             print(f"\n  → Deploying stack '{self.stack_name}' from {name}...")
@@ -290,16 +290,23 @@ class SwarmFixture:
                     result.returncode, result.args, result.stdout, result.stderr
                 )
 
+    def wait_ready(self):
+        """Wait until all services in this stack have reached their target replica count."""
         if not wait_for_swarm_services(self.stack_name, self.timeout):
             raise TimeoutError(
                 f"Stack '{self.stack_name}' services did not become ready within {self.timeout}s"
             )
 
+    def up(self):
+        """Deploy the stack and wait for all services to be running."""
+        self.deploy()
+        self.wait_ready()
+
     def down(self):
         """Force-kill all stack containers, then remove the stack definition."""
         print(f"\n  → Removing stack '{self.stack_name}'...")
 
-        # Force-kill running containers immediately (no graceful shutdown period)
+        # Force-kill all running containers immediately (SIGKILL — no grace period)
         result = subprocess.run(
             ["docker", "ps", "-q", "--filter", f"name={self.stack_name}_"],
             capture_output=True, text=True
@@ -314,17 +321,7 @@ class SwarmFixture:
             capture_output=True, text=True
         )
 
-        # Poll until no containers from this stack remain, so ports are free
-        start = time.time()
-        while time.time() - start < 60:
-            result = subprocess.run(
-                ["docker", "ps", "-q", "--filter", f"name={self.stack_name}_"],
-                capture_output=True, text=True
-            )
-            if not result.stdout.strip():
-                break
-            time.sleep(2)
-
+        # Containers are already dead from docker kill above; ports are freed immediately.
         print(f"  ✓ Stack '{self.stack_name}' removed")
 
 
@@ -368,16 +365,21 @@ def swarm_basic_services(generate_ssl_certificates) -> Generator[None, None, Non
     easyhaproxy = SwarmFixture(str(SWARM_DIR / "easyhaproxy.yml"), "easyhaproxy", timeout=120)
     services = SwarmFixture(str(SWARM_DIR / "services.yml"), "services", timeout=60)
 
-    easyhaproxy.up()
-    services.up()
+    # Deploy both stacks immediately so they start pulling/starting in parallel,
+    # then wait for each to reach its target replica count.
+    easyhaproxy.deploy()
+    services.deploy()
+    easyhaproxy.wait_ready()
+    services.wait_ready()
 
     # Wait for EasyHAProxy to auto-attach services, regenerate config, and
     # for HAProxy to start serving traffic (up to 2 refresh cycles = ~20s).
+    # Do NOT include 503 — that means HAProxy is up but the backend isn't ready yet.
     print("\n  → Waiting for HAProxy to discover and configure swarm services...")
     ready = wait_for_http(
         "https://127.0.0.1/",
         headers={"Host": "host1.local"},
-        expected_status=[200, 301, 302, 503],
+        expected_status=[200, 301, 302],
         timeout=120,
     )
     if not ready:
@@ -415,7 +417,7 @@ def swarm_plugins_combined(generate_ssl_certificates) -> Generator[None, None, N
     ready = wait_for_http(
         "http://127.0.0.1/",
         headers={"Host": "website.example.com"},
-        expected_status=[200, 404, 403, 401, 503],
+        expected_status=[200],
         timeout=120,
     )
     if not ready:

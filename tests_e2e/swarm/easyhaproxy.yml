@@ -63,6 +63,7 @@ services:
       replicas: 1
     environment:
       EASYHAPROXY_DISCOVER: swarm
+      EASYHAPROXY_REFRESH_CONF: "2"
       EASYHAPROXY_SSL_MODE: "loose"
       EASYHAPROXY_CERTBOT_EMAIL: changeme@example.org
       HAPROXY_CUSTOMERRORS: "true"
