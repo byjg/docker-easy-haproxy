@@ -47,5 +47,5 @@ Pick the guide that matches your environment:
 After you have traffic flowing:
 
 - **[Guides](../guides/ssl.md)** — SSL certificates, ACME/Let's Encrypt, plugins
-- **[Concepts](../concepts/index.md)** — how service discovery and the config pipeline work
+- **[Concepts](../concepts/)** — how service discovery and the config pipeline work
 - **[Reference](../reference/environment-variables.md)** — full environment variable and label tables

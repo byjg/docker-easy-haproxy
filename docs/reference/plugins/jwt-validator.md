@@ -26,18 +26,18 @@ Protect APIs and services with JWT authentication without needing application-le
 
 ## Configuration Options
 
-| Option            | Description                                                                                  | Default     |
-|-------------------|----------------------------------------------------------------------------------------------|-------------|
-| `enabled`         | Enable/disable plugin                                                                        | `true`      |
-| `algorithm`       | JWT signing algorithm                                                                        | `RS256`     |
-| `issuer`          | Expected JWT issuer (optional, set to `none`/`null` to skip validation)                      | (optional)  |
-| `audience`        | Expected JWT audience (optional, set to `none`/`null` to skip validation)                    | (optional)  |
-| `pubkey_path`     | Path to public key file (priority 1: explicit file path)                                    | (optional)  |
-| `pubkey`          | Public key content as base64-encoded string (priority 2: inline content)                    | (optional)  |
-| `k8s_secret.pubkey` | Kubernetes secret containing public key (priority 3: Kubernetes only)                    | (optional)  |
-| `paths`           | List of paths that require JWT validation (optional)                                         | (all paths) |
-| `only_paths`      | If `true`, only specified paths are accessible; if `false`, only specified paths require JWT | `false`     |
-| `allow_anonymous` | If `true`, allows requests without Authorization header (validates JWT if present)           | `false`     |
+| Option              | Description                                                                                   | Default     |
+|---------------------|-----------------------------------------------------------------------------------------------|-------------|
+| `enabled`           | Enable/disable plugin                                                                         | `true`      |
+| `algorithm`         | JWT signing algorithm                                                                         | `RS256`     |
+| `issuer`            | Expected JWT issuer (optional, set to `none`/`null` to skip validation)                       | (optional)  |
+| `audience`          | Expected JWT audience (optional, set to `none`/`null` to skip validation)                     | (optional)  |
+| `pubkey_path`       | Path to public key file (priority 1: explicit file path)                                      | (optional)  |
+| `pubkey`            | Public key content as base64-encoded string (priority 2: inline content)                      | (optional)  |
+| `k8s_secret.pubkey` | Kubernetes secret containing public key (priority 3: Kubernetes only)                         | (optional)  |
+| `paths`             | List of paths that require JWT validation (optional)                                          | (all paths) |
+| `only_paths`        | If `true`, only specified paths are accessible; if `false`, only specified paths require JWT  | `false`     |
+| `allow_anonymous`   | If `true`, allows requests without Authorization header (validates JWT if present)            | `false`     |
 
 ### Public Key Configuration Priority
 

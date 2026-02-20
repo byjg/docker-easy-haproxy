@@ -78,17 +78,17 @@ All EasyHAProxy files are organized under `/etc/easyhaproxy/`. This can be custo
 
 The most commonly mapped volumes for persistence and customization:
 
-| Volume                                    | Purpose                                                                                               | Required |
-|-------------------------------------------|-------------------------------------------------------------------------------------------------------|----------|
-| `/etc/easyhaproxy/static/`                | [Static configuration](../getting-started/static.md) - mount your `config.yml` here                  | Optional |
-| `/etc/easyhaproxy/certs/haproxy/`         | [SSL certificates](../guides/ssl.md) - user-provided certificates in PEM format                       | Optional |
-| `/etc/easyhaproxy/certs/certbot/`         | [ACME/Certbot certificates](../guides/acme.md) - auto-generated Let's Encrypt certificates            | Optional |
-| `/etc/easyhaproxy/certs/live/`            | Certbot live certificates - persist across container restarts                                         | Optional |
-| `/etc/easyhaproxy/haproxy/conf.d/`        | [Custom HAProxy config](other.md) - additional `.cfg` files to include                                | Optional |
-| `/etc/easyhaproxy/haproxy/errors-custom/` | [Custom error pages](other.md) - custom HTTP error pages (400, 403, 500, etc.)                        | Optional |
-| `/etc/easyhaproxy/plugins/`               | [Custom plugins](../guides/plugins.md) - Python plugin files                                          | Optional |
-| `/etc/easyhaproxy/jwt_keys/`              | [JWT public keys](plugins/jwt-validator.md) - RSA public keys for JWT validation                      | Optional |
-| `/etc/easyhaproxy/www/`                   | [FastCGI document root](plugins/fastcgi.md) - PHP/FastCGI application files                           | Optional |
+| Volume                                    | Purpose                                                                                    | Required |
+|-------------------------------------------|--------------------------------------------------------------------------------------------|----------|
+| `/etc/easyhaproxy/static/`                | [Static configuration](../getting-started/static.md) - mount your `config.yml` here        | Optional |
+| `/etc/easyhaproxy/certs/haproxy/`         | [SSL certificates](../guides/ssl.md) - user-provided certificates in PEM format            | Optional |
+| `/etc/easyhaproxy/certs/certbot/`         | [ACME/Certbot certificates](../guides/acme.md) - auto-generated Let's Encrypt certificates | Optional |
+| `/etc/easyhaproxy/certs/live/`            | Certbot live certificates - persist across container restarts                              | Optional |
+| `/etc/easyhaproxy/haproxy/conf.d/`        | [Custom HAProxy config](other.md) - additional `.cfg` files to include                     | Optional |
+| `/etc/easyhaproxy/haproxy/errors-custom/` | [Custom error pages](other.md) - custom HTTP error pages (400, 403, 500, etc.)             | Optional |
+| `/etc/easyhaproxy/plugins/`               | [Custom plugins](../guides/plugins.md) - Python plugin files                               | Optional |
+| `/etc/easyhaproxy/jwt_keys/`              | [JWT public keys](plugins/jwt-validator.md) - RSA public keys for JWT validation           | Optional |
+| `/etc/easyhaproxy/www/`                   | [FastCGI document root](plugins/fastcgi.md) - PHP/FastCGI application files                | Optional |
 
 ## Directory Details
 

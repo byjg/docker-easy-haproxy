@@ -9,13 +9,13 @@ sidebar_label: "Other Configurations"
 
 EasyHAProxy automatically sets standard proxy-awareness headers for all HTTP requests:
 
-| Header | Description | Example Value |
-|--------|-------------|---------------|
-| X-Forwarded-For | Client IP address | `203.0.113.50` |
-| X-Forwarded-Port | Port HAProxy received request on | `443` |
-| X-Forwarded-Proto | Protocol (http or https) | `https` |
-| X-Forwarded-Host | Original Host header from client | `example.com` |
-| X-Request-ID | Unique request identifier (UUID) | `550e8400-e29b-41d4-a716-446655440000` |
+| Header            | Description                      | Example Value                          |
+|-------------------|----------------------------------|----------------------------------------|
+| X-Forwarded-For   | Client IP address                | `203.0.113.50`                         |
+| X-Forwarded-Port  | Port HAProxy received request on | `443`                                  |
+| X-Forwarded-Proto | Protocol (http or https)         | `https`                                |
+| X-Forwarded-Host  | Original Host header from client | `example.com`                          |
+| X-Request-ID      | Unique request identifier (UUID) | `550e8400-e29b-41d4-a716-446655440000` |
 
 These headers help backend applications:
 - Determine the original client IP

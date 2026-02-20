@@ -34,12 +34,12 @@ For ACME/Certbot configuration (Let's Encrypt, ZeroSSL, etc.), see the [ACME doc
 
 These variables apply only when `EASYHAPROXY_DISCOVER=kubernetes`. They control how EasyHAProxy updates Ingress resources with load-balancer IP information.
 
-| Environment Variable               | Description                                                                                                                          | Default |
-|------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|---------|
-| EASYHAPROXY_UPDATE_INGRESS_STATUS  | Update Ingress resources with the load-balancer IP. Set to `false` to disable.                                                       | `true`  |
-| EASYHAPROXY_DEPLOYMENT_MODE        | How to detect and report Ingress IPs: `auto`, `daemonset`, `nodeport`, or `clusterip`. `auto` inspects pod owner references and service type automatically. | `auto`  |
-| EASYHAPROXY_EXTERNAL_HOSTNAME      | Hostname to report in Ingress status when using ClusterIP mode without a cloud LoadBalancer.                                          | *(none)* |
-| EASYHAPROXY_STATUS_UPDATE_INTERVAL | Seconds between Ingress status update cycles.                                                                                         | `30`    |
+| Environment Variable               | Description                                                                                                                                                 | Default  |
+|------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|
+| EASYHAPROXY_UPDATE_INGRESS_STATUS  | Update Ingress resources with the load-balancer IP. Set to `false` to disable.                                                                              | `true`   |
+| EASYHAPROXY_DEPLOYMENT_MODE        | How to detect and report Ingress IPs: `auto`, `daemonset`, `nodeport`, or `clusterip`. `auto` inspects pod owner references and service type automatically. | `auto`   |
+| EASYHAPROXY_EXTERNAL_HOSTNAME      | Hostname to report in Ingress status when using ClusterIP mode without a cloud LoadBalancer.                                                                | *(none)* |
+| EASYHAPROXY_STATUS_UPDATE_INTERVAL | Seconds between Ingress status update cycles.                                                                                                               | `30`     |
 
 :::tip Deployment mode auto-detection
 `EASYHAPROXY_DEPLOYMENT_MODE=auto` is recommended. EasyHAProxy inspects its own pod owner references (DaemonSet vs Deployment) and Service type (NodePort vs ClusterIP) to determine the correct IP source. Override only if auto-detection gives wrong results.
