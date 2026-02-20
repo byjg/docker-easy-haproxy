@@ -89,6 +89,6 @@ See `conf/` directory for complete examples.
 
 ## Additional Documentation
 
-- [Static Configuration Guide](../../docs/static.md)
-- [Using Plugins](../../docs/plugins/)
-- [Environment Variables](../../docs/environment-variable.md)
+- [Static Configuration Guide](../../docs/getting-started/static.md)
+- [Using Plugins](../../docs/guides/plugins.md)
+- [Environment Variables](../../docs/reference/environment-variables.md)

@@ -146,6 +146,6 @@ docker compose -f docker-compose-php-fpm.yml exec haproxy ping php-fpm
 
 ## Learn More
 
-- [FastCGI Plugin Documentation](../../../docs/plugins.md#fastcgi-plugin)
-- [Container Labels Reference](../../../docs/container-labels.md)
+- [FastCGI Plugin Documentation](../../../docs/reference/plugins/fastcgi.md)
+- [Container Labels Reference](../../../docs/reference/container-labels.md)
 - [HAProxy FastCGI Documentation](https://docs.haproxy.org/2.8/configuration.html#5.2-proto)

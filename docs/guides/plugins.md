@@ -1,5 +1,6 @@
 ---
-sidebar_position: 15
+sidebar_position: 3
+sidebar_label: "Using Plugins"
 ---
 
 # Using Plugins
@@ -44,12 +45,12 @@ Execute **once for each discovered domain/host**.
 
 EasyHAProxy includes several built-in plugins ready to use:
 
-- [Cloudflare](Plugins/cloudflare.md) - Restore visitor IP from Cloudflare CDN
-- [Cleanup](Plugins/cleanup.md) - Cleanup temporary files
-- [Deny Pages](Plugins/deny-pages.md) - Block specific paths
-- [IP Whitelist](Plugins/ip-whitelist.md) - Restrict access to IPs/CIDR ranges
-- [JWT Validator](Plugins/jwt-validator.md) - Validate JWT tokens
-- [FastCGI](Plugins/fastcgi.md) - Configure PHP-FPM and FastCGI applications
+- [Cloudflare](../reference/plugins/cloudflare.md) - Restore visitor IP from Cloudflare CDN
+- [Cleanup](../reference/plugins/cleanup.md) - Cleanup temporary files
+- [Deny Pages](../reference/plugins/deny-pages.md) - Block specific paths
+- [IP Whitelist](../reference/plugins/ip-whitelist.md) - Restrict access to IPs/CIDR ranges
+- [JWT Validator](../reference/plugins/jwt-validator.md) - Validate JWT tokens
+- [FastCGI](../reference/plugins/fastcgi.md) - Configure PHP-FPM and FastCGI applications
 
 ## Configuration Methods
 
@@ -96,7 +97,7 @@ spec:
 - Enable plugins: `easyhaproxy.plugins: plugin1,plugin2`
 - Configure plugin: `easyhaproxy.plugin.<plugin_name>.<config_key>: value`
 
-See the [Kubernetes guide](kubernetes.md#using-plugins-with-kubernetes) for more examples.
+See the [Kubernetes guide](../getting-started/kubernetes.md) for more examples.
 
 ### 2. Container Labels (Docker/Docker Compose)
 
@@ -181,11 +182,6 @@ EASYHAPROXY_PLUGIN_CLOUDFLARE_USE_BUILTIN_IPS=true
 - Enable global plugins: `EASYHAPROXY_PLUGINS_ENABLED=plugin1,plugin2`
 - Configure plugin: `EASYHAPROXY_PLUGIN_<PLUGIN_NAME>_<CONFIG_KEY>=value`
 
-**Scope limitations:**
-- **Global plugins**: Environment variables configure the single instance
-- **Domain plugins**: Environment variables set defaults for ALL domains
-- **Per-domain configuration**: Use container labels (Docker) or annotations (Kubernetes) instead
-
 ## Common Use Cases
 
 ### Protect API with JWT Authentication
@@ -205,41 +201,7 @@ services:
       - ./auth_pubkey.pem:/etc/easyhaproxy/jwt_keys/api_pubkey.pem:ro
 ```
 
-**Protect only admin/sensitive endpoints:**
-
-```yaml
-services:
-  api:
-    labels:
-      easyhaproxy.http.host: api.example.com
-      easyhaproxy.http.plugins: jwt_validator
-      easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/easyhaproxy/jwt_keys/api_pubkey.pem
-      easyhaproxy.http.plugin.jwt_validator.paths: /api/admin,/api/users,/api/billing
-      easyhaproxy.http.plugin.jwt_validator.only_paths: false
-    volumes:
-      - ./auth_pubkey.pem:/etc/easyhaproxy/jwt_keys/api_pubkey.pem:ro
-# /api/health, /api/docs, etc. remain publicly accessible
-```
-
-**Restrict API to only allow specific endpoints:**
-
-```yaml
-services:
-  api:
-    labels:
-      easyhaproxy.http.host: api.example.com
-      easyhaproxy.http.plugins: jwt_validator
-      easyhaproxy.http.plugin.jwt_validator.pubkey_path: /etc/easyhaproxy/jwt_keys/api_pubkey.pem
-      easyhaproxy.http.plugin.jwt_validator.paths: /api/v1,/api/v2
-      easyhaproxy.http.plugin.jwt_validator.only_paths: true
-    volumes:
-      - ./auth_pubkey.pem:/etc/easyhaproxy/jwt_keys/api_pubkey.pem:ro
-# All paths except /api/v1 and /api/v2 are denied
-```
-
 ### Restrict Admin Panel to Office IPs
-
-Protect admin panel by only allowing access from office network:
 
 ```yaml
 labels:
@@ -262,8 +224,6 @@ labels:
 
 ### Cloudflare IP Restoration
 
-Restore original visitor IPs for applications behind Cloudflare:
-
 ```yaml
 labels:
   easyhaproxy.http.host: myapp.com
@@ -271,8 +231,6 @@ labels:
 ```
 
 ### Multiple Plugins Together
-
-Combine multiple plugins for one domain:
 
 ```yaml
 labels:
@@ -283,8 +241,6 @@ labels:
 ```
 
 ### Automatic Cleanup
-
-Keep your system clean with automatic temp file removal:
 
 ```yaml
 # /etc/easyhaproxy/static/config.yaml
@@ -307,14 +263,6 @@ plugins:
   abort_on_error: false  # Default
 ```
 
-**When to use:** Most situations. Ensures a failing plugin doesn't prevent HAProxy updates.
-
-**Behavior:**
-- Plugin errors logged as warnings
-- Discovery cycle continues
-- Other plugins still execute
-- HAProxy config is generated without the failed plugin
-
 ### Abort on Error
 
 Stop discovery cycle if any plugin fails:
@@ -324,18 +272,9 @@ plugins:
   abort_on_error: true
 ```
 
-**When to use:** Critical plugins where failure should halt deployment.
-
-**Behavior:**
-- Plugin error stops discovery
-- Previous HAProxy config remains active
-- No configuration changes until issue is resolved
-
 ## Troubleshooting
 
 ### Enable Debug Logging
-
-See detailed plugin execution information:
 
 ```bash
 EASYHAPROXY_LOG_LEVEL=DEBUG
@@ -357,18 +296,6 @@ DEBUG: Plugin cloudflare metadata: {'domain': 'example.com', 'ip_list_path': '/e
 3. Plugin class inherits from `PluginInterface`
 4. Check logs for load errors
 
-### Plugin Not Executing
-
-**For domain plugins:**
-1. Check container has label: `easyhaproxy.http.plugins: plugin_name`
-2. Verify plugin name is correct (case-sensitive)
-3. Enable debug logging
-
-**For global plugins:**
-1. Check YAML config: `plugins.enabled: [plugin_name]`
-2. Or env var: `EASYHAPROXY_PLUGINS_ENABLED=plugin_name`
-3. Enable debug logging
-
 ### Configuration Not Applied
 
 **Check precedence order:**
@@ -383,16 +310,6 @@ For Docker deployments:
 2. YAML configuration
 3. Environment variables (lowest)
 
-Per-ingress/per-container settings override global configuration.
-
-### Plugin Output Missing
-
-**Verify:**
-1. Plugin is enabled (`enabled: true`)
-2. Plugin configuration is correct
-3. Plugin's `process()` method returns valid `PluginResult`
-4. Check debug logs for plugin execution
-
 ## Best Practices
 
 1. **Start with log-and-continue mode** - Use `abort_on_error: false` until you're confident plugins are stable
@@ -400,7 +317,6 @@ Per-ingress/per-container settings override global configuration.
 3. **Use YAML/env for global config** - Better for global plugins and defaults
 4. **Enable debug logging during testing** - Helps identify configuration issues
 5. **Test plugin changes in staging first** - Avoid production surprises
-6. **Keep plugin configurations simple** - Use defaults when possible
 
 ## Limitations
 
@@ -416,7 +332,7 @@ Want to create your own plugins? See the [Plugin Developer Guide](plugin-develop
 ## Further Reading
 
 - [Plugin Developer Guide](plugin-development.md) - Create custom plugins
-- [Container Labels](container-labels.md) - Label configuration reference
-- [Environment Variables](environment-variable.md) - Environment variable reference
-- [Static Configuration](static.md) - YAML configuration reference
-- [Kubernetes Guide](kubernetes.md) - Using plugins with Kubernetes
+- [Container Labels](../reference/container-labels.md) - Label configuration reference
+- [Environment Variables](../reference/environment-variables.md) - Environment variable reference
+- [Static Configuration](../getting-started/static.md) - YAML configuration reference
+- [Kubernetes Guide](../getting-started/kubernetes.md) - Using plugins with Kubernetes

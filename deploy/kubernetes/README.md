@@ -27,7 +27,7 @@ kubectl apply -f easyhaproxy-nodeport.yml
 kubectl apply -f easyhaproxy-clusterip.yml
 ```
 
-For more details, see the [Kubernetes documentation](../../docs/kubernetes.md).
+For more details, see the [Kubernetes documentation](../../docs/getting-started/kubernetes.md).
 
 ## Regenerating These Files
 

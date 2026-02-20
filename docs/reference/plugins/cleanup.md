@@ -1,5 +1,6 @@
 ---
-sidebar_position: 21
+sidebar_position: 6
+sidebar_label: "Cleanup"
 ---
 
 # Cleanup Plugin
@@ -39,8 +40,6 @@ plugins:
 
 ### Environment Variables
 
-Configure the Cleanup plugin globally:
-
 | Environment Variable                            | Config Key           | Type     | Default | Description                                  |
 |-------------------------------------------------|----------------------|----------|---------|----------------------------------------------|
 | `EASYHAPROXY_PLUGINS_ENABLED`                   | -                    | string   | -       | Enable cleanup plugin (value: `cleanup`)     |
@@ -48,12 +47,9 @@ Configure the Cleanup plugin globally:
 | `EASYHAPROXY_PLUGIN_CLEANUP_MAX_IDLE_TIME`      | `max_idle_time`      | integer  | `300`   | Maximum age in seconds before deleting files |
 | `EASYHAPROXY_PLUGIN_CLEANUP_CLEANUP_TEMP_FILES` | `cleanup_temp_files` | boolean  | `true`  | Enable temp file cleanup                     |
 
-**Note:** This is a global plugin - configuration applies to the entire system.
-
 ### Custom Idle Time (1 hour)
 
 ```yaml
-# /etc/easyhaproxy/static/config.yaml
 plugins:
   enabled: [cleanup]
   config:
@@ -79,6 +75,6 @@ The cleanup plugin:
 
 ## Related Documentation
 
-- [Plugin System Overview](../plugins.md)
-- [Environment Variables Reference](../environment-variable.md)
-- [Static Configuration Reference](../static.md)
+- [Plugin System Overview](../../guides/plugins.md)
+- [Environment Variables Reference](../environment-variables.md)
+- [Static Configuration Reference](../../getting-started/static.md)

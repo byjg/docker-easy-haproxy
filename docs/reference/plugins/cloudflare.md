@@ -1,5 +1,6 @@
 ---
-sidebar_position: 18
+sidebar_position: 3
+sidebar_label: "Cloudflare"
 ---
 
 # Cloudflare Plugin
@@ -38,8 +39,6 @@ services:
 
 ### Docker/Docker Compose (Custom IP List)
 
-If you want to use your own IP list file instead of the built-in ranges:
-
 ```yaml
 labels:
   easyhaproxy.http.plugins: cloudflare
@@ -72,7 +71,6 @@ spec:
 ### Static YAML Configuration
 
 ```yaml
-# /etc/easyhaproxy/static/config.yaml
 plugins:
   config:
     cloudflare:
@@ -82,15 +80,11 @@ plugins:
 
 ### Environment Variables
 
-Configure Cloudflare plugin defaults for all domains:
-
 | Environment Variable                            | Config Key        | Type     | Default                               | Description                           |
 |-------------------------------------------------|-------------------|----------|---------------------------------------|---------------------------------------|
 | `EASYHAPROXY_PLUGIN_CLOUDFLARE_ENABLED`         | `enabled`         | boolean  | `true`                                | Enable/disable plugin for all domains |
 | `EASYHAPROXY_PLUGIN_CLOUDFLARE_USE_BUILTIN_IPS` | `use_builtin_ips` | boolean  | `true`                                | Use built-in Cloudflare IP ranges     |
 | `EASYHAPROXY_PLUGIN_CLOUDFLARE_IP_LIST_PATH`    | `ip_list_path`    | string   | `/etc/easyhaproxy/cloudflare_ips.lst` | Path to Cloudflare IP list file       |
-
-**Note:** Environment variables set defaults for ALL domains. To enable/disable per-domain, use container labels or Kubernetes annotations.
 
 ## Generated HAProxy Configuration
 
@@ -114,16 +108,13 @@ The plugin includes the current Cloudflare IP ranges (22 ranges total):
 - 2400:cb00::/32, 2606:4700::/32, 2803:f800::/32, 2405:b500::/32
 - 2405:8100::/32, 2a06:98c0::/29, 2c0f:f248::/32
 
-These ranges are automatically written to `/etc/easyhaproxy/cloudflare_ips.lst` during each discovery cycle.
-
 ## Important Notes
 
 - ✅ **No manual configuration required** - Built-in Cloudflare IPs are included!
 - The plugin runs once per domain during the discovery cycle
 - IP list file is automatically created and updated
-- To update Cloudflare IPs in the future, simply update the plugin source code and rebuild
 
 ## Related Documentation
 
-- [Plugin System Overview](../plugins.md)
+- [Plugin System Overview](../../guides/plugins.md)
 - [Container Labels Reference](../container-labels.md)

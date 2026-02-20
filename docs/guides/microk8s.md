@@ -1,5 +1,6 @@
 ---
 sidebar_position: 7
+sidebar_label: "MicroK8s"
 ---
 
 # Microk8s Add-ons
@@ -74,7 +75,7 @@ microk8s enable easyhaproxy --nodeport
 You need to disable any ingress controller you have previously installed (e.g., nginx, traefik, etc.) before installing EasyHAProxy to avoid conflicts.
 :::
 
-For more parameters you can refer to the [Kubernetes](kubernetes.md) page.
+For more parameters you can refer to the [Kubernetes](../getting-started/kubernetes.md) page.
 
 ----
 [Open source ByJG](http://opensource.byjg.com)

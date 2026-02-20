@@ -46,7 +46,7 @@ Each docker-compose file contains:
 
 ## Additional Documentation
 
-- [Container Labels Reference](../../docs/container-labels.md)
-- [Docker Configuration Guide](../../docs/docker.md)
-- [Environment Variables](../../docs/environment-variable.md)
-- [Plugin Documentation](../../docs/plugins/)
+- [Container Labels Reference](../../docs/reference/container-labels.md)
+- [Docker Configuration Guide](../../docs/getting-started/docker.md)
+- [Environment Variables](../../docs/reference/environment-variables.md)
+- [Plugin Documentation](../../docs/guides/plugins.md)

@@ -1,84 +1,19 @@
 ---
-sidebar_position: 5
+sidebar_position: 1
+sidebar_label: "CLI Reference"
 ---
 
-# Install via pip / uv
+# CLI Reference
 
-EasyHAProxy can run directly on any Linux or macOS host without Docker, using the `easyhaproxy` Python package.
-
-## Prerequisites
-
-HAProxy must be installed and available in your system `PATH` before running `easy-haproxy`. EasyHAProxy will refuse to start with a clear error message if HAProxy is not found.
-
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
-
-<Tabs>
-  <TabItem value="debian" label="Debian / Ubuntu" default>
-
-```bash
-sudo apt install haproxy
-```
-
-  </TabItem>
-  <TabItem value="rhel" label="RHEL / Fedora">
-
-```bash
-sudo dnf install haproxy
-```
-
-  </TabItem>
-  <TabItem value="macos" label="macOS">
-
-```bash
-brew install haproxy
-```
-
-  </TabItem>
-</Tabs>
-
-## Installation
-
-### Recommended: `uv tool` (system-wide, isolated)
-
-[`uv`](https://docs.astral.sh/uv/) installs `easyhaproxy` into its own isolated environment and exposes the `easy-haproxy` binary in `~/.local/bin/`, similar to `pipx`.
-
-```bash
-# Install uv (if not already installed)
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Install easyhaproxy as a tool
-uv tool install easyhaproxy
-
-# Make sure ~/.local/bin is in PATH (one-time setup)
-uv tool update-shell
-```
-
-After installation:
-
-```bash
-easy-haproxy --help
-```
-
-### Alternative: `pip`
-
-```bash
-pip install easyhaproxy
-```
-
-:::note Virtual environments
-When installing inside a virtual environment, `easy-haproxy` is only available while the environment is activated. For system-wide use, prefer `uv tool install` or install with `pip` at the system/user level.
-:::
-
-## CLI Reference
-
-Every configuration option can be set via a CLI flag **or** an environment variable. CLI flags take precedence over environment variables.
+The `easy-haproxy` command is the native binary installed via `pip` or `uv`. Every option can be set as a **CLI flag** or an **environment variable**. CLI flags take precedence over environment variables.
 
 ```
 easy-haproxy [OPTIONS]
 ```
 
-### Core
+For installation instructions, see [Native install](../getting-started/native.md).
+
+## Core
 
 | Flag                     | Environment Variable       | Default                                              | Description                                               |
 |--------------------------|----------------------------|------------------------------------------------------|-----------------------------------------------------------|
@@ -89,7 +24,7 @@ easy-haproxy [OPTIONS]
 | `--refresh-conf SECONDS` | `EASYHAPROXY_REFRESH_CONF` | `10`                                                 | Polling interval for configuration changes                |
 | `--customer-errors BOOL` | `HAPROXY_CUSTOMERRORS`     | `false`                                              | Enable custom HAProxy HTML error pages                    |
 
-### Logging
+## Logging
 
 | Flag                        | Environment Variable    | Default  | Description               |
 |-----------------------------|-------------------------|----------|---------------------------|
@@ -99,7 +34,7 @@ easy-haproxy [OPTIONS]
 
 Valid levels: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`
 
-### Stats Dashboard
+## Stats Dashboard
 
 | Flag                                 | Environment Variable        | Default      | Description                                 |
 |--------------------------------------|-----------------------------|--------------|---------------------------------------------|
@@ -112,7 +47,7 @@ Valid levels: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`
 The stats dashboard is only enabled when `--haproxy-password` (or `HAPROXY_PASSWORD`) is set.
 :::
 
-### ACME / Certbot (SSL certificates)
+## ACME / Certbot (SSL certificates)
 
 | Flag                                  | Environment Variable                       | Default  | Description                                                                                                                                           |
 |---------------------------------------|--------------------------------------------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -125,18 +60,18 @@ The stats dashboard is only enabled when `--haproxy-password` (or `HAPROXY_PASSW
 | `--certbot-preferred-challenges TYPE` | `EASYHAPROXY_CERTBOT_PREFERRED_CHALLENGES` | `http`   | ACME challenge type                                                                                                                                   |
 | `--certbot-manual-auth-hook SCRIPT`   | `EASYHAPROXY_CERTBOT_MANUAL_AUTH_HOOK`     | *(none)* | Path to a manual auth hook script for certbot                                                                                                         |
 
-See the full [ACME documentation](acme.md) for details.
+See the full [ACME documentation](../guides/acme.md) for details.
 
-### Plugins
+## Plugins
 
 | Flag                            | Environment Variable                 | Default  | Description                               |
 |---------------------------------|--------------------------------------|----------|-------------------------------------------|
 | `--plugins-enabled LIST`        | `EASYHAPROXY_PLUGINS_ENABLED`        | *(none)* | Comma-separated list of plugins to enable |
 | `--plugins-abort-on-error BOOL` | `EASYHAPROXY_PLUGINS_ABORT_ON_ERROR` | `false`  | Abort startup if a plugin fails to load   |
 
-See the [plugins documentation](plugins.md) for available plugins.
+See the [plugins guide](../guides/plugins.md) for available plugins.
 
-### Kubernetes
+## Kubernetes
 
 | Flag                                       | Environment Variable                 | Default  | Description                                  |
 |--------------------------------------------|--------------------------------------|----------|----------------------------------------------|
@@ -144,68 +79,3 @@ See the [plugins documentation](plugins.md) for available plugins.
 | `--deployment-mode MODE`                   | `EASYHAPROXY_DEPLOYMENT_MODE`        | `auto`   | Deployment mode: `auto`, `single`, `cluster` |
 | `--external-hostname HOSTNAME`             | `EASYHAPROXY_EXTERNAL_HOSTNAME`      | *(none)* | External hostname reported in Ingress status |
 | `--ingress-status-update-interval SECONDS` | `EASYHAPROXY_STATUS_UPDATE_INTERVAL` | `30`     | Interval to update Ingress status            |
-
-## Quick-start examples
-
-### Static mode (bare-metal / VM)
-
-```bash
-mkdir -p ~/easyhaproxy/static
-
-cat > ~/easyhaproxy/static/config.yml <<EOF
-containers:
-  "myapp.example.com:80":
-    ip: ["127.0.0.1:3000"]
-EOF
-
-easy-haproxy --discover static
-```
-
-### Static mode with stats and HTTPS redirect
-
-```bash
-easy-haproxy \
-  --discover static \
-  --haproxy-password mysecret \
-  --ssl-mode default \
-  --log-level INFO
-```
-
-### Let's Encrypt (ACME)
-
-```bash
-easy-haproxy \
-  --discover static \
-  --certbot-email admin@example.com \
-  --certbot-autoconfig letsencrypt
-```
-
-## Running as a systemd service
-
-To keep `easy-haproxy` running across reboots, create a systemd unit:
-
-```ini title="/etc/systemd/system/easy-haproxy.service"
-[Unit]
-Description=EasyHAProxy
-After=network.target
-
-[Service]
-ExecStart=/usr/local/bin/easy-haproxy --discover static --haproxy-password mysecret
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now easy-haproxy
-```
-
-:::tip Adjust ExecStart path
-Run `which easy-haproxy` to get the correct binary path for `ExecStart`. If you installed with `uv tool`, it is typically `/root/.local/bin/easy-haproxy` when running as root.
-:::
-
-----
-[Open source ByJG](http://opensource.byjg.com)

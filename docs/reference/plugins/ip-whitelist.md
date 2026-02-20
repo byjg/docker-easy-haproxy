@@ -1,5 +1,6 @@
 ---
-sidebar_position: 19
+sidebar_position: 4
+sidebar_label: "IP Whitelist"
 ---
 
 # IP Whitelist Plugin
@@ -72,7 +73,6 @@ spec:
 ### Static YAML Configuration
 
 ```yaml
-# /etc/easyhaproxy/static/config.yaml
 easymapping:
   - host: admin.example.com
     port: 443
@@ -87,15 +87,11 @@ easymapping:
 
 ### Environment Variables
 
-Configure IP Whitelist plugin defaults for all domains:
-
 | Environment Variable                          | Config Key    | Type     | Default | Description                                      |
 |-----------------------------------------------|---------------|----------|---------|--------------------------------------------------|
 | `EASYHAPROXY_PLUGIN_IP_WHITELIST_ENABLED`     | `enabled`     | boolean  | `true`  | Enable/disable plugin for all domains            |
 | `EASYHAPROXY_PLUGIN_IP_WHITELIST_ALLOWED_IPS` | `allowed_ips` | string   | -       | Comma-separated list of IPs/CIDR ranges to allow |
 | `EASYHAPROXY_PLUGIN_IP_WHITELIST_STATUS_CODE` | `status_code` | integer  | `403`   | HTTP status code to return for blocked IPs       |
-
-**Note:** Environment variables set defaults for ALL domains. To configure per-domain, use container labels or Kubernetes annotations.
 
 ## Generated HAProxy Configuration
 
@@ -118,9 +114,8 @@ The plugin supports:
 - The plugin runs once per domain during the discovery cycle
 - Test thoroughly before deploying to production
 - Consider using VPN CIDR ranges for remote access
-- Works well with staging and admin environments
 
 ## Related Documentation
 
-- [Plugin System Overview](../plugins.md)
+- [Plugin System Overview](../../guides/plugins.md)
 - [Container Labels Reference](../container-labels.md)

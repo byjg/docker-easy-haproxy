@@ -1,5 +1,6 @@
 ---
-sidebar_position: 23
+sidebar_position: 2
+sidebar_label: "Limitations"
 ---
 
 # Limitations and Considerations

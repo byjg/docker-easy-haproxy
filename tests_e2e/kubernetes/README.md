@@ -44,7 +44,7 @@ Each YAML file contains:
 
 ## Additional Documentation
 
-- [Kubernetes Installation Guide](../../docs/kubernetes.md)
-- [Helm Installation](../../docs/helm.md)
-- [Kubernetes Annotations Reference](../../docs/kubernetes.md#kubernetes-annotations)
-- [Using Plugins with Kubernetes](../../docs/kubernetes.md#using-plugins-with-kubernetes)
+- [Kubernetes Installation Guide](../../docs/getting-started/kubernetes.md)
+- [Helm Installation](../../docs/guides/helm.md)
+- [Kubernetes Annotations Reference](../../docs/getting-started/kubernetes.md#kubernetes-annotations)
+- [Using Plugins with Kubernetes](../../docs/getting-started/kubernetes.md#using-plugins-with-kubernetes)

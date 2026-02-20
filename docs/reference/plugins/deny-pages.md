@@ -1,5 +1,6 @@
 ---
-sidebar_position: 20
+sidebar_position: 5
+sidebar_label: "Deny Pages"
 ---
 
 # Deny Pages Plugin
@@ -73,7 +74,6 @@ spec:
 ### Static YAML Configuration
 
 ```yaml
-# /etc/easyhaproxy/static/config.yaml
 containers:
   "example.com:80":
     ip: ["webapp:80"]
@@ -96,15 +96,11 @@ labels:
 
 ### Environment Variables
 
-Configure Deny Pages plugin defaults for all domains:
-
 | Environment Variable                        | Config Key    | Type    | Default | Description                            |
 |---------------------------------------------|---------------|---------|---------|----------------------------------------|
 | `EASYHAPROXY_PLUGIN_DENY_PAGES_ENABLED`     | `enabled`     | boolean | `true`  | Enable/disable plugin for all domains  |
 | `EASYHAPROXY_PLUGIN_DENY_PAGES_PATHS`       | `paths`       | string  | -       | Comma-separated list of paths to block |
 | `EASYHAPROXY_PLUGIN_DENY_PAGES_STATUS_CODE` | `status_code` | integer | `403`   | HTTP status code to return             |
-
-**Note:** Environment variables set defaults for ALL domains. To configure per-domain, use container labels or Kubernetes annotations.
 
 ## Generated HAProxy Configuration
 
@@ -123,5 +119,5 @@ http-request deny deny_status 404 if denied_path
 
 ## Related Documentation
 
-- [Plugin System Overview](../plugins.md)
+- [Plugin System Overview](../../guides/plugins.md)
 - [Container Labels Reference](../container-labels.md)

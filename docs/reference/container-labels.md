@@ -1,5 +1,6 @@
 ---
-sidebar_position: 12
+sidebar_position: 3
+sidebar_label: "Container Labels"
 ---
 
 # Container Labels
@@ -16,7 +17,7 @@ sidebar_position: 12
 | easyhaproxy.[definition].sslcert      | (Optional) Cert PEM Base64 encoded. Do not use this if `certbot` is enabled.                                                                         | *empty*      | base64 cert + key                                                                                                |
 | easyhaproxy.[definition].ssl          | (Optional) If `true` you need to provide certificate as a file. See below. Do not use with `sslcert`.                                                | false        | true or false                                                                                                    |
 | easyhaproxy.[definition].ssl-check    | (Optional) `ssl`, enable health check via SSL in `mode tcp`                                                                                          | *empty*      | ssl                                                                                                              |
-| easyhaproxy.[definition].certbot      | (Optional) Generate certificate with certbot. Do not use with `sslcert` parameter. More info [here](acme.md).                                        | false        | true OR false                                                                                                    |
+| easyhaproxy.[definition].certbot      | (Optional) Generate certificate with certbot. Do not use with `sslcert` parameter. More info [here](../guides/acme.md).                              | false        | true OR false                                                                                                    |
 | easyhaproxy.[definition].redirect_ssl | (Optional) Redirect all requests to https                                                                                                            | false        | true OR false                                                                                                    |
 | easyhaproxy.[definition].clone_to_ssl | (Optional) It copies the configuration to HTTPS(443) and disable SSL from the current config. **Do not use** this with `ssl` or `certbot` parameters | false        | true OR false                                                                                                    |
 | easyhaproxy.[definition].balance      | (Optional) HAProxy balance algorithm. See [HAProxy documentation](https://cbonte.github.io/haproxy-dconv/1.8/configuration.html#4.2-balance)         | roundrobin   | roundrobin, source, uri, url_param, hdr, rdp-cookie, leastconn, first, static-rr, rdp-cookie, hdr_dom, map-based |
@@ -145,6 +146,25 @@ backend srv_phpapp_local_80
 docker run \
     --label easyhaproxy.[definition].redirect='{"www.byjg.com.br":"http://byjg.com.br","byjg.com":"http://byjg.com.br"}'
 ```
+
+---
+
+## Kubernetes Ingress Annotations
+
+When using Kubernetes, configure EasyHAProxy behavior with these annotations on your Ingress resources. Annotations apply to **all hosts** in the ingress configuration.
+
+| Annotation                          | Description                                                                          | Default    | Example                     |
+|-------------------------------------|--------------------------------------------------------------------------------------|------------|-----------------------------|
+| kubernetes.io/ingress.class         | (deprecated) Activate EasyHAProxy. Use `spec.ingressClassName` instead.              | *optional* | easyhaproxy-ingress         |
+| easyhaproxy.redirect_ssl            | (optional) Boolean. Force redirect all endpoints to HTTPS.                           | false      | true or false               |
+| easyhaproxy.certbot                 | (optional) Boolean. Request certbot certificates for the ingress domains.            | false      | true or false               |
+| easyhaproxy.redirect                | (optional) JSON. Key pair with a domain and its destination.                         | *empty*    | \{"domain":"redirect_url"}  |
+| easyhaproxy.mode                    | (optional) Set the HTTP mode for that connection.                                    | http       | http or tcp                 |
+| easyhaproxy.listen_port             | (optional) Override the HTTP listen port created for that ingress.                   | 80         | 8081                        |
+| easyhaproxy.plugins                 | (optional) Comma-separated list of plugins to enable for this ingress.               | *empty*    | cloudflare,deny_pages       |
+| easyhaproxy.plugin.`{name}`.`{key}` | (optional) Plugin-specific configuration (see [Using Plugins](../guides/plugins.md)) | *varies*   | See plugin docs             |
+
+For annotation usage examples, see the [Kubernetes getting started guide](../getting-started/kubernetes.md).
 
 ----
 [Open source ByJG](http://opensource.byjg.com)

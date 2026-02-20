@@ -61,7 +61,7 @@ labels:
 
 ## Additional Documentation
 
-- [Docker Swarm Guide](../../docs/swarm.md)
-- [Container Labels Reference](../../docs/container-labels.md)
-- [Using Plugins](../../docs/plugins/)
-- [ACME/Let's Encrypt](../../docs/acme.md)
+- [Docker Swarm Guide](../../docs/getting-started/swarm.md)
+- [Container Labels Reference](../../docs/reference/container-labels.md)
+- [Using Plugins](../../docs/guides/plugins.md)
+- [ACME/Let's Encrypt](../../docs/guides/acme.md)

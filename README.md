@@ -13,133 +13,48 @@
 
 ## Service discovery for HAProxy
 
-EasyHAProxy dynamically creates the `haproxy.cfg` based on metadata collected from your workloads (Docker labels, Swarm service labels, or Kubernetes ingress annotations).
+EasyHAProxy dynamically creates `haproxy.cfg` based on metadata from your workloads — Docker labels, Swarm service labels, or Kubernetes Ingress annotations. No HAProxy knowledge required.
 
-EasyHAProxy can detect and configure HAProxy automatically on the following platforms:
+## Features
 
-- Docker
-- Docker Swarm
-- Kubernetes
-- Static YAML definitions (`EASYHAPROXY_DISCOVER=static`)
+- **Automatic service discovery** — Docker, Docker Swarm, Kubernetes, or static YAML
+- **Zero-downtime HAProxy reload** — configuration updates happen without dropping connections
+- **Automatic TLS with ACME** — Let's Encrypt, ZeroSSL, BuyPass, and more
+- **Custom SSL certificates** — volume-mount or label-embed your own PEM files
+- **TCP mode** — proxy any TCP service, not just HTTP
+- **Plugin system** — JWT validation, IP whitelisting, Cloudflare IP restoration, FastCGI, path blocking, and custom plugins
+- **HAProxy stats dashboard** — optional, password-protected
+- **Balance algorithms** — roundrobin, leastconn, source, uri, and more
+
+## Supported platforms
+
+[![Kubernetes](docs/easyhaproxy_kubernetes.png)](docs/getting-started/kubernetes.md)
+[![Docker Swarm](docs/easyhaproxy_swarm.png)](docs/getting-started/swarm.md)
+[![Docker](docs/easyhaproxy_docker.png)](docs/getting-started/docker.md)
+[![Static](docs/easyhaproxy_static.png)](docs/getting-started/static.md)
+
+Install using tools:
+
+[![Helm](docs/easyhaproxy_helm.png)](docs/guides/helm.md)
+[![MicroK8s](docs/easyhaproxy_microk8s.png)](docs/guides/microk8s.md)
+[![Dokku](docs/easyhaproxy_dokku.png)](docs/guides/dokku.md)
+[![DigitalOcean](docs/easyhaproxy_digitalocean.png)](docs/guides/digitalocean.md)
+
+## Documentation
+
+| Section | Description |
+|---------|-------------|
+| **[Getting Started](docs/getting-started/index.md)** | Choose your runtime and discovery mode, minimal working setup |
+| **[Guides](docs/guides/ssl.md)** | SSL, ACME, plugins, Helm, MicroK8s, Dokku, DigitalOcean |
+| **[Concepts](docs/concepts/index.md)** | Service discovery, config pipeline, plugin model, TLS termination |
+| **[Reference](docs/reference/environment-variables.md)** | Environment variables, container labels, CLI flags, volumes |
 
 ## Who is using?
 
 EasyHAProxy is part of some projects:
-- Dokku
-- MicroK8s
-- DigitalOcean Marketplace
-
-See detailed instructions on how to install below.
-
-## EasyHAProxy Mission
-
-Easy to set up and low configuration to numerous features. 
-
-## Features
-
-EasyHAProxy will discover services based on Docker (or Swarm) labels and Kubernetes ingress annotations, then dynamically build the `haproxy.cfg`. Below, EasyHAProxy main features:
-
-- Support Automatic Certificate Management Environment (ACME) protocol compatible with Let's Encrypt and other CAs.
-- Set your custom SSL certificates
-- Balance traffic between multiple replicas
-- Set SSL policies (`strict`, `default`, `loose`) via `EASYHAPROXY_SSL_MODE`.
-- Set up HAProxy to listen to TCP.
-- Add redirects.
-- Enable/disable Stats on port 1936 with a custom password.
-- Enable/disable custom errors.
-
-Also, it is possible to set up HAProxy from a simple Yaml file instead of creating `haproxy.cfg` file.
-
-## How Does It Work?
-
-You don't need to change your current infrastructure and don't need to learn the HAProxy configuration.
-
-The steps are:
-
-- Run the EasyHAProxy container;
-- Add some labels to the containers you want to be parsed by EasyHAProxy (see detailed instructions below);
-- EasyHAProxy will automatically detect the containers, set up, and reload the HAProxy configurations for you without downtime.
-
-## Detailed Instructions
-
-For detailed instructions on how to use EasyHAProxy, follow the instructions for the platform you want to use:
-
-[![Kubernetes](docs/easyhaproxy_kubernetes.png)](docs/kubernetes.md)
-[![Docker Swarm](docs/easyhaproxy_swarm.png)](docs/swarm.md)
-[![Docker](docs/easyhaproxy_docker.png)](docs/docker.md)
-[![Static](docs/easyhaproxy_static.png)](docs/static.md)
-
-Or you can install using tools:
-
-[![Helm](docs/easyhaproxy_helm.png)](docs/helm.md)
-[![MicroK8s](docs/easyhaproxy_microk8s.png)](docs/microk8s.md)
-[![Dokku](docs/easyhaproxy_dokku.png)](docs/dokku.md)
-[![DigitalOcean](docs/easyhaproxy_digitalocean.png)](docs/digitalocean.md)
-
-## Special Topics
-
-If you already set up the EasyHAProxy, is time to go deeper:
-
-- [Custom SSL](docs/ssl.md)
-- [Automatic Certificate Issuing](docs/acme.md) (e.g. Letsencrypt)
-
-## Configuration Reference
-
-Detailed configuration guides for advanced setups:
-
-- [Container Labels](docs/container-labels.md) - Configure Docker/Swarm containers with labels
-- [Environment Variables](docs/environment-variable.md) - Configure EasyHAProxy behavior
-- [Volumes](docs/volumes.md) - Map volumes for certificates, config, and custom files
-- [Plugins](docs/plugins.md) - Extend HAProxy with plugins ([Development Guide](docs/plugin-development.md))
-  - [JWT Validator](docs/Plugins/jwt-validator.md) - JWT authentication validation
-  - [FastCGI](docs/Plugins/fastcgi.md) - PHP-FPM and FastCGI application support
-  - [Cloudflare](docs/Plugins/cloudflare.md) - Restore visitor IP from Cloudflare CDN
-  - [IP Whitelist](docs/Plugins/ip-whitelist.md) - Restrict access to IPs/CIDR ranges
-  - [Deny Pages](docs/Plugins/deny-pages.md) - Block access to specific paths
-  - [Cleanup](docs/Plugins/cleanup.md) - Automatic cleanup of temporary files
-- [Other Configurations](docs/other.md) - Additional configurations (ports, custom errors, etc.)
-- [Limitations](docs/limitations.md) - Important limitations and considerations
-
-## Development
-
-### Requirements
-
-- Python 3.11 or higher
-- [uv](https://github.com/astral-sh/uv) package manager
-
-### Installation for Development
-
-```bash
-# Install uv (if not already installed)
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Clone the repository
-git clone https://github.com/byjg/docker-easy-haproxy.git
-cd docker-easy-haproxy
-
-# Install dependencies (creates virtual environment automatically)
-uv sync --dev
-
-# Run tests
-make test
-# or directly: uv run pytest tests/ -vv
-
-# Run linting
-make lint
-
-# Format code
-make format
-```
-
-### Installing the Package
-
-```bash
-# Install with uv
-uv pip install easymapping
-
-# Or install from source
-uv pip install -e ".[dev]"
-```
+- [Dokku](docs/guides/dokku.md)
+- [MicroK8s](docs/guides/microk8s.md)
+- [DigitalOcean Marketplace](docs/guides/digitalocean.md)
 
 ## See EasyHAProxy in action
 
@@ -153,7 +68,6 @@ Click on the image to see the videos (use HD for better visualization)
 [![TCP Mode](docs/video-tcp-mysql.png)](https://youtu.be/JHqcq9crbDI)
 
 [Here is the code](https://gist.github.com/byjg/e125e478a0562190176d69ea795fd3d4) applied in the test examples above.
-
 
 ----
 [Open source ByJG](http://opensource.byjg.com)

@@ -1,5 +1,6 @@
 ---
-sidebar_position: 10
+sidebar_position: 1
+sidebar_label: "Custom SSL Certificates"
 ---
 
 # Setup custom certificates

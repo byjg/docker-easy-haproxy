@@ -1,5 +1,6 @@
 ---
-sidebar_position: 17
+sidebar_position: 2
+sidebar_label: "FastCGI"
 ---
 
 # FastCGI Plugin
@@ -64,16 +65,6 @@ services:
       - /run/php:/run/php
 ```
 
-### Custom Document Root and Index File
-
-```yaml
-labels:
-  easyhaproxy.http.plugins: fastcgi
-  easyhaproxy.http.plugin.fastcgi.document_root: /var/www/myapp/public
-  easyhaproxy.http.plugin.fastcgi.index_file: app.php
-  easyhaproxy.http.plugin.fastcgi.path_info: true
-```
-
 ### Kubernetes Annotations
 
 ```yaml
@@ -117,21 +108,15 @@ easymapping:
 
 ### Environment Variables
 
-Configure FastCGI plugin defaults for all domains:
-
-| Environment Variable                         | Config Key        | Type     | Default         | Description                           |
-|----------------------------------------------|-------------------|----------|-----------------|---------------------------------------|
-| `EASYHAPROXY_PLUGIN_FASTCGI_ENABLED`         | `enabled`         | boolean  | `true`          | Enable/disable plugin for all domains |
+| Environment Variable                         | Config Key        | Type     | Default                | Description                           |
+|----------------------------------------------|-------------------|----------|------------------------|---------------------------------------|
+| `EASYHAPROXY_PLUGIN_FASTCGI_ENABLED`         | `enabled`         | boolean  | `true`                 | Enable/disable plugin for all domains |
 | `EASYHAPROXY_PLUGIN_FASTCGI_DOCUMENT_ROOT`   | `document_root`   | string   | `/etc/easyhaproxy/www` | Document root path                    |
-| `EASYHAPROXY_PLUGIN_FASTCGI_SCRIPT_FILENAME` | `script_filename` | string   | `%[path]`       | Custom pattern for SCRIPT_FILENAME    |
-| `EASYHAPROXY_PLUGIN_FASTCGI_INDEX_FILE`      | `index_file`      | string   | `index.php`     | Default index file                    |
-| `EASYHAPROXY_PLUGIN_FASTCGI_PATH_INFO`       | `path_info`       | boolean  | `true`          | Enable PATH_INFO support              |
-
-**Note:** Environment variables set defaults for ALL domains. To configure per-domain, use container labels or Kubernetes annotations. Custom params (`custom_params`) cannot be configured via environment variables - use YAML or labels instead.
+| `EASYHAPROXY_PLUGIN_FASTCGI_SCRIPT_FILENAME` | `script_filename` | string   | `%[path]`              | Custom pattern for SCRIPT_FILENAME    |
+| `EASYHAPROXY_PLUGIN_FASTCGI_INDEX_FILE`      | `index_file`      | string   | `index.php`            | Default index file                    |
+| `EASYHAPROXY_PLUGIN_FASTCGI_PATH_INFO`       | `path_info`       | boolean  | `true`                 | Enable PATH_INFO support              |
 
 ## Generated HAProxy Configuration
-
-The plugin generates a top-level `fcgi-app` section and a `use-fcgi-app` directive in the backend:
 
 ```haproxy
 # Top-level fcgi-app definition (added after defaults, before frontends/backends)
@@ -143,15 +128,10 @@ fcgi-app fcgi_phpapp_local
 # Backend configuration (added to the backend section)
 backend srv_phpapp_local_80
     use-fcgi-app fcgi_phpapp_local
-    # TCP connection:
     server srv-0 172.19.0.3:9000 proto fcgi
-    # OR Unix socket:
-    # server srv-0 /run/php/php-fpm.sock proto fcgi
 ```
 
 ## CGI Parameters
-
-**Note:** HAProxy automatically sets standard CGI parameters based on the `fcgi-app` configuration when communicating with PHP-FPM via the FastCGI protocol.
 
 The plugin configures:
 - ✅ **SCRIPT_FILENAME** - Path to PHP script
@@ -169,9 +149,8 @@ The plugin configures:
 
 - **Required:** Use this plugin together with `proto: fcgi` parameter for complete PHP-FPM support
 - The plugin runs once per domain during the discovery cycle
-- HAProxy handles the actual FastCGI protocol communication and CGI parameter transmission
 
 ## Related Documentation
 
-- [Plugin System Overview](../plugins.md)
+- [Plugin System Overview](../../guides/plugins.md)
 - [Container Labels Reference](../container-labels.md)

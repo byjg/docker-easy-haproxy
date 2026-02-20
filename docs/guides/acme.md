@@ -1,12 +1,13 @@
 ---
-sidebar_position: 11
+sidebar_position: 2
+sidebar_label: "ACME / Let's Encrypt"
 ---
 
 # SSL - Automatic Certificate Management Environment (ACME)
 
-The Automatic Certificate Management Environment (ACME) protocol 
+The Automatic Certificate Management Environment (ACME) protocol
 allow automating interactions between certificate authorities and their users' servers,
-allowing the automated deployment of public key infrastructure. 
+allowing the automated deployment of public key infrastructure.
 
 Most of the issuers offers Automatic Issuing free of cost.
 
@@ -14,7 +15,7 @@ Most of the issuers offers Automatic Issuing free of cost.
 
 Easy HAProxy supports the following ACME challenge types:
 
-- **HTTP-01 Challenge (Default and Only)**  
+- **HTTP-01 Challenge (Default and Only)**
   The ACME server validates ownership by making an HTTP request to a temporary endpoint served on port 80. Easy HAProxy provisions a standalone Certbot responder on an internal port and routes `/.well-known/acme-challenge/` traffic to it.
 
 :::info Challenge Support
@@ -38,7 +39,7 @@ At a high level, ACME with Easy HAProxy works in two stages:
 
 2. Enable ACME per domain (per service/app)
    - Add the label `easyhaproxy.<definition>.certbot=true` to the service you want a certificate for.
-   - Ensure the service is exposed on HTTP port 80 from EasyHAProxy’s perspective (e.g., `easyhaproxy.<definition>.port=80`). ACME HTTP-01 will not work if the front port is not 80.
+   - Ensure the service is exposed on HTTP port 80 from EasyHAProxy's perspective (e.g., `easyhaproxy.<definition>.port=80`). ACME HTTP-01 will not work if the front port is not 80.
    - Provide the domain via `easyhaproxy.<definition>.host=yourdomain.tld` (and additional labels per your install method).
 
 What happens under the hood
@@ -90,7 +91,7 @@ Possible values for: `EASYHAPROXY_CERTBOT_AUTOCONFIG`
 | Entrust              | -                | No    | Yes                | Yes      | Yes           | [Link](https://www.entrust.com/knowledgebase/ssl/how-to-use-acme-to-install-ssl-tls-certificates-in-entrust-certificate-services-apache)                           |
 | Sectigo              | -                | No    | Yes                | Yes      | Yes           | [Link](https://www.sectigo.com/resource-library/sectigos-acme-automation)                                                                                          |
 
-This configuration is global. After set up ACME properly, is necessary enable for each domain the certificate request. 
+This configuration is global. After set up ACME properly, is necessary enable for each domain the certificate request.
 
 To do that add the label: `easyhaproxy.<definition>.certbot=true`. See the method of installation you are using to learn how to set up properly.
 
@@ -123,10 +124,10 @@ To avoid hitting rate limits and certificate issuing problems:
 - **You must persist** the container folder `/etc/easyhaproxy/certs/certbot` outside the container
 - **Never delete or modify** its contents manually
 - If you don't persist this folder, or if you delete/modify its contents, certificate issuing may not work properly and you may hit rate limits
-::: 
+:::
 
 If you are using Let's Encrypt, be aware of it rate limits:
- 
+
 - https://letsencrypt.org/docs/duplicate-certificate-limit/
 - https://letsencrypt.org/docs/rate-limits/
 
@@ -171,10 +172,6 @@ services:
       # ACME/Certbot Configuration (Method 1: Recommended)
       EASYHAPROXY_CERTBOT_EMAIL: your-email@example.com
       EASYHAPROXY_CERTBOT_AUTOCONFIG: letsencrypt
-
-      # ACME/Certbot Configuration (Method 2: Manual)
-      # EASYHAPROXY_CERTBOT_EMAIL: your-email@example.com
-      # EASYHAPROXY_CERTBOT_SERVER: https://acme-v02.api.letsencrypt.org/directory
 
       # Other settings
       EASYHAPROXY_SSL_MODE: "default"
@@ -266,29 +263,6 @@ If you hit Let's Encrypt rate limits:
 - Use staging server for testing: `EASYHAPROXY_CERTBOT_AUTOCONFIG: letsencrypt_test`
 - Ensure `/etc/easyhaproxy/certs/certbot` volume is properly persisted
 - See: https://letsencrypt.org/docs/rate-limits/
-
-### Using Both ACME and Manual Certificates
-
-You can use both simultaneously:
-1. Mount both volumes (`certs_certbot` and `certs_haproxy`)
-2. Use `certbot=true` label for domains that should use ACME
-3. Omit the label for domains using manual certificates
-
-Example:
-```yaml
-services:
-  # This service uses ACME
-  app1:
-    labels:
-      easyhaproxy.http.host: auto.example.com
-      easyhaproxy.http.certbot: "true"
-
-  # This service uses manual certificate
-  app2:
-    labels:
-      easyhaproxy.http.host: manual.example.com
-      # No certbot label - will use /etc/easyhaproxy/certs/haproxy/manual.example.com.pem
-```
 
 ----
 [Open source ByJG](http://opensource.byjg.com)
