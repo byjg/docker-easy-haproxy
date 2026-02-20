@@ -1078,9 +1078,28 @@ class TestTLSService:
         """Test HTTPS request via ingress with host2.local"""
         kubectl = k8s_service_tls
 
-        # Wait for EasyHAProxy to discover and fully configure the ingress
+        # Wait for EasyHAProxy to discover and fully configure the ingress (checks HTTP)
         assert wait_for_easyhaproxy_discovery(kubectl, "host2.local", timeout=30), \
             "EasyHAProxy did not become ready for host2.local within 30 seconds"
+
+        # HTTP readiness does not guarantee HTTPS is ready: the TLS frontend (port 443)
+        # may still be initialising or HAProxy may be mid-reload after writing the cert
+        # file.  Poll HTTPS directly until it returns a real response before asserting.
+        deadline = time.time() + 30
+        while time.time() < deadline:
+            try:
+                probe = subprocess.run(
+                    ["curl", "-k", "-s", "-o", "/dev/null", "-w", "%{http_code}",
+                     "-H", "Host: host2.local", f"https://localhost:{HTTPS_PORT}"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                if probe.stdout.strip() not in ("000", "503"):
+                    break
+            except Exception:
+                pass
+            time.sleep(1)
 
         # Test HTTPS request (using -k to allow self-signed certificate)
         result = subprocess.run(
