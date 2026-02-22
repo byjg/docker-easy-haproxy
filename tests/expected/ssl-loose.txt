@@ -35,6 +35,14 @@ backend srv_stats
     mode http
     server Local 127.0.0.1:1936
 
+frontend dashboard
+    bind *:11936
+    mode http
+    acl is_index path /
+    acl is_index path /index.html
+    http-request return status 200 content-type "text/html" file /etc/easyhaproxy/www/dashboard.html if is_index
+    http-request return status 404
+
 backend certbot_backend
     mode http
     server certbot 127.0.0.1:2080
