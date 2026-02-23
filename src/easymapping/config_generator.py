@@ -4,7 +4,7 @@ import re
 
 from jinja2 import Environment, FileSystemLoader
 
-from functions import Functions, logger_easyhaproxy
+from functions import Functions, logger_easyhaproxy, Consts
 
 from .label_handler import DockerLabelHandler
 
@@ -92,7 +92,8 @@ class HaproxyConfigGenerator:
         return template.render(
             data=self.mapping,
             global_plugin_configs=self.global_plugin_configs,
-            defaults_plugin_configs=self.defaults_plugin_configs
+            defaults_plugin_configs=self.defaults_plugin_configs,
+            dashboard_server_port=Consts.DASHBOARD_SERVER_PORT
         )
 
     def parse(self, container_metadata):

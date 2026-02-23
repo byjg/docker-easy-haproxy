@@ -57,3 +57,10 @@ class Consts:
     def certs_haproxy(cls):
         """Path to user-provided certificates directory."""
         return f"{cls.base_path}/certs/haproxy"
+
+    @classproperty
+    def www_path(cls):
+        """Path to the web assets directory (dashboard, static files)."""
+        return f"{cls.base_path}/www"
+
+    DASHBOARD_SERVER_PORT = 9190

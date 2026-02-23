@@ -64,8 +64,8 @@ All EasyHAProxy files are organized under `/etc/easyhaproxy/`. This can be custo
 │
 ├── cloudflare_ips.lst                  # Optional - Cloudflare plugin
 │
-└── www/                                # Optional - FastCGI document root
-    └── index.php
+└── www/                                # 📦 Base image - Stats dashboard
+    └── dashboard.html                  # 📦 Base image - Stats dashboard UI
 ```
 
 :::tip Legend
@@ -88,7 +88,7 @@ The most commonly mapped volumes for persistence and customization:
 | `/etc/easyhaproxy/haproxy/errors-custom/` | [Custom error pages](other.md) - custom HTTP error pages (400, 403, 500, etc.)             | Optional |
 | `/etc/easyhaproxy/plugins/`               | [Custom plugins](../guides/plugins.md) - Python plugin files                               | Optional |
 | `/etc/easyhaproxy/jwt_keys/`              | [JWT public keys](plugins/jwt-validator.md) - RSA public keys for JWT validation           | Optional |
-| `/etc/easyhaproxy/www/`                   | [FastCGI document root](plugins/fastcgi.md) - PHP/FastCGI application files                | Optional |
+| `/etc/easyhaproxy/www/`                   | Stats dashboard UI - served on port `stats_port + 10000` (default `11936`)                 | Optional |
 
 ## Directory Details
 

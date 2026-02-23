@@ -10,7 +10,7 @@ The plugin creates:
 
 Configuration:
     - enabled: Enable/disable the plugin (default: true)
-    - document_root: Document root path (default: /etc/easyhaproxy/www)
+    - document_root: Document root path (default: /var/www/html)
     - script_filename: Pattern for SCRIPT_FILENAME (default: %[path])
     - index_file: Default index file (default: index.php)
     - path_info: Enable PATH_INFO support (default: true)
@@ -39,8 +39,6 @@ Example Kubernetes Annotation:
 import os
 import sys
 
-from functions import Consts
-
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -52,7 +50,7 @@ class FastcgiPlugin(PluginInterface):
 
     def __init__(self):
         self.enabled = True
-        self.document_root = Consts.base_path + "/www"
+        self.document_root = "/var/www/html"
         self.script_filename = "%[path]"
         self.index_file = "index.php"
         self.path_info = True

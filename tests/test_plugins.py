@@ -948,7 +948,7 @@ class TestFastcgiPlugin:
 
         assert plugin.name == "fastcgi"
         assert plugin.enabled is True
-        assert plugin.document_root == f"{Consts.base_path}/www"
+        assert plugin.document_root == "/var/www/html"
         assert plugin.index_file == "index.php"
         assert plugin.path_info is True
         assert plugin.custom_params == {}
@@ -970,7 +970,7 @@ class TestFastcgiPlugin:
         """Test plugin generates correct HAProxy config"""
         plugin = FastcgiPlugin()
         plugin.configure({
-            "document_root": f"{Consts.base_path}/www",
+            "document_root": "/var/www/html",
             "index_file": "index.php"
         })
 
@@ -992,9 +992,9 @@ class TestFastcgiPlugin:
         assert len(result.global_configs) == 1
         fcgi_app_def = result.global_configs[0]
         assert "fcgi-app fcgi_phpapp_local" in fcgi_app_def
-        assert f"docroot {Consts.base_path}/www" in fcgi_app_def
+        assert "docroot /var/www/html" in fcgi_app_def
         assert "index index.php" in fcgi_app_def
-        assert result.metadata["document_root"] == f"{Consts.base_path}/www"
+        assert result.metadata["document_root"] == "/var/www/html"
         assert result.metadata["index_file"] == "index.php"
 
     def test_fastcgi_plugin_custom_params(self):

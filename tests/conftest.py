@@ -6,13 +6,12 @@ This module provides session-wide and function-level fixtures for testing.
 
 import os
 import shutil
-import tempfile
 import pytest
 
 
-# Create a session-wide temporary directory for all tests
-# Use a different prefix to avoid conflicts with cleanup plugin (which looks for "easyhaproxy_*")
-_test_session_dir = tempfile.mkdtemp(prefix="pytest_easyhaproxy_")
+# Fixed temporary directory for all tests — predictable so expected fixtures can reference it
+_test_session_dir = "/tmp/easyhaproxy_test"
+os.makedirs(_test_session_dir, exist_ok=True)
 os.environ["EASYHAPROXY_BASE_PATH"] = _test_session_dir
 
 

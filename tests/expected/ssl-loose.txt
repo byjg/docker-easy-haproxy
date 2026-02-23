@@ -40,8 +40,14 @@ frontend dashboard
     mode http
     acl is_index path /
     acl is_index path /index.html
-    http-request return status 200 content-type "text/html" file /etc/easyhaproxy/www/dashboard.html if is_index
-    http-request return status 404
+    acl is_dashboard path /dashboard.html
+    http-request set-path /dashboard.html if is_index
+    http-request return status 404 if !is_dashboard
+    default_backend srv_dashboard
+
+backend srv_dashboard
+    mode http
+    server Local 127.0.0.1:9190
 
 backend certbot_backend
     mode http

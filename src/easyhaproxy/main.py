@@ -2,6 +2,8 @@ import argparse
 import os
 import shutil
 import sys
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from deepdiff import DeepDiff
 
@@ -14,6 +16,38 @@ from functions import (
     logger_init,
 )
 from processor import ProcessorInterface
+
+
+class DashboardHandler(BaseHTTPRequestHandler):
+    _content: bytes | None = None
+
+    def do_GET(self):
+        if self.path in ("/", "/index.html", "/dashboard.html"):
+            if DashboardHandler._content is None:
+                dashboard_path = os.path.join(Consts.www_path, "dashboard.html")
+                try:
+                    with open(dashboard_path, "rb") as f:
+                        DashboardHandler._content = f.read()
+                except OSError:
+                    DashboardHandler._content = b""
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(DashboardHandler._content)))
+            self.end_headers()
+            self.wfile.write(DashboardHandler._content)
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def log_message(self, format, *args):
+        pass
+
+
+def start_dashboard_server():
+    server = HTTPServer(("127.0.0.1", Consts.DASHBOARD_SERVER_PORT), DashboardHandler)
+    t = threading.Thread(target=server.serve_forever, daemon=True)
+    t.start()
+    logger_easyhaproxy.info(f"Dashboard server listening on 127.0.0.1:{Consts.DASHBOARD_SERVER_PORT}")
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -145,6 +179,8 @@ def start():
 
     os.makedirs(Consts.certs_certbot, exist_ok=True)
     os.makedirs(Consts.certs_haproxy, exist_ok=True)
+
+    start_dashboard_server()
 
     processor_obj.save_config(Consts.haproxy_config)
     processor_obj.save_certs(Consts.certs_haproxy)
