@@ -94,6 +94,7 @@ services:
 
   # EasyHAProxy with Certbot
   haproxy:
+    image: byjg/easy-haproxy:local
     build:
       context: ../..
       dockerfile: deploy/docker/Dockerfile
@@ -111,6 +112,9 @@ services:
     environment:
       EASYHAPROXY_DISCOVER: docker
       HAPROXY_CUSTOMERRORS: "true"
+      HAPROXY_USERNAME: admin
+      HAPROXY_PASSWORD: password
+      HAPROXY_STATS_PORT: 1936
 
       # Certbot configuration pointing to Pebble
       EASYHAPROXY_CERTBOT_EMAIL: test@example.com

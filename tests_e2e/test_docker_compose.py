@@ -842,16 +842,21 @@ def docker_compose_acme() -> Generator[None, None, None]:
     )
 
     fixture = DockerComposeFixture(str(DOCKER_DIR / "docker-compose-acme-e2e.yml"), startup_wait=0)
-    fixture.up()
-    yield
-    fixture.down()
-
-    # Clean up volume after test
-    subprocess.run(
-        ["docker", "volume", "rm", volume_name],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    )
+    try:
+        fixture.up()
+    except Exception:
+        fixture.down()
+        raise
+    try:
+        yield
+    finally:
+        fixture.down()
+        # Clean up volume after test
+        subprocess.run(
+            ["docker", "volume", "rm", volume_name],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
 
 
 @pytest.mark.acme
