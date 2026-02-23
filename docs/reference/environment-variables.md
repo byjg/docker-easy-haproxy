@@ -19,11 +19,14 @@ sidebar_label: "Environment Variables"
 | HAPROXY_USERNAME          | (Optional) The HAProxy username for the statistics endpoint (used only when `HAPROXY_PASSWORD` is set).                                                                                        | `admin`            |
 | HAPROXY_PASSWORD          | (Optional) The HAProxy password to the statistics endpoint. Stats are **disabled** unless this is defined.                                                                                     | *empty*            |
 | HAPROXY_STATS_PORT        | (Optional) The HAProxy port to the statistics. If set to `false`, disable statistics. Only applies when `HAPROXY_PASSWORD` is defined.                                                         | `1936`             |
-| HAPROXY_STATS_CORS_ORIGIN | (Optional) Enable CORS for the HAProxy stats dashboard by specifying the allowed origin (e.g., `http://localhost:3000`). Only applies when `HAPROXY_PASSWORD` is defined.                      | *empty*            |
+| HAPROXY_STATS_CORS_ORIGIN | Required for the monitoring dashboard to function. Set to the origin you use to open the dashboard (e.g. `http://localhost:11936`). The dashboard page calls the stats API from a different port, so the browser enforces CORS — without this header the dashboard shows no data. Only applies when `HAPROXY_PASSWORD` is defined. | *empty*            |
 | HAPROXY_CUSTOMERRORS      | (Optional) If HAProxy will use custom HTML errors. true/false.                                                                                                                                 | `false`            |
 
-:::tip HAProxy Stats
-Statistics are only configured when `HAPROXY_PASSWORD` is set. Without a password, the stats section is not generated.
+:::tip HAProxy Stats & Dashboard
+Statistics are only configured when `HAPROXY_PASSWORD` is set. Without a password, neither the
+stats endpoint nor the monitoring dashboard is generated.
+When enabled, the real-time dashboard is available at `http://<host>:<HAPROXY_STATS_PORT + 10000>/`
+(default `http://<host>:11936/`). See the [Monitoring Dashboard guide](../guides/dashboard.md) for details.
 :::
 
 :::note ACME/Certbot Environment Variables
