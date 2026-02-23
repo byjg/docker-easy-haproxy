@@ -35,19 +35,21 @@ Set `service.create: true` and `service.type: NodePort` for most setups. DaemonS
 
 ## Port Binding
 
-| Value                     | Description                        | Default |
-|---------------------------|------------------------------------|---------|
-| `binding.ports.http`      | HTTP port                          | `80`    |
-| `binding.ports.https`     | HTTPS port                         | `443`   |
-| `binding.ports.stats`     | HAProxy stats port                 | `1936`  |
-| `binding.additionalPorts` | List of additional ports to expose | `[]`    |
+| Value                      | Description                                                        | Default  |
+|----------------------------|--------------------------------------------------------------------|----------|
+| `binding.ports.http`       | HTTP port                                                          | `80`     |
+| `binding.ports.https`      | HTTPS port                                                         | `443`    |
+| `binding.ports.stats`      | HAProxy stats port                                                 | `1936`   |
+| `binding.ports.dashboard`  | Monitoring dashboard port (always `stats + 10000` inside the pod) | `11936`  |
+| `binding.additionalPorts`  | List of additional ports to expose                                 | `[]`     |
 
 ## EasyHAProxy Settings
 
 | Value                              | Description                                         | Default    |
 |------------------------------------|-----------------------------------------------------|------------|
-| `easyhaproxy.stats.username`       | HAProxy stats dashboard username                    | `admin`    |
-| `easyhaproxy.stats.password`       | HAProxy stats dashboard password                    | `password` |
+| `easyhaproxy.stats.username`       | HAProxy stats username                                                              | `admin`    |
+| `easyhaproxy.stats.password`       | HAProxy stats password. **Required** to enable the stats endpoint and dashboard.   | `password` |
+| `easyhaproxy.stats.corsOrigin`     | Allowed origin for stats API CORS (e.g. `http://node01:11936`). **Required** for the dashboard to load in a browser. | `""`       |
 | `easyhaproxy.refresh`              | Seconds between service discovery polls             | `"10"`     |
 | `easyhaproxy.customErrors`         | Enable custom HTML error pages                      | `"true"`   |
 | `easyhaproxy.sslMode`              | TLS mode: `strict`, `default`, or `loose`           | `loose`    |

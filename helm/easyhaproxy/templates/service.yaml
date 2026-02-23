@@ -22,6 +22,9 @@ spec:
     - name: stats
       port: 1936
       {{ if eq .Values.service.type "NodePort" }}nodePort: {{ .Values.binding.ports.stats }}{{ end }}
+    - name: dashboard
+      port: 11936
+      {{ if eq .Values.service.type "NodePort" }}nodePort: {{ .Values.binding.ports.dashboard }}{{ end }}
     {{- range $port := .Values.binding.additionalPorts }}
     - name: extra{{ $port }}
       port: {{ $port }}

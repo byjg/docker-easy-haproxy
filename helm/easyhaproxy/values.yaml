@@ -24,6 +24,7 @@ binding:
     http: 80
     https: 443
     stats: 1936
+    dashboard: 11936
   additionalPorts: []
 
 serviceAccount:
@@ -80,6 +81,7 @@ easyhaproxy:
   stats:
     username: admin
     password: password
+    corsOrigin: ""
   refresh: "10"
   customErrors: "true"
   sslMode: loose

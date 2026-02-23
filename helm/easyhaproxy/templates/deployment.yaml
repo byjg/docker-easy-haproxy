@@ -48,6 +48,9 @@ spec:
             - name: stats
               containerPort: 1936
               {{ if not .Values.service.create }}hostPort: {{ .Values.binding.ports.stats }}{{ end }}
+            - name: dashboard
+              containerPort: 11936
+              {{ if not .Values.service.create }}hostPort: {{ .Values.binding.ports.dashboard }}{{ end }}
             {{- range $port := .Values.binding.additionalPorts }}
             - name: extra{{ $port }}
               containerPort: {{ $port }}
@@ -62,6 +65,10 @@ spec:
               value: {{ .Values.easyhaproxy.stats.username }}
             - name: HAPROXY_PASSWORD
               value: {{ .Values.easyhaproxy.stats.password }}
+            {{- if .Values.easyhaproxy.stats.corsOrigin }}
+            - name: HAPROXY_STATS_CORS_ORIGIN
+              value: {{ .Values.easyhaproxy.stats.corsOrigin | quote }}
+            {{- end }}
             - name: EASYHAPROXY_REFRESH_CONF
               value: {{ .Values.easyhaproxy.refresh | quote }}
             - name: HAPROXY_CUSTOMERRORS

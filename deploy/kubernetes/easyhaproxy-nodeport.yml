@@ -6,7 +6,7 @@ metadata:
   name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-2.0.1
+    helm.sh/chart: easyhaproxy-2.0.2
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
     app.kubernetes.io/version: "6.0.1"
@@ -19,7 +19,7 @@ metadata:
   name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-2.0.1
+    helm.sh/chart: easyhaproxy-2.0.2
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
     app.kubernetes.io/version: "6.0.1"
@@ -83,7 +83,7 @@ metadata:
   name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-2.0.1
+    helm.sh/chart: easyhaproxy-2.0.2
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
     app.kubernetes.io/version: "6.0.1"
@@ -105,7 +105,7 @@ metadata:
   name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-2.0.1
+    helm.sh/chart: easyhaproxy-2.0.2
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
     app.kubernetes.io/version: "6.0.1"
@@ -124,6 +124,9 @@ spec:
     - name: stats
       port: 1936
       nodePort: 1936
+    - name: dashboard
+      port: 11936
+      nodePort: 11936
 
 
   selector:
@@ -137,7 +140,7 @@ metadata:
   name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-2.0.1
+    helm.sh/chart: easyhaproxy-2.0.2
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
     app.kubernetes.io/version: "6.0.1"
@@ -172,6 +175,9 @@ spec:
               
             - name: stats
               containerPort: 1936
+              
+            - name: dashboard
+              containerPort: 11936
               
           resources:
             {}
@@ -211,7 +217,7 @@ kind: IngressClass
 metadata:
   name: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-2.0.1
+    helm.sh/chart: easyhaproxy-2.0.2
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
     app.kubernetes.io/version: "6.0.1"
