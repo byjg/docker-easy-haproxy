@@ -50,7 +50,7 @@ frontend stats
 
 backend srv_stats
     mode http
-    server Local 127.0.0.1:1936
+    server Local 127.0.0.1:1936 check
 
 frontend dashboard
     bind *:11936
@@ -64,7 +64,7 @@ frontend dashboard
 
 backend srv_dashboard
     mode http
-    server Local 127.0.0.1:9190
+    server Local 127.0.0.1:9190 check
 
 frontend http_in_80
     bind *:80
