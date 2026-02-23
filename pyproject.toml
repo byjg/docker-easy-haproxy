@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "easyhaproxy"
-version = "6.0.0"
+version = "6.0.1"
 description = "HAProxy label based routing with service discovery for Docker, Swarm, and Kubernetes"
 readme = "README.md"
 license = {file = "LICENSE"}

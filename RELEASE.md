@@ -54,7 +54,7 @@ EasyHAProxy follows [Semantic Versioning](https://semver.org/):
   - **MINOR**: New features, plugin additions, backward-compatible changes
   - **PATCH**: Bug fixes, documentation updates, minor improvements
 
-**Current Version:** `6.0.0` (as of Chart.yaml)
+**Current Version:** `6.0.1` (as of Chart.yaml)
 
 ## Automated Release (Recommended)
 
@@ -329,6 +329,7 @@ helm show chart byjg/easyhaproxy
 
 | Version | Release Date | Type  | Highlights                                                                                                                            |
 |---------|--------------|-------|---------------------------------------------------------------------------------------------------------------------------------------|
+| 6.0.1   | 2026-02-23   | Patch | HAProxy dashboard, real-time monitoring dashboard with live traffic charts, ACME e2e test fixes |
 | 6.0.0   | 2026-XX-XX   | Major | Python module refactoring (one-class-per-file), IngressClassName support (spec.ingressClassName + deprecated annotation fallback), modernized build system (uv/pyproject.toml), improved version management and release tooling, GitHub Actions workflow_dispatch push control |
 | 5.0.0   | 2025-12-04   | Major | Plugin framework (builtin plugins: JWT, FastCGI, Cloudflare, IP whitelist, deny pages, cleanup), docs restructure, examples refreshed |
 | 4.6.0   | 2024-11-27   | Minor | FastCGI plugin, JWT enhancements                                                                                                      |

@@ -157,7 +157,7 @@ Here's a complete `docker-compose.yml` showing proper ACME configuration:
 ```yaml
 services:
   easyhaproxy:
-    image: byjg/easy-haproxy:6.0.0
+    image: byjg/easy-haproxy:6.0.1
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       # REQUIRED: Persist Certbot certificates (ACME)
