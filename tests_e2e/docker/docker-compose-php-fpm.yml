@@ -77,9 +77,9 @@ services:
       easyhaproxy.http.port: 80
       # PHP-FPM listens on port 9000
       easyhaproxy.http.localport: 9000
-      easyhaproxy.http.proto: fcgi
 
       # Enable FastCGI plugin for PHP environment configuration
+      # Note: proto fcgi is set automatically by the fastcgi plugin
       easyhaproxy.http.plugins: fastcgi
 
       # FastCGI plugin configuration
