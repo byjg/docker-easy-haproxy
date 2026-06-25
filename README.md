@@ -1,3 +1,8 @@
+---
+sidebar_key: docker-easy-haproxy
+tags: [docker, devops]
+---
+
 # EasyHAProxy
 
 [![Sponsor](https://img.shields.io/badge/Sponsor-%23ea4aaa?logo=githubsponsors&logoColor=white&labelColor=0d1117)](https://github.com/sponsors/byjg)

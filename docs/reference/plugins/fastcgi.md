@@ -67,6 +67,8 @@ services:
 
 ### Kubernetes Annotations
 
+The `proto: fcgi` backend protocol is set automatically when using this plugin — no need to add `easyhaproxy.proto` manually.
+
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -75,12 +77,15 @@ metadata:
     easyhaproxy.plugins: "fastcgi"
     easyhaproxy.plugin.fastcgi.document_root: "/var/www/html"
     easyhaproxy.plugin.fastcgi.index_file: "index.php"
+    easyhaproxy.plugin.fastcgi.script_filename: "/var/www/html/index.php"
 spec:
+  ingressClassName: easyhaproxy
   rules:
     - host: phpapp.example.com
       http:
         paths:
           - path: /
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: php-fpm

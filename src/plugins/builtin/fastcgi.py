@@ -148,7 +148,7 @@ class FastcgiPlugin(PluginInterface):
 
         return PluginResult(
             haproxy_config=backend_config,  # use-fcgi-app directive for the backend
-            modified_easymapping=None,
+            modified_easymapping={"proto": "fcgi"},
             metadata=metadata,
             global_configs=[fcgi_app_definition]  # For top-level injection
         )
