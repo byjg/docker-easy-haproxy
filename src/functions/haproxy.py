@@ -4,7 +4,7 @@ import shutil
 import subprocess
 import sys
 import time
-from multiprocessing import Process
+import multiprocessing
 from typing import Final
 
 import psutil
@@ -31,7 +31,7 @@ class DaemonizeHAProxy:
             logger_haproxy.fatal(f"Failed to start HAProxy ({action}). Exiting.")
             sys.exit(1)
 
-        self.thread = Process(target=self.__start, args=())
+        self.thread = multiprocessing.get_context('fork').Process(target=self.__start, args=())
         self.thread.start()
 
     @staticmethod

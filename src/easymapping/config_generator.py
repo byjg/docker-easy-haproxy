@@ -260,6 +260,11 @@ class HaproxyConfigGenerator:
                             # Extract all plugin configs in a single loop
                             plugin_configs_for_host = []
                             for result in domain_results:
+                                # Allow plugins to override host-level config (e.g. proto)
+                                if result.modified_easymapping:
+                                    for key, value in result.modified_easymapping.items():
+                                        easymapping[port]["hosts"][hostname][key] = value
+
                                 # HAProxy config snippets for this domain
                                 if result.haproxy_config:
                                     plugin_configs_for_host.append(result.haproxy_config)

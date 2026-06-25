@@ -153,16 +153,17 @@ docker run \
 
 When using Kubernetes, configure EasyHAProxy behavior with these annotations on your Ingress resources. Annotations apply to **all hosts** in the ingress configuration.
 
-| Annotation                          | Description                                                                          | Default    | Example                     |
-|-------------------------------------|--------------------------------------------------------------------------------------|------------|-----------------------------|
-| kubernetes.io/ingress.class         | (deprecated) Activate EasyHAProxy. Use `spec.ingressClassName` instead.              | *optional* | easyhaproxy-ingress         |
-| easyhaproxy.redirect_ssl            | (optional) Boolean. Force redirect all endpoints to HTTPS.                           | false      | true or false               |
-| easyhaproxy.certbot                 | (optional) Boolean. Request certbot certificates for the ingress domains.            | false      | true or false               |
-| easyhaproxy.redirect                | (optional) JSON. Key pair with a domain and its destination.                         | *empty*    | \{"domain":"redirect_url"}  |
-| easyhaproxy.mode                    | (optional) Set the HTTP mode for that connection.                                    | http       | http or tcp                 |
-| easyhaproxy.listen_port             | (optional) Override the HTTP listen port created for that ingress.                   | 80         | 8081                        |
-| easyhaproxy.plugins                 | (optional) Comma-separated list of plugins to enable for this ingress.               | *empty*    | cloudflare,deny_pages       |
-| easyhaproxy.plugin.`{name}`.`{key}` | (optional) Plugin-specific configuration (see [Using Plugins](../guides/plugins.md)) | *varies*   | See plugin docs             |
+| Annotation                          | Description                                                                                    | Default    | Example                    |
+|-------------------------------------|------------------------------------------------------------------------------------------------|------------|----------------------------|
+| kubernetes.io/ingress.class         | (deprecated) Activate EasyHAProxy. Use `spec.ingressClassName` instead.                        | *optional* | easyhaproxy-ingress        |
+| easyhaproxy.redirect_ssl            | (optional) Boolean. Force redirect all endpoints to HTTPS.                                     | false      | true or false              |
+| easyhaproxy.certbot                 | (optional) Boolean. Request certbot certificates for the ingress domains.                      | false      | true or false              |
+| easyhaproxy.redirect                | (optional) JSON. Key pair with a domain and its destination.                                   | *empty*    | \{"domain":"redirect_url"} |
+| easyhaproxy.mode                    | (optional) Set the HTTP mode for that connection.                                              | http       | http or tcp                |
+| easyhaproxy.proto                   | (optional) Backend server protocol. Automatically set to `fcgi` when using the fastcgi plugin. | *empty*    | fcgi, h2                   |
+| easyhaproxy.listen_port             | (optional) Override the HTTP listen port created for that ingress.                             | 80         | 8081                       |
+| easyhaproxy.plugins                 | (optional) Comma-separated list of plugins to enable for this ingress.                         | *empty*    | cloudflare,deny_pages      |
+| easyhaproxy.plugin.`{name}`.`{key}` | (optional) Plugin-specific configuration (see [Using Plugins](../guides/plugins.md))           | *varies*   | See plugin docs            |
 
 For annotation usage examples, see the [Kubernetes getting started guide](../getting-started/kubernetes.md).
 

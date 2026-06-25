@@ -269,6 +269,7 @@ class Kubernetes(ProcessorInterface):
             redirect_ssl = self._check_annotation(annotations, "easyhaproxy.redirect_ssl")
             redirect = self._check_annotation(annotations, "easyhaproxy.redirect")
             mode = self._check_annotation(annotations, "easyhaproxy.mode")
+            proto = self._check_annotation(annotations, "easyhaproxy.proto")
             listen_port = self._check_annotation(annotations, "easyhaproxy.listen_port", 80)
             plugins = self._check_annotation(annotations, "easyhaproxy.plugins")
 
@@ -432,6 +433,8 @@ class Kubernetes(ProcessorInterface):
                     rule_data[f"{definition}.redirect"] = redirect
                 if mode is not None:
                     rule_data[f"{definition}.mode"] = mode
+                if proto is not None:
+                    rule_data[f"{definition}.proto"] = proto
                 rule_data[f"{definition}.balance"] = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.balance", "roundrobin")
 
                 # Add plugin configuration
