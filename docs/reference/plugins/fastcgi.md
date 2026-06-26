@@ -24,9 +24,27 @@ Automatically generates HAProxy `fcgi-app` configuration that defines required C
 | `document_root`   | Document root path                         | `/var/www/html`                      |
 | `script_filename` | Custom pattern for SCRIPT_FILENAME         | `%[path]` (uses HAProxy's default)   |
 | `index_file`      | Default index file                         | `index.php`                          |
-| `path_info`       | Enable PATH_INFO support                   | `true`                               |
+| `path_info`       | PATH_INFO preset or custom regex           | `php`                                |
+| `log_stderr`      | Forward FastCGI stderr to HAProxy logs     | `false`                              |
+| `keep_conn`       | Reuse FastCGI connections between requests | `true`                               |
 | `custom_params`   | Dictionary of custom FastCGI parameters    | (optional)                           |
 | `pass_headers`    | HTTP headers to forward to the FastCGI app | (optional)                           |
+
+### `path_info` — PATH_INFO Presets
+
+The `path_info` option accepts a preset name or a custom regex. Built-in presets:
+
+| Preset   | Language       | Regex                           |
+|----------|----------------|---------------------------------|
+| `php`    | PHP (default)  | `^(/.+\.php)(/.*)?$`            |
+| `python` | Python FastCGI | `^(/.+\.py)(/.*)?$`             |
+| `perl`   | Perl/CGI       | `^(/.+\.(pl\|cgi))(/.*)?$`      |
+| `ruby`   | Ruby FastCGI   | `^(/.+\.rb)(/.*)?$`             |
+| `any`    | Generic        | `^(.+?)(/.*)?$`                 |
+
+Pass `false` to disable PATH_INFO entirely, or any other string to use it as a custom regex directly.
+
+Setting `path_info: true` maps to `php` for backward compatibility.
 
 ### `pass_headers` — Forwarding HTTP Headers
 
@@ -154,6 +172,7 @@ easymapping:
 fcgi-app fcgi_phpapp_local
     docroot /var/www/html
     index index.php
+    option keep-conn
     path-info ^(/.+\.php)(/.*)?$
     pass-header Authorization
     pass-header Proxy-Authorization
