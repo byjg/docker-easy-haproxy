@@ -54,7 +54,7 @@ EasyHAProxy follows [Semantic Versioning](https://semver.org/):
   - **MINOR**: New features, plugin additions, backward-compatible changes
   - **PATCH**: Bug fixes, documentation updates, minor improvements
 
-**Current Version:** `6.1.0` (as of Chart.yaml)
+**Current Version:** `6.1.1` (as of Chart.yaml)
 
 ## Automated Release (Recommended)
 
@@ -329,6 +329,7 @@ helm show chart byjg/easyhaproxy
 
 | Version | Release Date | Type  | Highlights                                                                                                                            |
 |---------|--------------|-------|---------------------------------------------------------------------------------------------------------------------------------------|
+| 6.1.1   | 2026-06-25   | Patch | Add pass_headers support to FastCGI plugin, fix flaky ACME e2e test timeout |
 | 6.1.0   | 2026-06-24   | Minor | FastCGI protocol support, certbot sidecar plugin, dependency updates |
 | 6.0.1   | 2026-02-23   | Patch | HAProxy dashboard, real-time monitoring dashboard with live traffic charts, ACME e2e test fixes |
 | 6.0.0   | 2026-XX-XX   | Major | Python module refactoring (one-class-per-file), IngressClassName support (spec.ingressClassName + deprecated annotation fallback), modernized build system (uv/pyproject.toml), improved version management and release tooling, GitHub Actions workflow_dispatch push control |
