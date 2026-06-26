@@ -15,6 +15,8 @@ Configuration:
     - index_file: Default index file (default: index.php)
     - path_info: Enable PATH_INFO support (default: true)
     - custom_params: Dictionary of custom FastCGI parameters (optional)
+    - pass_headers: Headers to forward to the FastCGI app (optional).
+      Comma-separated string or list of strings/dicts with optional condition.
 
 Example YAML config:
     plugins:
@@ -34,6 +36,7 @@ Example Kubernetes Annotation:
     easyhaproxy.plugins: "fastcgi"
     easyhaproxy.plugin.fastcgi.document_root: /var/www/myapp
     easyhaproxy.plugin.fastcgi.index_file: index.php
+    easyhaproxy.plugin.fastcgi.pass_headers: "Authorization, Proxy-Authorization"
 """
 
 import os
@@ -55,6 +58,7 @@ class FastcgiPlugin(PluginInterface):
         self.index_file = "index.php"
         self.path_info = True
         self.custom_params = {}
+        self.pass_headers = []  # list of {"name": str, "condition": str|None}
 
     @property
     def name(self) -> str:
@@ -76,6 +80,19 @@ class FastcgiPlugin(PluginInterface):
                 - index_file: Default index file
                 - path_info: Enable PATH_INFO support
                 - custom_params: Dictionary of custom FastCGI parameters
+                - pass_headers: Headers to forward to the FastCGI application.
+                  HAProxy omits Authorization, Proxy-Authorization, and hop-by-hop headers
+                  by default — this directive is required to pass them through.
+                  Note: Content-Type and Content-Length are never passable here; they are
+                  already converted to CGI parameters (CONTENT_TYPE, CONTENT_LENGTH).
+
+                  Accepts a comma-separated string or a list of strings/dicts:
+                    Simple:    "Authorization"
+                    Multiple:  "Authorization, Proxy-Authorization"
+                    With ACL:  [{"name": "Authorization", "condition": "if { ssl_fc }"}]
+
+                  HAProxy syntax: pass-header <name> [ { if | unless } <condition> ]
+                  Ref: https://docs.haproxy.org/dev/configuration.html
         """
         if "enabled" in config:
             self.enabled = str(config["enabled"]).lower() in ["true", "1", "yes"]
@@ -94,6 +111,23 @@ class FastcgiPlugin(PluginInterface):
 
         if "custom_params" in config:
             self.custom_params = config["custom_params"]
+
+        if "pass_headers" in config:
+            val = config["pass_headers"]
+            if isinstance(val, str):
+                self.pass_headers = [{"name": h.strip(), "condition": None}
+                                     for h in val.split(",") if h.strip()]
+            elif isinstance(val, list):
+                result = []
+                for item in val:
+                    if isinstance(item, str):
+                        result.append({"name": item.strip(), "condition": None})
+                    elif isinstance(item, dict):
+                        result.append({
+                            "name": item["name"],
+                            "condition": item.get("condition")
+                        })
+                self.pass_headers = result
 
     def process(self, context: PluginContext) -> PluginResult:
         """
@@ -134,6 +168,13 @@ class FastcgiPlugin(PluginInterface):
             for param_name, param_value in self.custom_params.items():
                 fcgi_app_lines.append(f"    set-param {param_name.upper()} {param_value}")
 
+        # Pass headers
+        for header in self.pass_headers:
+            line = f"    pass-header {header['name']}"
+            if header.get("condition"):
+                line += f" {header['condition']}"
+            fcgi_app_lines.append(line)
+
         fcgi_app_definition = "\n".join(fcgi_app_lines)
 
         # Build metadata
@@ -143,7 +184,8 @@ class FastcgiPlugin(PluginInterface):
             "document_root": self.document_root,
             "index_file": self.index_file,
             "path_info": self.path_info,
-            "custom_params_count": len(self.custom_params)
+            "custom_params_count": len(self.custom_params),
+            "pass_headers_count": len(self.pass_headers)
         }
 
         return PluginResult(

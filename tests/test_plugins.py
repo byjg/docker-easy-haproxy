@@ -952,6 +952,7 @@ class TestFastcgiPlugin:
         assert plugin.index_file == "index.php"
         assert plugin.path_info is True
         assert plugin.custom_params == {}
+        assert plugin.pass_headers == []
 
     def test_fastcgi_plugin_configuration(self):
         """Test plugin configuration"""
@@ -1045,6 +1046,53 @@ class TestFastcgiPlugin:
         result = plugin.process(context)
 
         assert result.haproxy_config is None or result.haproxy_config == ""
+
+    def test_fastcgi_plugin_pass_headers_string(self):
+        """Test pass_headers parsed from comma-separated string"""
+        plugin = FastcgiPlugin()
+        plugin.configure({"pass_headers": "Authorization, Proxy-Authorization"})
+
+        assert plugin.pass_headers == [
+            {"name": "Authorization", "condition": None},
+            {"name": "Proxy-Authorization", "condition": None},
+        ]
+
+        context = PluginContext(
+            parsed_object={}, easymapping=[], container_env={},
+            domain="phpapp.local", port="80", host_config={}
+        )
+        result = plugin.process(context)
+        fcgi_app_def = result.global_configs[0]
+
+        assert "pass-header Authorization" in fcgi_app_def
+        assert "pass-header Proxy-Authorization" in fcgi_app_def
+        assert result.metadata["pass_headers_count"] == 2
+
+    def test_fastcgi_plugin_pass_headers_list(self):
+        """Test pass_headers parsed from list of strings and dicts with condition"""
+        plugin = FastcgiPlugin()
+        plugin.configure({
+            "pass_headers": [
+                "Authorization",
+                {"name": "X-Custom-Header", "condition": "if { ssl_fc }"},
+            ]
+        })
+
+        assert plugin.pass_headers == [
+            {"name": "Authorization", "condition": None},
+            {"name": "X-Custom-Header", "condition": "if { ssl_fc }"},
+        ]
+
+        context = PluginContext(
+            parsed_object={}, easymapping=[], container_env={},
+            domain="phpapp.local", port="80", host_config={}
+        )
+        result = plugin.process(context)
+        fcgi_app_def = result.global_configs[0]
+
+        assert "pass-header Authorization" in fcgi_app_def
+        assert "pass-header X-Custom-Header if { ssl_fc }" in fcgi_app_def
+        assert result.metadata["pass_headers_count"] == 2
 
 
 class TestPluginManager:
