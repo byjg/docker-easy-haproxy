@@ -950,8 +950,11 @@ class TestFastcgiPlugin:
         assert plugin.enabled is True
         assert plugin.document_root == "/var/www/html"
         assert plugin.index_file == "index.php"
-        assert plugin.path_info is True
+        assert plugin.path_info == "php"
+        assert plugin.log_stderr is False
+        assert plugin.keep_conn is True
         assert plugin.custom_params == {}
+        assert plugin.pass_headers == []
 
     def test_fastcgi_plugin_configuration(self):
         """Test plugin configuration"""
@@ -1045,6 +1048,128 @@ class TestFastcgiPlugin:
         result = plugin.process(context)
 
         assert result.haproxy_config is None or result.haproxy_config == ""
+
+    def test_fastcgi_plugin_pass_headers_string(self):
+        """Test pass_headers parsed from comma-separated string"""
+        plugin = FastcgiPlugin()
+        plugin.configure({"pass_headers": "Authorization, Proxy-Authorization"})
+
+        assert plugin.pass_headers == [
+            {"name": "Authorization", "condition": None},
+            {"name": "Proxy-Authorization", "condition": None},
+        ]
+
+        context = PluginContext(
+            parsed_object={}, easymapping=[], container_env={},
+            domain="phpapp.local", port="80", host_config={}
+        )
+        result = plugin.process(context)
+        fcgi_app_def = result.global_configs[0]
+
+        assert "pass-header Authorization" in fcgi_app_def
+        assert "pass-header Proxy-Authorization" in fcgi_app_def
+        assert result.metadata["pass_headers_count"] == 2
+
+    def test_fastcgi_plugin_pass_headers_list(self):
+        """Test pass_headers parsed from list of strings and dicts with condition"""
+        plugin = FastcgiPlugin()
+        plugin.configure({
+            "pass_headers": [
+                "Authorization",
+                {"name": "X-Custom-Header", "condition": "if { ssl_fc }"},
+            ]
+        })
+
+        assert plugin.pass_headers == [
+            {"name": "Authorization", "condition": None},
+            {"name": "X-Custom-Header", "condition": "if { ssl_fc }"},
+        ]
+
+        context = PluginContext(
+            parsed_object={}, easymapping=[], container_env={},
+            domain="phpapp.local", port="80", host_config={}
+        )
+        result = plugin.process(context)
+        fcgi_app_def = result.global_configs[0]
+
+        assert "pass-header Authorization" in fcgi_app_def
+        assert "pass-header X-Custom-Header if { ssl_fc }" in fcgi_app_def
+        assert result.metadata["pass_headers_count"] == 2
+
+    def test_fastcgi_plugin_log_stderr(self):
+        """Test log-stderr directive is emitted when enabled"""
+        plugin = FastcgiPlugin()
+        plugin.configure({"log_stderr": "true"})
+        assert plugin.log_stderr is True
+
+        context = PluginContext(
+            parsed_object={}, easymapping=[], container_env={},
+            domain="phpapp.local", port="80", host_config={}
+        )
+        result = plugin.process(context)
+        assert "log-stderr" in result.global_configs[0]
+        assert result.metadata["log_stderr"] is True
+
+    def test_fastcgi_plugin_keep_conn_disabled(self):
+        """Test option keep-conn is omitted when disabled"""
+        plugin = FastcgiPlugin()
+        plugin.configure({"keep_conn": "false"})
+        assert plugin.keep_conn is False
+
+        context = PluginContext(
+            parsed_object={}, easymapping=[], container_env={},
+            domain="phpapp.local", port="80", host_config={}
+        )
+        result = plugin.process(context)
+        assert "option keep-conn" not in result.global_configs[0]
+        assert result.metadata["keep_conn"] is False
+
+    def test_fastcgi_plugin_path_info_presets(self):
+        """Test path_info presets resolve to correct regexes"""
+        presets = {
+            "php":    r"^(/.+\.php)(/.*)?$",
+            "python": r"^(/.+\.py)(/.*)?$",
+            "perl":   r"^(/.+\.(?:pl|cgi))(/.*)?$",
+            "ruby":   r"^(/.+\.rb)(/.*)?$",
+            "any":    r"^(.+?)(/.*)?$",
+        }
+        context = PluginContext(
+            parsed_object={}, easymapping=[], container_env={},
+            domain="phpapp.local", port="80", host_config={}
+        )
+        for preset, expected_regex in presets.items():
+            plugin = FastcgiPlugin()
+            plugin.configure({"path_info": preset})
+            assert plugin.path_info == preset
+            result = plugin.process(context)
+            assert f"path-info {expected_regex}" in result.global_configs[0], \
+                f"Preset '{preset}' did not emit expected regex"
+
+    def test_fastcgi_plugin_path_info_custom_regex(self):
+        """Test path_info accepts a custom regex"""
+        plugin = FastcgiPlugin()
+        plugin.configure({"path_info": r"^(/.+\.fcgi)(/.*)?$"})
+        assert plugin.path_info == r"^(/.+\.fcgi)(/.*)?$"
+
+        context = PluginContext(
+            parsed_object={}, easymapping=[], container_env={},
+            domain="phpapp.local", port="80", host_config={}
+        )
+        result = plugin.process(context)
+        assert r"path-info ^(/.+\.fcgi)(/.*)?$" in result.global_configs[0]
+
+    def test_fastcgi_plugin_path_info_backward_compat(self):
+        """Test path_info: true maps to php preset (backward compatibility)"""
+        plugin = FastcgiPlugin()
+        plugin.configure({"path_info": "true"})
+        assert plugin.path_info == "php"
+
+        context = PluginContext(
+            parsed_object={}, easymapping=[], container_env={},
+            domain="phpapp.local", port="80", host_config={}
+        )
+        result = plugin.process(context)
+        assert r"path-info ^(/.+\.php)(/.*)?$" in result.global_configs[0]
 
 
 class TestPluginManager:

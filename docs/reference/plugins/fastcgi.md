@@ -18,14 +18,57 @@ Automatically generates HAProxy `fcgi-app` configuration that defines required C
 
 ## Configuration Options
 
-| Option            | Description                             | Default                            |
-|-------------------|-----------------------------------------|------------------------------------|
-| `enabled`         | Enable/disable plugin                   | `true`                             |
-| `document_root`   | Document root path                      | `/var/www/html`             |
-| `script_filename` | Custom pattern for SCRIPT_FILENAME      | `%[path]` (uses HAProxy's default) |
-| `index_file`      | Default index file                      | `index.php`                        |
-| `path_info`       | Enable PATH_INFO support                | `true`                             |
-| `custom_params`   | Dictionary of custom FastCGI parameters | (optional)                         |
+| Option            | Description                                | Default                              |
+|-------------------|--------------------------------------------|--------------------------------------|
+| `enabled`         | Enable/disable plugin                      | `true`                               |
+| `document_root`   | Document root path                         | `/var/www/html`                      |
+| `script_filename` | Custom pattern for SCRIPT_FILENAME         | `%[path]` (uses HAProxy's default)   |
+| `index_file`      | Default index file                         | `index.php`                          |
+| `path_info`       | PATH_INFO preset or custom regex           | `php`                                |
+| `log_stderr`      | Forward FastCGI stderr to HAProxy logs     | `false`                              |
+| `keep_conn`       | Reuse FastCGI connections between requests | `true`                               |
+| `custom_params`   | Dictionary of custom FastCGI parameters    | (optional)                           |
+| `pass_headers`    | HTTP headers to forward to the FastCGI app | (optional)                           |
+
+### `path_info` — PATH_INFO Presets
+
+The `path_info` option accepts a preset name or a custom regex. Built-in presets:
+
+| Preset   | Language       | Regex                           |
+|----------|----------------|---------------------------------|
+| `php`    | PHP (default)  | `^(/.+\.php)(/.*)?$`            |
+| `python` | Python FastCGI | `^(/.+\.py)(/.*)?$`             |
+| `perl`   | Perl/CGI       | `^(/.+\.(pl\|cgi))(/.*)?$`      |
+| `ruby`   | Ruby FastCGI   | `^(/.+\.rb)(/.*)?$`             |
+| `any`    | Generic        | `^(.+?)(/.*)?$`                 |
+
+Pass `false` to disable PATH_INFO entirely, or any other string to use it as a custom regex directly.
+
+Setting `path_info: true` maps to `php` for backward compatibility.
+
+### `pass_headers` — Forwarding HTTP Headers
+
+:::important
+HAProxy strips `Authorization`, `Proxy-Authorization`, and all hop-by-hop headers before forwarding requests to the FastCGI backend. Applications that rely on these headers (e.g. APIs using Bearer tokens, Basic auth, or JWT) will fail silently without this option.
+:::
+
+`pass_headers` accepts a comma-separated string or a list of strings/dicts:
+
+```yaml
+# Simple — single header
+pass_headers: "Authorization"
+
+# Multiple — comma-separated
+pass_headers: "Authorization, Proxy-Authorization"
+
+# With ACL condition — list of dicts
+pass_headers:
+  - Authorization
+  - name: X-Custom-Header
+    condition: "if { ssl_fc }"
+```
+
+> **Note:** `Content-Type` and `Content-Length` cannot be passed here — they are automatically converted to the CGI parameters `CONTENT_TYPE` and `CONTENT_LENGTH`.
 
 ## Configuration Examples
 
@@ -78,6 +121,7 @@ metadata:
     easyhaproxy.plugin.fastcgi.document_root: "/var/www/html"
     easyhaproxy.plugin.fastcgi.index_file: "index.php"
     easyhaproxy.plugin.fastcgi.script_filename: "/var/www/html/index.php"
+    easyhaproxy.plugin.fastcgi.pass_headers: "Authorization, Proxy-Authorization"
 spec:
   ingressClassName: easyhaproxy
   rules:
@@ -113,13 +157,13 @@ easymapping:
 
 ### Environment Variables
 
-| Environment Variable                         | Config Key        | Type     | Default                | Description                           |
-|----------------------------------------------|-------------------|----------|------------------------|---------------------------------------|
-| `EASYHAPROXY_PLUGIN_FASTCGI_ENABLED`         | `enabled`         | boolean  | `true`                 | Enable/disable plugin for all domains |
-| `EASYHAPROXY_PLUGIN_FASTCGI_DOCUMENT_ROOT`   | `document_root`   | string   | `/var/www/html` | Document root path                    |
-| `EASYHAPROXY_PLUGIN_FASTCGI_SCRIPT_FILENAME` | `script_filename` | string   | `%[path]`              | Custom pattern for SCRIPT_FILENAME    |
-| `EASYHAPROXY_PLUGIN_FASTCGI_INDEX_FILE`      | `index_file`      | string   | `index.php`            | Default index file                    |
-| `EASYHAPROXY_PLUGIN_FASTCGI_PATH_INFO`       | `path_info`       | boolean  | `true`                 | Enable PATH_INFO support              |
+| Environment Variable                         | Config Key        | Type     | Default                 | Description                           |
+|----------------------------------------------|-------------------|----------|-------------------------|---------------------------------------|
+| `EASYHAPROXY_PLUGIN_FASTCGI_ENABLED`         | `enabled`         | boolean  | `true`                  | Enable/disable plugin for all domains |
+| `EASYHAPROXY_PLUGIN_FASTCGI_DOCUMENT_ROOT`   | `document_root`   | string   | `/var/www/html`         | Document root path                    |
+| `EASYHAPROXY_PLUGIN_FASTCGI_SCRIPT_FILENAME` | `script_filename` | string   | `%[path]`               | Custom pattern for SCRIPT_FILENAME    |
+| `EASYHAPROXY_PLUGIN_FASTCGI_INDEX_FILE`      | `index_file`      | string   | `index.php`             | Default index file                    |
+| `EASYHAPROXY_PLUGIN_FASTCGI_PATH_INFO`       | `path_info`       | boolean  | `true`                  | Enable PATH_INFO support              |
 
 ## Generated HAProxy Configuration
 
@@ -128,7 +172,10 @@ easymapping:
 fcgi-app fcgi_phpapp_local
     docroot /var/www/html
     index index.php
+    option keep-conn
     path-info ^(/.+\.php)(/.*)?$
+    pass-header Authorization
+    pass-header Proxy-Authorization
 
 # Backend configuration (added to the backend section)
 backend srv_phpapp_local_80

@@ -28,7 +28,7 @@ docker network create -d overlay --attachable easyhaproxy
 ```yaml
 services:
   haproxy:
-    image: byjg/easy-haproxy:6.1.0
+    image: byjg/easy-haproxy:6.1.1
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     deploy:

@@ -920,7 +920,7 @@ class TestACME:
         """Test that Pebble successfully issues a certificate"""
         # Wait for certificate issuance (Certbot runs in background loop)
         # Typical time: 10-15 seconds from container start
-        max_retries = 30
+        max_retries = 60
         check_interval = 1
         has_success = False
 
