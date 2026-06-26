@@ -96,5 +96,17 @@ easyhaproxy:
 # When service.create is true (Deployment with ClusterIP/NodePort), this is ignored
 masterNode:
   label: easyhaproxy/node
-  values: 
+  values:
     - master
+
+# Extra environment variables to inject into the container
+# Supports all Kubernetes env var forms: value, valueFrom (secretKeyRef, configMapKeyRef, fieldRef)
+# extraEnv:
+#   - name: MY_VAR
+#     value: "my-value"
+#   - name: SECRET_VAR
+#     valueFrom:
+#       secretKeyRef:
+#         name: my-secret
+#         key: my-key
+extraEnv: []

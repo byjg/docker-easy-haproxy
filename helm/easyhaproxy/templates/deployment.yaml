@@ -99,3 +99,6 @@ spec:
             {{- end }}
             - name: EASYHAPROXY_STATUS_UPDATE_INTERVAL
               value: {{ .Values.ingressStatus.updateInterval | quote }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
