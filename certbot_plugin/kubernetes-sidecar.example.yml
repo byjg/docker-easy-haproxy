@@ -1,0 +1,103 @@
+# ==============================================================================
+# Kubernetes Sidecar Pattern: EasyHAProxy + Certbot Plugin
+# ==============================================================================
+#
+# This example shows EasyHAProxy and the certbot plugin running as sidecar
+# containers in the same Pod. Because sidecar containers share the same
+# network namespace:
+#
+#   - HAProxy routes ACME challenges to 127.0.0.1:2080 → certbot plugin (default)
+#   - EASYHAPROXY_CERTBOT_PLUGIN_URL=http://localhost:8088 — no service discovery needed
+#   - PEM files are shared via an emptyDir volume
+#
+# ==============================================================================
+#
+# Deploy:
+#   kubectl apply -f kubernetes-sidecar.example.yml
+#
+# ==============================================================================
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: easyhaproxy
+  namespace: easyhaproxy
+spec:
+  selector:
+    matchLabels:
+      app: easyhaproxy
+  template:
+    metadata:
+      labels:
+        app: easyhaproxy
+    spec:
+      serviceAccountName: easyhaproxy
+      containers:
+        # ----------------------------------------------------------------
+        # EasyHAProxy — ingress controller
+        # ----------------------------------------------------------------
+        - name: easyhaproxy
+          image: byjg/easy-haproxy:latest
+          ports:
+            - containerPort: 80
+              hostPort: 80
+              protocol: TCP
+            - containerPort: 443
+              hostPort: 443
+              protocol: TCP
+          env:
+            - name: EASYHAPROXY_DISCOVER
+              value: kubernetes
+            # Certbot plugin sidecar — shares localhost network namespace
+            - name: EASYHAPROXY_CERTBOT_PLUGIN_URL
+              value: http://localhost:8088
+            # Optional: HAProxy stats
+            - name: HAPROXY_PASSWORD
+              value: changeme
+          volumeMounts:
+            # Shared certificate volume: certbot plugin writes PEM files here,
+            # EasyHAProxy reads them for HAProxy TLS configuration.
+            - name: certbot-certs
+              mountPath: /etc/easyhaproxy/certs/certbot
+
+        # ----------------------------------------------------------------
+        # Certbot plugin sidecar — manages ACME certificate issuance
+        # ----------------------------------------------------------------
+        - name: certbot-plugin
+          image: byjg/easy-haproxy-certbot-plugin:latest
+          ports:
+            # ACME HTTP-01 challenge port
+            # HAProxy routes /.well-known/acme-challenge/ to 127.0.0.1:2080
+            - containerPort: 2080
+              protocol: TCP
+            # Plugin API port (used by EasyHAProxy via EASYHAPROXY_CERTBOT_PLUGIN_URL)
+            - containerPort: 8088
+              protocol: TCP
+          env:
+            - name: CERTBOT_EMAIL
+              value: admin@example.com
+            # Use letsencrypt_test for staging, letsencrypt for production
+            - name: CERTBOT_AUTOCONFIG
+              value: letsencrypt
+            - name: CERTBOT_CERTS_DIR
+              value: /certs
+            - name: CERTBOT_API_PORT
+              value: "8088"
+            # Certificate renewal check interval (seconds)
+            - name: CERTBOT_RENEWAL_INTERVAL
+              value: "43200"
+          volumeMounts:
+            - name: certbot-certs
+              mountPath: /certs
+
+      volumes:
+        # Shared ephemeral volume for PEM files.
+        # Use a PersistentVolumeClaim instead to persist certs across Pod restarts.
+        - name: certbot-certs
+          emptyDir: {}
+
+      # Ensure HAProxy can listen on host ports 80 and 443
+      hostNetwork: false
+      tolerations:
+        - effect: NoSchedule
+          operator: Exists

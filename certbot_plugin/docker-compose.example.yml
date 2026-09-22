@@ -1,0 +1,39 @@
+services:
+  easyhaproxy:
+    image: byjg/easy-haproxy:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      EASYHAPROXY_DISCOVER: static
+      # Point EasyHAProxy to the certbot plugin (plugin mode)
+      EASYHAPROXY_CERTBOT_PLUGIN_URL: http://certbot:8088
+    volumes:
+      - ./static.yml:/etc/easyhaproxy/static/config.yml
+      # Shared certificate volume: plugin writes PEM files here,
+      # EasyHAProxy reads them for HAProxy TLS configuration.
+      - certs:/etc/easyhaproxy/certs/certbot
+
+  certbot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      CERTBOT_EMAIL: admin@example.com
+      # Use letsencrypt_test for staging, letsencrypt for production
+      CERTBOT_AUTOCONFIG: letsencrypt_test
+      # Domains managed via CERTBOT_DOMAINS env var (without using the API)
+      # CERTBOT_DOMAINS: example.com,www.example.com
+      # Webhook called by certbot plugin when certs are issued/renewed
+      # CERTBOT_WEBHOOK_URL: http://easyhaproxy:9190/reload
+      CERTBOT_CERTS_DIR: /certs
+      CERTBOT_API_PORT: "8088"
+      CERTBOT_RENEWAL_INTERVAL: "43200"
+    ports:
+      - "2080:2080"   # ACME HTTP-01 challenge port (HAProxy routes /.well-known/ here)
+      - "8088:8088"   # Plugin API port
+    volumes:
+      - certs:/certs
+
+volumes:
+  certs:
