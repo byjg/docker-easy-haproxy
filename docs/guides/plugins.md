@@ -230,6 +230,8 @@ labels:
   easyhaproxy.http.plugins: cloudflare
 ```
 
+Using a Cloudflare Tunnel? See [Cloudflare Tunnel](../reference/plugins/cloudflare.md#cloudflare-tunnel).
+
 ### Multiple Plugins Together
 
 ```yaml
