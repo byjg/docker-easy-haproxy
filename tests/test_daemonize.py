@@ -1,7 +1,6 @@
 import os
-from functions import Consts
 
-from functions import DaemonizeHAProxy
+from functions import Consts, DaemonizeHAProxy
 
 BIN = DaemonizeHAProxy.get_haproxy_bin()
 

@@ -233,7 +233,7 @@ class TestCloudflarePlugin:
 
         # Verify file was written with our IPs
         assert os.path.exists("/tmp/test_cloudflare_ips.lst")
-        with open("/tmp/test_cloudflare_ips.lst", 'r') as f:
+        with open("/tmp/test_cloudflare_ips.lst") as f:
             content = f.read()
 
         assert "10.0.0.0/8" in content
@@ -275,7 +275,7 @@ class TestCloudflarePlugin:
         result = plugin.process(context)
 
         # Verify file contains ONLY our IP, not built-in IPs
-        with open("/tmp/test_precedence.lst", 'r') as f:
+        with open("/tmp/test_precedence.lst") as f:
             content = f.read()
 
         assert "127.0.0.1" in content
@@ -317,7 +317,7 @@ class TestCloudflarePlugin:
 
         # Verify fallback to built-in IPs
         assert os.path.exists("/tmp/test_invalid.lst")
-        with open("/tmp/test_invalid.lst", 'r') as f:
+        with open("/tmp/test_invalid.lst") as f:
             content = f.read()
 
         assert "173.245.48.0/20" in content  # Built-in IP

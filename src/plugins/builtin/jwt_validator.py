@@ -100,7 +100,7 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from functions import Functions, logger_easyhaproxy, Consts
+from functions import Consts, Functions, logger_easyhaproxy
 from plugins import InitializationResult, PluginContext, PluginInterface, PluginResult, PluginType, ResourceRequest
 
 

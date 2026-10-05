@@ -9,16 +9,14 @@ import logging
 import os
 import sys
 import tempfile
-import time
-from datetime import datetime, timedelta
-from unittest.mock import MagicMock, Mock, mock_open, patch
+from unittest.mock import Mock, patch
 
 from OpenSSL import crypto
 
 # Add src to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from functions import Certbot, ContainerEnv, Functions
+from functions import Certbot, Functions
 
 
 class TestCertbotStaticMethods:
@@ -374,7 +372,7 @@ class TestCertbotMergeCertificate:
         try:
             Certbot.merge_certificate(cert, key, filename)
 
-            with open(filename, 'r') as f:
+            with open(filename) as f:
                 content = f.read()
 
             assert content == cert + key
@@ -648,7 +646,7 @@ class TestCertbotFindLiveCertificates:
             # Verify merged certificate was created
             merged_file = os.path.join(output_dir, "example.com.pem")
             if os.path.exists(merged_file):
-                with open(merged_file, 'r') as f:
+                with open(merged_file) as f:
                     content = f.read()
                 assert content == cert_content + key_content
 
