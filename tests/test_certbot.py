@@ -213,7 +213,7 @@ class TestCertbotInitialization:
             assert certbot.freeze_issue == {}
             assert certbot.retry_count == 60  # default
             assert certbot.certbot_preferred_challenges == "http"  # default
-            assert certbot.certbot_manual_auth_hook == False  # default
+            assert certbot.certbot_manual_auth_hook is False  # default
 
     def test_certbot_init_with_eab(self):
         """Test Certbot initialization with EAB credentials"""

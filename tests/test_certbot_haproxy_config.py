@@ -384,7 +384,7 @@ class TestCertbotHAProxyConfigEdgeCases:
             # Should only have mode and server lines
             assert 'mode http' in certbot_backend_lines
             assert 'server certbot 127.0.0.1:2080' in certbot_backend_lines
-            assert len([l for l in certbot_backend_lines if l]) == 2  # Only 2 non-empty lines
+            assert len([line for line in certbot_backend_lines if line]) == 2  # Only 2 non-empty lines
 
     def test_certbot_acl_order_before_use_backend(self):
         """Test that ACL definitions come before use_backend rules"""
