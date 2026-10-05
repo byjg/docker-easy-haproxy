@@ -26,10 +26,10 @@ class ProcessorInterface:
 
     @staticmethod
     def factory(mode):
-        from .static import Static
         from .docker import Docker
-        from .swarm import Swarm
         from .kubernetes import Kubernetes
+        from .static import Static
+        from .swarm import Swarm
 
         if mode == ProcessorInterface.STATIC:
             return Static(ProcessorInterface.static_file)

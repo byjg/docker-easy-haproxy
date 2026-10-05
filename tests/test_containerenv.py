@@ -432,7 +432,7 @@ def test_yaml_to_env_combined():
     try:
         result = ContainerEnv.read(yaml_config)
         # Check the result
-        assert result["customerrors"] == True
+        assert result["customerrors"] is True
         assert result["ssl_mode"] == "strict"
         assert result["logLevel"]["easyhaproxy"] == Functions.WARN
         assert result["logLevel"]["haproxy"] == Functions.ERROR

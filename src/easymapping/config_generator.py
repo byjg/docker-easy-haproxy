@@ -4,7 +4,7 @@ import re
 
 from jinja2 import Environment, FileSystemLoader
 
-from functions import Functions, logger_easyhaproxy, Consts
+from functions import Consts, logger_easyhaproxy
 
 from .label_handler import DockerLabelHandler
 

@@ -80,6 +80,12 @@ target-version = "py311"
 select = ["E", "F", "W", "I", "N", "UP"]
 ignore = ["E501"]
 
+[tool.ruff.lint.pep8-naming]
+# @classproperty (src/functions/consts.py) passes the class: check for `cls` like @classmethod
+classmethod-decorators = ["classproperty"]
+# Decorator classes are lowercase by convention, like the builtin property/classmethod
+extend-ignore-names = ["classproperty"]
+
 [tool.coverage.run]
 source = ["src"]
 omit = ["*/tests/*", "*/test_*.py"]

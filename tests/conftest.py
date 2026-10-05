@@ -6,8 +6,8 @@ This module provides session-wide and function-level fixtures for testing.
 
 import os
 import shutil
-import pytest
 
+import pytest
 
 # Fixed temporary directory for all tests — predictable so expected fixtures can reference it
 _test_session_dir = "/tmp/easyhaproxy_test"
