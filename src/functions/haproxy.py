@@ -1,10 +1,10 @@
+import multiprocessing
 import os
 import shlex
 import shutil
 import subprocess
 import sys
 import time
-import multiprocessing
 from typing import Final
 
 import psutil
