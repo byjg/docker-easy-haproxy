@@ -39,6 +39,7 @@ HAProxy Config Generated:
 Log Format (when update_log_format=true):
     Shows real visitor IP alongside connection IP for debugging
     Format: real_ip/connection_ip [timestamp] request status bytes ...
+    real_ip is "-" when the request did not come from a trusted IP.
 """
 
 import base64
@@ -204,7 +205,7 @@ http-request set-header X-Forwarded-For %[var(txn.real_ip)] if from_cloudflare""
         log_format_config = None
         if self.update_log_format:
             log_format_config = """# Cloudflare - Enhanced log format showing real visitor IP
-log-format "%{+Q}[var(txn.real_ip)]:-/%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs %{+Q}r\""""
+log-format "%[var(txn.real_ip,-)]/%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs %{+Q}r\""""
 
         return PluginResult(
             haproxy_config=haproxy_config,
