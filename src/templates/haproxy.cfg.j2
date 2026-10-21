@@ -57,7 +57,7 @@ defaults
 {% endif %}
 
 {% set data_stats = data["stats"] | default({}) %}
-{% if data_stats["port"] | default(1936) | int > 0 %}
+{% if data_stats["enabled"] | default(true) and data_stats["port"] | default(1936) | int > 0 %}
 frontend stats
     bind *:{{ data_stats["port"] | default(1936) }}
     mode http

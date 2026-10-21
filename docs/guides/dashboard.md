@@ -13,11 +13,11 @@ single page, with no extra software required.
 
 ## Enabling the dashboard
 
-Two environment variables are required:
+The dashboard is on by default (`HAPROXY_STATS_ENABLE=true`). Set these two variables:
 
 | Variable                    | Purpose                                                                                                                                       |
 |-----------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
-| `HAPROXY_PASSWORD`          | Enables the stats endpoint and the dashboard.                                                                                                 |
+| `HAPROXY_PASSWORD`          | Requires a login for the stats endpoint and the dashboard. **Without it, both are served without a login.**                                   |
 | `HAPROXY_STATS_CORS_ORIGIN` | Allows the dashboard page to call the stats API. **Required** — without it the browser blocks the requests and the dashboard shows no data.   |
 
 The dashboard page is served from port `HAPROXY_STATS_PORT + 10000`, but it fetches data from
@@ -133,7 +133,8 @@ EasyHAProxy bundles a polished, self-contained dashboard that:
 
 | Variable | Description | Default |
 |---|---|---|
-| `HAPROXY_PASSWORD` | Enables stats **and** the dashboard. Required. | *empty* |
+| `HAPROXY_STATS_ENABLE` | Serve stats **and** the dashboard. `false` turns both off. | `true` |
+| `HAPROXY_PASSWORD` | Login password for stats and the dashboard. Without it they are served without a login. | *empty* |
 | `HAPROXY_USERNAME` | Username for the stats endpoint. | `admin` |
 | `HAPROXY_STATS_PORT` | Stats API port. Dashboard is served on this port **+ 10000**. | `1936` |
 | `HAPROXY_STATS_CORS_ORIGIN` | **Required for the dashboard.** Set to the exact origin you use to open the dashboard (e.g. `http://localhost:11936`). Without this the browser blocks stats API calls and the dashboard shows no data. | *empty* |

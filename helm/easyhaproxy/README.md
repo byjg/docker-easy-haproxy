@@ -50,6 +50,7 @@ binding:
 
 easyhaproxy:
   stats:
+    enabled: true
     username: admin
     password: password
   refresh: "10"
