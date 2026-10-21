@@ -21,6 +21,6 @@ version: 2.0.5
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
-appVersion: "6.1.1"
+appVersion: "6.2.0"
 
 icon: https://opensource.byjg.com/img/easy_haproxy_logo.png
