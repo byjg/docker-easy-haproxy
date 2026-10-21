@@ -29,6 +29,7 @@ def test_container_env_empty():
                "update_ingress_status": True,
                "deployment_mode": "auto",
                "external_hostname": "",
+               "service_name": "",
                "ingress_status_update_interval": 30
            } == ContainerEnv.read()
 
@@ -63,6 +64,7 @@ def test_container_env_customerrors():
                    "update_ingress_status": True,
                    "deployment_mode": "auto",
                    "external_hostname": "",
+                   "service_name": "",
                    "ingress_status_update_interval": 30
                } == ContainerEnv.read()
     finally:
@@ -97,6 +99,7 @@ def test_container_env_sslmode():
                    "update_ingress_status": True,
                    "deployment_mode": "auto",
                    "external_hostname": "",
+                   "service_name": "",
                    "ingress_status_update_interval": 30
                } == ContainerEnv.read()
     finally:
@@ -132,6 +135,7 @@ def test_container_env_stats():
                    "update_ingress_status": True,
                    "deployment_mode": "auto",
                    "external_hostname": "",
+                   "service_name": "",
                    "ingress_status_update_interval": 30
                } == ContainerEnv.read()
     finally:
@@ -173,6 +177,7 @@ def test_container_env_stats_password():
                    "update_ingress_status": True,
                    "deployment_mode": "auto",
                    "external_hostname": "",
+                   "service_name": "",
                    "ingress_status_update_interval": 30
                } == ContainerEnv.read()
     finally:
@@ -215,6 +220,7 @@ def test_container_env_stats_password_2():
                    "update_ingress_status": True,
                    "deployment_mode": "auto",
                    "external_hostname": "",
+                   "service_name": "",
                    "ingress_status_update_interval": 30
                } == ContainerEnv.read()
     finally:
@@ -253,6 +259,7 @@ def test_container_env_certbot_email():
                    "update_ingress_status": True,
                    "deployment_mode": "auto",
                    "external_hostname": "",
+                   "service_name": "",
                    "ingress_status_update_interval": 30
                } == ContainerEnv.read()
     finally:
@@ -295,6 +302,7 @@ def test_container_env_certbot_full():
            "update_ingress_status": True,
            "deployment_mode": "auto",
            "external_hostname": "",
+           "service_name": "",
            "ingress_status_update_interval": 30
         } == ContainerEnv.read()
     finally:
@@ -339,6 +347,7 @@ def test_container_log_level():
            "update_ingress_status": True,
            "deployment_mode": "auto",
            "external_hostname": "",
+           "service_name": "",
            "ingress_status_update_interval": 30
        } == ContainerEnv.read()
     finally:

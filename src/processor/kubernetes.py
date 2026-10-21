@@ -32,20 +32,26 @@ class Kubernetes(ProcessorInterface):
     def _detect_deployment_mode(self):
         """
         Detect the deployment mode (daemonset, nodeport, clusterip).
-        Returns: tuple (mode: str, service: V1Service or None)
+
+        Only the mode is cached: it cannot change while the pod runs. The
+        Service is read again when the addresses are refreshed, because a
+        cloud LoadBalancer gets its address after EasyHAProxy has started.
+
+        Returns: mode (str)
         """
-        # Return cached if available
         if self.deployment_mode_cache:
             return self.deployment_mode_cache
 
+        self.deployment_mode_cache = self._find_deployment_mode()
+        return self.deployment_mode_cache
+
+    def _find_deployment_mode(self):
         env_config = ContainerEnv.read()
 
         # Check for manual override
         if env_config['deployment_mode'] != 'auto':
             logger_easyhaproxy.info(f"Using manual deployment mode: {env_config['deployment_mode']}")
-            service = self._get_easyhaproxy_service() if env_config['deployment_mode'] in ['nodeport', 'clusterip'] else None
-            self.deployment_mode_cache = (env_config['deployment_mode'], service)
-            return self.deployment_mode_cache
+            return env_config['deployment_mode']
 
         try:
             # Get current pod name from hostname
@@ -61,32 +67,28 @@ class Kubernetes(ProcessorInterface):
 
                 if owner_kind == 'DaemonSet':
                     logger_easyhaproxy.info("Detected deployment mode: daemonset")
-                    self.deployment_mode_cache = ('daemonset', None)
-                    return self.deployment_mode_cache
+                    return 'daemonset'
                 elif owner_kind in ['ReplicaSet', 'Deployment']:
                     # Check if Service exists
                     service = self._get_easyhaproxy_service()
                     if service:
                         if service.spec.type == 'NodePort':
                             logger_easyhaproxy.info("Detected deployment mode: nodeport")
-                            self.deployment_mode_cache = ('nodeport', service)
-                            return self.deployment_mode_cache
-                        else:
-                            logger_easyhaproxy.info("Detected deployment mode: clusterip")
-                            self.deployment_mode_cache = ('clusterip', service)
-                            return self.deployment_mode_cache
+                            return 'nodeport'
+                        logger_easyhaproxy.info("Detected deployment mode: clusterip")
+                        return 'clusterip'
         except Exception as e:
             logger_easyhaproxy.warn(f"Failed to detect deployment mode: {e}, defaulting to daemonset")
 
-        self.deployment_mode_cache = ('daemonset', None)
-        return self.deployment_mode_cache
+        return 'daemonset'
 
     def _get_easyhaproxy_service(self):
         """Get the EasyHAProxy service if it exists."""
         try:
             namespace = os.getenv('POD_NAMESPACE', 'easyhaproxy')
-            # Try common service names
-            service_names = ['easyhaproxy', 'ingress-easyhaproxy']
+            # The Helm chart passes its Service name; without it, try the common names
+            service_name = ContainerEnv.read()['service_name']
+            service_names = [service_name] if service_name else ['easyhaproxy', 'ingress-easyhaproxy']
 
             for service_name in service_names:
                 try:
@@ -99,13 +101,12 @@ class Kubernetes(ProcessorInterface):
             logger_easyhaproxy.warn(f"Failed to get EasyHAProxy service: {e}")
             return None
 
-    def _get_ingress_addresses(self, mode, service):
+    def _get_ingress_addresses(self, mode):
         """
         Get IP addresses or hostnames to report in ingress status.
 
         Args:
             mode: Deployment mode (daemonset, nodeport, clusterip)
-            service: V1Service object (for nodeport/clusterip modes)
 
         Returns:
             List of dicts: [{"ip": "..."}, {"hostname": "..."}]
@@ -118,6 +119,7 @@ class Kubernetes(ProcessorInterface):
             return self.ingress_addresses_cache
 
         addresses = []
+        service = self._get_easyhaproxy_service() if mode in ['nodeport', 'clusterip'] else None
 
         try:
             if mode == 'daemonset':
@@ -236,8 +238,7 @@ class Kubernetes(ProcessorInterface):
         # Detect deployment mode once per cycle for ingress status updates
         env_config = ContainerEnv.read()
         if env_config['update_ingress_status']:
-            deployment_mode, service = self._detect_deployment_mode()
-            ingress_addresses = self._get_ingress_addresses(deployment_mode, service)
+            ingress_addresses = self._get_ingress_addresses(self._detect_deployment_mode())
         else:
             ingress_addresses = []
 

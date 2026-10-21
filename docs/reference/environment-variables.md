@@ -42,6 +42,7 @@ These variables apply only when `EASYHAPROXY_DISCOVER=kubernetes`. They control 
 | EASYHAPROXY_UPDATE_INGRESS_STATUS  | Update Ingress resources with the load-balancer IP. Set to `false` to disable.                                                                              | `true`   |
 | EASYHAPROXY_DEPLOYMENT_MODE        | How to detect and report Ingress IPs: `auto`, `daemonset`, `nodeport`, or `clusterip`. `auto` inspects pod owner references and service type automatically. | `auto`   |
 | EASYHAPROXY_EXTERNAL_HOSTNAME      | Hostname to report in Ingress status when using ClusterIP mode without a cloud LoadBalancer.                                                                | *(none)* |
+| EASYHAPROXY_SERVICE_NAME           | Name of the EasyHAProxy Service, in the pod's namespace. The Helm chart sets it. When empty, `easyhaproxy` and `ingress-easyhaproxy` are tried. | *(none)* |
 | EASYHAPROXY_STATUS_UPDATE_INTERVAL | Seconds between Ingress status update cycles.                                                                                                               | `30`     |
 
 :::tip Deployment mode auto-detection
