@@ -19,7 +19,7 @@ helm upgrade --install --create-namespace -n easyhaproxy easyhaproxy byjg/easyha
 EasyHAProxy can be deployed in two ways:
 
 1. **DaemonSet (default)**: When `service.create: false`, EasyHAProxy is deployed as a DaemonSet with hostPort, and will only be scheduled on nodes with the masterNode label.
-2. **Deployment**: When `service.create: true`, EasyHAProxy is deployed as a Deployment with a Service (ClusterIP or NodePort), and the `replicaCount` value determines the number of replicas (defaults to 1 if not specified).
+2. **Deployment**: When `service.create: true`, EasyHAProxy is deployed as a Deployment with a Service (ClusterIP, NodePort or LoadBalancer), and the `replicaCount` value determines the number of replicas (defaults to 1 if not specified).
 
 ## Parameters
 
@@ -38,7 +38,7 @@ fullnameOverride: ""
 
 service:
   create: false          # If false, it will create a Daemonset with hostPort. The easiest. 
-  type: ClusterIP        # or NodePort
+  type: ClusterIP        # ClusterIP, NodePort or LoadBalancer
   annotations: {}
 
 binding:
@@ -61,6 +61,15 @@ easyhaproxy:
     haproxy: DEBUG
   certbot:
     email: ""
+
+# Persist ACME/Certbot certificates (/etc/easyhaproxy/certs/certbot)
+persistence:
+  certbot:
+    enabled: false
+    existingClaim: ""
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 1Gi
 
 # Master node configuration - only used when service.create is false (DaemonSet mode)
 # When service.create is true (Deployment with ClusterIP/NodePort), this is ignored

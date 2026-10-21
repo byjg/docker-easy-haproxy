@@ -16,7 +16,7 @@ fullnameOverride: ""
 
 service:
   create: false          # If false, it will create a Daemonset with hostPort. The easiest. 
-  type: ClusterIP        # or NodePort
+  type: ClusterIP        # ClusterIP, NodePort or LoadBalancer
   annotations: {}
 
 binding:
@@ -91,6 +91,19 @@ easyhaproxy:
     haproxy: DEBUG
   certbot:
     email: ""
+
+# Persist the ACME/Certbot certificates (/etc/easyhaproxy/certs/certbot).
+# Without it, every pod restart requests the certificates again and can hit
+# the CA rate limits. With service.create: true the Deployment uses the
+# Recreate strategy, because a ReadWriteOnce volume can't move to the new pod
+# while the old one still holds it.
+persistence:
+  certbot:
+    enabled: false
+    existingClaim: ""    # Use this PVC instead of creating one
+    storageClass: ""     # "" = cluster default
+    accessMode: ReadWriteOnce
+    size: 1Gi
 
 # Master node configuration - only used when service.create is false (DaemonSet mode)
 # When service.create is true (Deployment with ClusterIP/NodePort), this is ignored

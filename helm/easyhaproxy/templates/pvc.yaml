@@ -1,0 +1,21 @@
+{{- if and .Values.persistence.certbot.enabled (not .Values.persistence.certbot.existingClaim) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "easyhaproxy.fullname" . }}-certbot
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "easyhaproxy.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    - {{ .Values.persistence.certbot.accessMode }}
+  {{- with .Values.persistence.certbot.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.certbot.size }}
+{{- end }}

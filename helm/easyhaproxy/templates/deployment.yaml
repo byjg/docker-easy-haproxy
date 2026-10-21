@@ -9,26 +9,45 @@ metadata:
 spec:
 {{- if .Values.service.create }}
   replicas: {{ .Values.replicaCount | default 1 }}
+{{- if .Values.persistence.certbot.enabled }}
+  strategy:
+    type: Recreate
+{{- end }}
 {{- end }}
   selector:
     matchLabels:
       {{- include "easyhaproxy.selectorLabels" . | nindent 6 }}
   template:
     metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       labels:
         {{- include "easyhaproxy.selectorLabels" . | nindent 8 }}
     spec:
+{{- /* DaemonSet mode pins the pod to the masterNode label; other affinity keys are kept */}}
+{{- $affinity := deepCopy (.Values.affinity | default dict) }}
 {{- if not .Values.service.create }}
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: {{ .Values.masterNode.label }}
-                operator: In
-                values:
-                  {{- toYaml .Values.masterNode.values | nindent 18 }}
+{{- $match := dict "key" .Values.masterNode.label "operator" "In" "values" .Values.masterNode.values }}
+{{- $_ := set $affinity "nodeAffinity" (dict "requiredDuringSchedulingIgnoredDuringExecution" (dict "nodeSelectorTerms" (list (dict "matchExpressions" (list $match))))) }}
 {{- end }}
+      {{- with $affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       serviceAccountName: {{ include "easyhaproxy.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
@@ -99,6 +118,19 @@ spec:
             {{- end }}
             - name: EASYHAPROXY_STATUS_UPDATE_INTERVAL
               value: {{ .Values.ingressStatus.updateInterval | quote }}
+            {{- if .Values.service.create }}
+            - name: EASYHAPROXY_SERVICE_NAME
+              value: {{ include "easyhaproxy.fullname" . | quote }}
+            {{- end }}
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
+{{- if .Values.persistence.certbot.enabled }}
+          volumeMounts:
+            - name: certbot
+              mountPath: /etc/easyhaproxy/certs/certbot
+      volumes:
+        - name: certbot
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.certbot.existingClaim | default (printf "%s-certbot" (include "easyhaproxy.fullname" .)) }}
+{{- end }}
