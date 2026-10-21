@@ -20,11 +20,18 @@ service:
   annotations: {}
 
 binding:
+  # Host ports (DaemonSet mode, service.create: false)
   ports:
     http: 80
     https: 443
     stats: 1936
     dashboard: 11936
+  # Node ports (service.type: NodePort); Kubernetes only accepts 30000-32767 by default
+  nodePorts:
+    http: 31080
+    https: 31443
+    stats: 31936
+    dashboard: 31937
   additionalPorts: []
 
 serviceAccount:

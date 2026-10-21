@@ -1756,6 +1756,44 @@ class TestCloudflare:
             f"client_ip should be HAProxy pod IP, not the translated IP"
 
 
+@pytest.mark.kubernetes
+class TestNodePortService:
+    """The chart's NodePort Service must be accepted by Kubernetes.
+
+    The server-side dry run does not check the node port range, so the
+    Service is really created. Only the Service is applied, in its own
+    namespace, so the cluster-wide objects of the other tests are untouched.
+    """
+
+    NAMESPACE = "nodeport-test"
+
+    def test_nodeport_service_is_accepted(self, kind_cluster, helm_cmd):
+        kubectl = kind_cluster["kubectl"]
+        helm_dir = Path(__file__).parent.parent / "helm" / "easyhaproxy"
+        service = subprocess.run(
+            [helm_cmd, "template", "np", str(helm_dir), "--namespace", self.NAMESPACE,
+             "--set", "service.create=true", "--set", "service.type=NodePort",
+             "--show-only", "templates/service.yaml"],
+            check=True, capture_output=True, text=True
+        ).stdout
+
+        subprocess.run([kubectl, "create", "namespace", self.NAMESPACE], check=True, capture_output=True)
+        try:
+            result = subprocess.run([kubectl, "apply", "-f", "-"], input=service,
+                                    capture_output=True, text=True)
+            assert result.returncode == 0, result.stderr
+
+            ports = json.loads(subprocess.run(
+                [kubectl, "get", "service", "np-easyhaproxy", "-n", self.NAMESPACE, "-o", "json"],
+                check=True, capture_output=True, text=True
+            ).stdout)["spec"]["ports"]
+            assert {p["name"]: p["nodePort"] for p in ports} == {
+                "http": 31080, "https": 31443, "stats": 31936, "dashboard": 31937
+            }
+        finally:
+            subprocess.run([kubectl, "delete", "namespace", self.NAMESPACE, "--wait=false"], capture_output=True)
+
+
 # =============================================================================
 # Helper functions for manual testing
 # =============================================================================

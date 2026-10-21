@@ -4,13 +4,14 @@
 
 ## About These Files
 
-This directory contains pre-rendered Kubernetes manifests for deploying EasyHAProxy without Helm. These are generated from the Helm chart at `../../helm/easyhaproxy/` and provide three deployment options:
+This directory contains pre-rendered Kubernetes manifests for deploying EasyHAProxy without Helm. These are generated from the Helm chart at `../../helm/easyhaproxy/` and provide four deployment options:
 
 | File                        | Type                   | Use Case                                                     |
 |-----------------------------|------------------------|--------------------------------------------------------------|
 | `easyhaproxy-daemonset.yml` | DaemonSet + hostPort   | Direct host networking, best for bare-metal or simple setups |
-| `easyhaproxy-nodeport.yml`  | Deployment + NodePort  | Exposes via NodePort (31080/31443/31936)                     |
+| `easyhaproxy-nodeport.yml`  | Deployment + NodePort  | Exposes via NodePort (31080/31443/31936/31937)               |
 | `easyhaproxy-clusterip.yml` | Deployment + ClusterIP | Internal cluster access only, use with external LoadBalancer |
+| `easyhaproxy-loadbalancer.yml` | Deployment + LoadBalancer | Cloud providers: the provider creates the load balancer |
 
 ## How to Use
 
@@ -25,39 +26,23 @@ kubectl apply -f easyhaproxy-nodeport.yml
 
 # Option 3: ClusterIP mode
 kubectl apply -f easyhaproxy-clusterip.yml
+
+# Option 4: LoadBalancer mode (cloud providers)
+kubectl apply -f easyhaproxy-loadbalancer.yml
 ```
 
 For more details, see the [Kubernetes documentation](../../docs/getting-started/kubernetes.md).
 
 ## Regenerating These Files
 
-**When to regenerate:**
-- After modifying Helm chart templates (`helm/easyhaproxy/templates/`)
-- After updating default values (`helm/easyhaproxy/values.yaml`)
-- After a new release to sync with latest Helm chart
-
-**How to regenerate:**
+`scripts/bump-version.sh` renders them from the chart on every version bump, so they always match it. Don't edit them by hand; change the chart instead. To render them without a bump:
 
 ```bash
-# Navigate to helm directory
 cd helm
-
-# Generate DaemonSet manifest (hostPort mode)
-helm template ingress ./easyhaproxy --namespace easyhaproxy \
-  --set service.create=false \
-  > ../deploy/kubernetes/easyhaproxy-daemonset.yml
-
-# Generate NodePort manifest
-helm template ingress ./easyhaproxy --namespace easyhaproxy \
-  --set service.create=true \
-  --set service.type=NodePort \
-  > ../deploy/kubernetes/easyhaproxy-nodeport.yml
-
-# Generate ClusterIP manifest
-helm template ingress ./easyhaproxy --namespace easyhaproxy \
-  --set service.create=true \
-  --set service.type=ClusterIP \
-  > ../deploy/kubernetes/easyhaproxy-clusterip.yml
+helm template ingress ./easyhaproxy --namespace easyhaproxy --set service.create=false > ../deploy/kubernetes/easyhaproxy-daemonset.yml
+helm template ingress ./easyhaproxy --namespace easyhaproxy --set service.create=true --set service.type=NodePort > ../deploy/kubernetes/easyhaproxy-nodeport.yml
+helm template ingress ./easyhaproxy --namespace easyhaproxy --set service.create=true --set service.type=ClusterIP > ../deploy/kubernetes/easyhaproxy-clusterip.yml
+helm template ingress ./easyhaproxy --namespace easyhaproxy --set service.create=true --set service.type=LoadBalancer > ../deploy/kubernetes/easyhaproxy-loadbalancer.yml
 ```
 
 **Verify regeneration:**

@@ -14,17 +14,17 @@ spec:
   ports:
     - name: http
       port: 80
-      {{ if eq .Values.service.type "NodePort" }}nodePort: {{ .Values.binding.ports.http }}{{ end }}
+      {{ if eq .Values.service.type "NodePort" }}nodePort: {{ dig "nodePorts" "http" 31080 .Values.binding }}{{ end }}
     - name: https
       port: 443
-      {{ if eq .Values.service.type "NodePort" }}nodePort: {{ .Values.binding.ports.https }}{{ end }}
+      {{ if eq .Values.service.type "NodePort" }}nodePort: {{ dig "nodePorts" "https" 31443 .Values.binding }}{{ end }}
     {{- if include "easyhaproxy.statsEnabled" . }}
     - name: stats
       port: 1936
-      {{ if eq .Values.service.type "NodePort" }}nodePort: {{ .Values.binding.ports.stats }}{{ end }}
+      {{ if eq .Values.service.type "NodePort" }}nodePort: {{ dig "nodePorts" "stats" 31936 .Values.binding }}{{ end }}
     - name: dashboard
       port: 11936
-      {{ if eq .Values.service.type "NodePort" }}nodePort: {{ .Values.binding.ports.dashboard }}{{ end }}
+      {{ if eq .Values.service.type "NodePort" }}nodePort: {{ dig "nodePorts" "dashboard" 31937 .Values.binding }}{{ end }}
     {{- end }}
     {{- range $port := .Values.binding.additionalPorts }}
     - name: extra{{ $port }}

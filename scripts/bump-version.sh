@@ -91,6 +91,7 @@ if [[ "$MODE" == "verify" ]]; then
   check_contains "appVersion: \"$NEW_VERSION\"" "$CHART_FILE" "Chart appVersion"
   check_contains "version: \"$NEW_VERSION\"" deploy/kubernetes/easyhaproxy-daemonset.yml "K8s daemonset manifest version"
   check_contains "easy-haproxy:$NEW_VERSION" deploy/kubernetes/easyhaproxy-daemonset.yml "K8s daemonset image tag"
+  check_contains "easy-haproxy:$NEW_VERSION" deploy/kubernetes/easyhaproxy-loadbalancer.yml "K8s loadbalancer image tag"
   check_contains "easy-haproxy:$NEW_VERSION" deploy/docker/docker-compose.yml "Docker compose image tag"
   check_contains "version = \"$NEW_VERSION\"" pyproject.toml "pyproject.toml version"
 
@@ -111,12 +112,16 @@ if [[ "$MODE" == "verify" ]]; then
   exit $STATUS
 fi
 
+# The static Kubernetes manifests are rendered from the chart (see below)
+if ! command -v helm >/dev/null 2>&1; then
+  echo "Error: helm is required to render deploy/kubernetes/*.yml"
+  exit 1
+fi
+
 echo "Updating repository to version $NEW_VERSION (previous appVersion: $CURRENT_APP_VERSION, chart version: $CURRENT_CHART_VERSION)"
 
 # Update deployment manifests and docs
 sed -i "s#easy-haproxy:[a-zA-Z0-9\\.-]*#easy-haproxy:$NEW_VERSION#g" deploy/docker/docker-compose.yml
-sed -i "s#version: \"[a-zA-Z0-9\\.-]*\"#version: \"$NEW_VERSION\"#g" deploy/kubernetes/easyhaproxy-*.yml
-sed -i "s#easy-haproxy:[a-zA-Z0-9\\.-]*#easy-haproxy:$NEW_VERSION#g" deploy/kubernetes/easyhaproxy-*.yml
 find docs -type f -name '*.md' -exec sed -i "s#easy-haproxy/[0-9][a-zA-Z0-9\\.-]*/#easy-haproxy/$NEW_VERSION/#g" {} \;
 find docs -type f -name '*.md' -exec sed -i "s#easy-haproxy:[0-9][a-zA-Z0-9\\.-]*#easy-haproxy:$NEW_VERSION#g" {} \;
 find docs -type f -name '*.md' -exec sed -i "s#raw.githubusercontent.com/byjg/docker-easy-haproxy/[a-zA-Z0-9\\.\\-]*/deploy/kubernetes/easyhaproxy-daemonset.yml#raw.githubusercontent.com/byjg/docker-easy-haproxy/$NEW_VERSION/deploy/kubernetes/easyhaproxy-daemonset.yml#g" {} \;
@@ -145,7 +150,17 @@ last_index=$((${#_parts[@]} - 1))
 _parts[$last_index]=$(( ${_parts[$last_index]} + 1 ))
 NEXT_CHART_VERSION=$(IFS='.'; echo "${_parts[*]}")
 sed -i -E "s/^version: .*/version: $NEXT_CHART_VERSION/" "$CHART_FILE"
-sed -i -E "s/helm\\.sh\\/chart: easyhaproxy-[0-9\\.]+/helm.sh\\/chart: easyhaproxy-$NEXT_CHART_VERSION/" deploy/kubernetes/easyhaproxy-*.yml
+
+# Render the static Kubernetes manifests from the chart, now at the new versions
+render_manifest() {
+  local name=$1; shift
+  helm template ingress "$REPO_ROOT/helm/easyhaproxy" --namespace easyhaproxy "$@" \
+    > "$REPO_ROOT/deploy/kubernetes/easyhaproxy-$name.yml"
+}
+render_manifest daemonset    --set service.create=false
+render_manifest nodeport     --set service.create=true --set service.type=NodePort
+render_manifest clusterip    --set service.create=true --set service.type=ClusterIP
+render_manifest loadbalancer --set service.create=true --set service.type=LoadBalancer
 
 uv sync --dev
 
