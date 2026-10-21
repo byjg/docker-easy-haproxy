@@ -21,6 +21,8 @@ EasyHAProxy is designed for single replica deployment.
 
 ### What happens with multiple replicas?
 
+On Kubernetes, multiple copies come from `replicaCount` above 1 in Deployment mode, or from **more than one labeled node** in DaemonSet mode, where one pod runs on every node with the `easyhaproxy/node` label.
+
 EasyHAProxy can still operate with multiple replicas; however:
 
 1. **Service Discovery**: Each replica will independently discover services, which may lead to temporary inconsistencies among replicas (out-of-sync for a few seconds).

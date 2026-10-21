@@ -57,6 +57,8 @@ kubectl apply -f \
 
 :::warning Requires node label maintenance
 The node label must be reapplied after any node replacement. Failing to do so will cause an outage.
+
+Label **one** node only: the DaemonSet runs a pod on every labeled node, and several copies break ACME certificates (see [Limitations](../concepts/limitations.md)).
 :::
 
 ```bash
