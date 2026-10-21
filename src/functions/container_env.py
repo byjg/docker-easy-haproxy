@@ -118,6 +118,7 @@ class ContainerEnv:
         env_vars["update_ingress_status"] = os.getenv("EASYHAPROXY_UPDATE_INGRESS_STATUS", "true").lower() == "true"
         env_vars["deployment_mode"] = os.getenv("EASYHAPROXY_DEPLOYMENT_MODE", "auto")
         env_vars["external_hostname"] = os.getenv("EASYHAPROXY_EXTERNAL_HOSTNAME", "")
+        env_vars["service_name"] = os.getenv("EASYHAPROXY_SERVICE_NAME", "")
         env_vars["ingress_status_update_interval"] = int(os.getenv("EASYHAPROXY_STATUS_UPDATE_INTERVAL", "30"))
 
         return env_vars

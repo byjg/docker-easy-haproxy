@@ -10,10 +10,46 @@ import os
 import sys
 from unittest.mock import MagicMock, Mock
 
+from kubernetes.client.rest import ApiException
+
 # Add src to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from processor import Kubernetes
+
+
+def create_mock_ingress(annotations, namespace="default"):
+    """Helper to create a mock Kubernetes ingress"""
+    ingress = Mock()
+    ingress.metadata = Mock()
+    ingress.metadata.namespace = namespace
+    ingress.metadata.name = "test-ingress"
+    ingress.metadata.annotations = annotations
+    ingress.metadata.creation_timestamp = Mock()
+    ingress.metadata.creation_timestamp.strftime = Mock(return_value="01/01/2024 00:00:00")
+    ingress.metadata.resource_version = "12345"
+    ingress.spec = Mock()
+    ingress.spec.tls = None
+    ingress.spec.ingress_class_name = "easyhaproxy"
+
+    # Create a proper rule with path and backend
+    rule = Mock()
+    rule.host = "test.example.com"
+    rule.http = Mock()
+
+    path = Mock()
+    path.path = "/"
+    path.path_type = "Prefix"
+    path.backend = Mock()
+    path.backend.service = Mock()
+    path.backend.service.name = "test-service"
+    path.backend.service.port = Mock()
+    path.backend.service.port.number = 8080
+
+    rule.http.paths = [path]
+    ingress.spec.rules = [rule]
+
+    return ingress
 
 
 class TestKubernetesSecretPattern:
@@ -29,39 +65,6 @@ class TestKubernetesSecretPattern:
         }
         return secret
 
-    def create_mock_ingress(self, annotations, namespace="default"):
-        """Helper to create a mock Kubernetes ingress"""
-        ingress = Mock()
-        ingress.metadata = Mock()
-        ingress.metadata.namespace = namespace
-        ingress.metadata.name = "test-ingress"
-        ingress.metadata.annotations = annotations
-        ingress.metadata.creation_timestamp = Mock()
-        ingress.metadata.creation_timestamp.strftime = Mock(return_value="01/01/2024 00:00:00")
-        ingress.metadata.resource_version = "12345"
-        ingress.spec = Mock()
-        ingress.spec.tls = None
-        ingress.spec.ingress_class_name = "easyhaproxy"
-
-        # Create a proper rule with path and backend
-        rule = Mock()
-        rule.host = "test.example.com"
-        rule.http = Mock()
-
-        path = Mock()
-        path.path = "/"
-        path.path_type = "Prefix"
-        path.backend = Mock()
-        path.backend.service = Mock()
-        path.backend.service.name = "test-service"
-        path.backend.service.port = Mock()
-        path.backend.service.port.number = 8080
-
-        rule.http.paths = [path]
-        ingress.spec.rules = [rule]
-
-        return ingress
-
     def test_k8s_secret_auto_detect_exact_match(self):
         """Test k8s_secret with auto-detect finds exact key match"""
         # Setup mocks
@@ -73,7 +76,7 @@ class TestKubernetesSecretPattern:
         mock_core_api.read_namespaced_secret.return_value = secret
 
         # Create ingress with k8s_secret annotation (auto-detect format)
-        ingress = self.create_mock_ingress({
+        ingress = create_mock_ingress({
             "easyhaproxy.plugins": "jwt_validator",
             "easyhaproxy.plugin.jwt_validator.k8s_secret.pubkey": "my-jwt-secret"
         })
@@ -109,7 +112,7 @@ class TestKubernetesSecretPattern:
         mock_core_api.read_namespaced_secret.return_value = secret
 
         # Create ingress with k8s_secret annotation (auto-detect format)
-        ingress = self.create_mock_ingress({
+        ingress = create_mock_ingress({
             "easyhaproxy.plugins": "jwt_validator",
             "easyhaproxy.plugin.jwt_validator.k8s_secret.pubkey": "my-jwt-secret"
         })
@@ -141,7 +144,7 @@ class TestKubernetesSecretPattern:
         mock_core_api.read_namespaced_secret.return_value = secret
 
         # Create ingress with explicit key format
-        ingress = self.create_mock_ingress({
+        ingress = create_mock_ingress({
             "easyhaproxy.plugins": "jwt_validator",
             "easyhaproxy.plugin.jwt_validator.k8s_secret.pubkey": "my-jwt-secret/rsa-public-key"
         })
@@ -173,7 +176,7 @@ class TestKubernetesSecretPattern:
         mock_core_api.read_namespaced_secret.return_value = secret
 
         # Create ingress with explicit key that doesn't exist
-        ingress = self.create_mock_ingress({
+        ingress = create_mock_ingress({
             "easyhaproxy.plugins": "jwt_validator",
             "easyhaproxy.plugin.jwt_validator.k8s_secret.pubkey": "my-jwt-secret/custom-key"
         })
@@ -204,7 +207,7 @@ class TestKubernetesSecretPattern:
         mock_core_api.read_namespaced_secret.return_value = secret
 
         # Create ingress with BOTH explicit pubkey AND k8s_secret.pubkey
-        ingress = self.create_mock_ingress({
+        ingress = create_mock_ingress({
             "easyhaproxy.plugins": "jwt_validator",
             "easyhaproxy.plugin.jwt_validator.pubkey": base64.b64encode(b"explicit-value").decode('ascii'),
             "easyhaproxy.plugin.jwt_validator.k8s_secret.pubkey": "my-jwt-secret"
@@ -234,7 +237,7 @@ class TestKubernetesSecretPattern:
         mock_core_api.read_namespaced_secret.side_effect = ApiException(status=404, reason="Not Found")
 
         # Create ingress with k8s_secret annotation
-        ingress = self.create_mock_ingress({
+        ingress = create_mock_ingress({
             "easyhaproxy.plugins": "jwt_validator",
             "easyhaproxy.plugin.jwt_validator.k8s_secret.pubkey": "nonexistent-secret"
         })
@@ -264,7 +267,7 @@ class TestKubernetesSecretPattern:
         mock_core_api.read_namespaced_secret.return_value = secret
 
         # Create ingress with k8s_secret annotation
-        ingress = self.create_mock_ingress({
+        ingress = create_mock_ingress({
             "easyhaproxy.plugins": "jwt_validator",
             "easyhaproxy.plugin.jwt_validator.k8s_secret.pubkey": "my-secret"
         })
@@ -298,7 +301,7 @@ class TestKubernetesSecretPattern:
         mock_core_api.read_namespaced_secret.side_effect = get_secret
 
         # Create ingress with multiple k8s_secret annotations
-        ingress = self.create_mock_ingress({
+        ingress = create_mock_ingress({
             "easyhaproxy.plugins": "jwt_validator,api_auth",
             "easyhaproxy.plugin.jwt_validator.k8s_secret.pubkey": "jwt-secret",
             "easyhaproxy.plugin.api_auth.k8s_secret.api_key": "api-secret"
@@ -329,14 +332,14 @@ class TestKubernetesSecretPattern:
         mock_core_api.read_namespaced_secret.return_value = secret
 
         # Create ingress in "production" namespace
-        ingress = self.create_mock_ingress({
+        ingress = create_mock_ingress({
             "easyhaproxy.plugins": "jwt_validator",
             "easyhaproxy.plugin.jwt_validator.k8s_secret.pubkey": "my-secret"
         }, namespace="production")
         mock_networking_api.list_ingress_for_all_namespaces.return_value = Mock(items=[ingress])
 
         # Create processor with mocked API clients
-        processor = Kubernetes(api_instance=mock_core_api, v1=mock_networking_api)
+        Kubernetes(api_instance=mock_core_api, v1=mock_networking_api)
 
         # Verify secret was read from correct namespace
         mock_core_api.read_namespaced_secret.assert_called_once_with("my-secret", "production")
@@ -348,7 +351,7 @@ class TestKubernetesSecretPattern:
         mock_networking_api = MagicMock()
 
         # Create ingress with malformed k8s_secret annotation
-        ingress = self.create_mock_ingress({
+        ingress = create_mock_ingress({
             "easyhaproxy.plugins": "jwt_validator",
             # Malformed: multiple k8s_secret in the key
             "easyhaproxy.plugin.k8s_secret.jwt_validator.k8s_secret.pubkey": "my-secret"
@@ -356,7 +359,7 @@ class TestKubernetesSecretPattern:
         mock_networking_api.list_ingress_for_all_namespaces.return_value = Mock(items=[ingress])
 
         # Create processor with mocked API clients
-        processor = Kubernetes(api_instance=mock_core_api, v1=mock_networking_api)
+        Kubernetes(api_instance=mock_core_api, v1=mock_networking_api)
 
         # Should not raise exception
 
@@ -374,7 +377,7 @@ class TestKubernetesSecretPattern:
         mock_core_api.read_namespaced_secret.return_value = secret
 
         # Create ingress requesting "password" key (should find "pass" variation)
-        ingress = self.create_mock_ingress({
+        ingress = create_mock_ingress({
             "easyhaproxy.plugins": "auth_plugin",
             "easyhaproxy.plugin.auth_plugin.k8s_secret.password": "my-secret"
         })
@@ -401,7 +404,7 @@ class TestKubernetesSecretPattern:
         mock_core_api.read_namespaced_secret.return_value = secret
 
         # Create ingress requesting "api_key" (should find "apikey" variation)
-        ingress = self.create_mock_ingress({
+        ingress = create_mock_ingress({
             "easyhaproxy.plugins": "api_plugin",
             "easyhaproxy.plugin.api_plugin.k8s_secret.api_key": "my-secret"
         })
@@ -416,3 +419,66 @@ class TestKubernetesSecretPattern:
         ingress_data = list(parsed.values())[0]
 
         assert "easyhaproxy.test-example-com_8080.plugin.api_plugin.api_key" in ingress_data
+
+
+
+class TestIngressStatusAddresses:
+    """The address written to the ingress status follows the EasyHAProxy Service"""
+
+    def create_mock_service(self, lb_ip=None):
+        service = Mock()
+        service.spec.type = 'LoadBalancer'
+        service.spec.cluster_ip = '10.0.0.10'
+        service.status.load_balancer.ingress = [Mock(ip=lb_ip, hostname=None)] if lb_ip else None
+        return service
+
+    def reported_addresses(self, mock_networking_api):
+        body = mock_networking_api.patch_namespaced_ingress_status.call_args.kwargs['body']
+        return body['status']['loadBalancer']['ingress']
+
+    def test_load_balancer_address_assigned_after_start(self):
+        """A cloud LoadBalancer gets its IP after EasyHAProxy started; the next refresh must report it"""
+        mock_core_api = MagicMock()
+        mock_networking_api = MagicMock()
+        pod = Mock()
+        pod.metadata.owner_references = [Mock(kind='ReplicaSet')]
+        mock_core_api.read_namespaced_pod.return_value = pod
+        pending, assigned = self.create_mock_service(), self.create_mock_service(lb_ip='203.0.113.10')
+        mock_core_api.read_namespaced_service.return_value = pending
+        mock_networking_api.list_ingress_for_all_namespaces.return_value = Mock(items=[create_mock_ingress({})])
+
+        # First cycle runs in the constructor: the LB is still pending
+        processor = Kubernetes(api_instance=mock_core_api, v1=mock_networking_api)
+        assert self.reported_addresses(mock_networking_api) == [{"ip": "10.0.0.10"}]
+
+        # The cloud provider assigns the LB IP; the next cycle after the update interval reports it
+        mock_core_api.read_namespaced_service.return_value = assigned
+        processor.addresses_cache_time = 0
+        processor.inspect_network()
+        assert self.reported_addresses(mock_networking_api) == [{"ip": "203.0.113.10"}]
+
+        # The mode is detected once
+        assert mock_core_api.read_namespaced_pod.call_count == 1
+
+    def test_service_found_by_configured_name(self, monkeypatch):
+        """A release not named easyhaproxy/ingress has its own Service name, passed by the chart"""
+        monkeypatch.setenv('EASYHAPROXY_SERVICE_NAME', 'my-proxy-easyhaproxy')
+        mock_core_api = MagicMock()
+        mock_networking_api = MagicMock()
+        pod = Mock()
+        pod.metadata.owner_references = [Mock(kind='ReplicaSet')]
+        mock_core_api.read_namespaced_pod.return_value = pod
+        service = self.create_mock_service(lb_ip='203.0.113.10')
+
+        def read_service(name, namespace):
+            if name != 'my-proxy-easyhaproxy':
+                raise ApiException(status=404)
+            return service
+
+        mock_core_api.read_namespaced_service.side_effect = read_service
+        mock_networking_api.list_ingress_for_all_namespaces.return_value = Mock(items=[create_mock_ingress({})])
+
+        processor = Kubernetes(api_instance=mock_core_api, v1=mock_networking_api)
+
+        assert processor._detect_deployment_mode() == 'clusterip'
+        assert self.reported_addresses(mock_networking_api) == [{"ip": "203.0.113.10"}]

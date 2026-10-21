@@ -25,8 +25,8 @@ Controls whether EasyHAProxy runs as a **Deployment** (with a Service) or a **Da
 | Value                 | Description                                                                                 | Default     |
 |-----------------------|---------------------------------------------------------------------------------------------|-------------|
 | `replicaCount`        | Number of replicas (only used when `service.create: true`)                                  | `1`         |
-| `service.create`      | `true` → Deployment + Service (NodePort or ClusterIP). `false` → DaemonSet with host ports. | `false`     |
-| `service.type`        | Service type when `service.create: true`: `NodePort` or `ClusterIP`                         | `ClusterIP` |
+| `service.create`      | `true` → Deployment + Service (NodePort, ClusterIP or LoadBalancer). `false` → DaemonSet with host ports. | `false`     |
+| `service.type`        | Service type when `service.create: true`: `NodePort`, `ClusterIP` or `LoadBalancer`                       | `ClusterIP` |
 | `service.annotations` | Annotations to add to the Service resource                                                  | `{}`        |
 
 :::tip Recommended mode
@@ -57,6 +57,24 @@ Set `service.create: true` and `service.type: NodePort` for most setups. DaemonS
 | `easyhaproxy.logLevel.easyhaproxy` | Log level for EasyHAProxy                           | `DEBUG`    |
 | `easyhaproxy.logLevel.haproxy`     | Log level for HAProxy                               | `DEBUG`    |
 | `easyhaproxy.certbot.email`        | Email address for Let's Encrypt / ACME registration | `""`       |
+
+## Certificate Persistence
+
+Keeps the ACME/Certbot certificates (`/etc/easyhaproxy/certs/certbot`) on a PersistentVolumeClaim, so a pod restart does not request them again and run into the CA rate limits. Recommended whenever `easyhaproxy.certbot.email` is set.
+
+| Value                                  | Description                                          | Default         |
+|----------------------------------------|------------------------------------------------------|-----------------|
+| `persistence.certbot.enabled`          | Mount a PVC at `/etc/easyhaproxy/certs/certbot`      | `false`         |
+| `persistence.certbot.existingClaim`    | Use this existing PVC instead of creating one        | `""`            |
+| `persistence.certbot.storageClass`     | Storage class of the created PVC. Empty = default.   | `""`            |
+| `persistence.certbot.accessMode`       | Access mode of the created PVC                       | `ReadWriteOnce` |
+| `persistence.certbot.size`             | Size of the created PVC                              | `1Gi`           |
+
+:::note
+With `service.create: true` and persistence enabled, the Deployment uses the `Recreate` strategy: a `ReadWriteOnce` volume cannot attach to the new pod while the old one still holds it. Expect a short gap during upgrades.
+
+The created PVC has `helm.sh/resource-policy: keep`, so `helm uninstall` leaves the certificates in place. Delete the PVC by hand to remove them.
+:::
 
 ## Ingress Status
 
@@ -94,7 +112,7 @@ kubectl label nodes node-01 "easyhaproxy/node=master"
 | `resources`          | CPU/memory requests and limits for the pod | `{}`    |
 | `nodeSelector`       | Node selector for pod scheduling           | `{}`    |
 | `tolerations`        | Tolerations for pod scheduling             | `[]`    |
-| `affinity`           | Affinity rules for pod scheduling          | `{}`    |
+| `affinity`           | Affinity rules for pod scheduling. In DaemonSet mode `nodeAffinity` comes from `masterNode`; other keys (e.g. `podAntiAffinity`) are kept. | `{}`    |
 | `podSecurityContext` | Pod-level security context                 | `{}`    |
 | `securityContext`    | Container-level security context           | `{}`    |
 
