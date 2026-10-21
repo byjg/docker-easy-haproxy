@@ -50,6 +50,7 @@ curl http://myapp.example.com
 
 ```yaml
 stats:
+  enabled: true       # Optional (default true); false turns stats and the dashboard off
   username: admin     # Optional (default "admin")
   password: password  # If omitted, stats are public with no password
   port: 1936          # Optional (default 1936)

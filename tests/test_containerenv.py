@@ -8,6 +8,13 @@ def test_container_env_empty():
                "customerrors": False,
                "ssl_mode": "default",
                "lookup_label": "easyhaproxy",
+               "stats": {
+                   "enabled": True,
+                   "username": "admin",
+                   "password": "",
+                   "port": "1936",
+                   "cors_origin": ""
+               },
                "logLevel": {
                    "easyhaproxy": Functions.DEBUG,
                    "haproxy": Functions.INFO,
@@ -43,6 +50,13 @@ def test_container_env_customerrors():
                    "customerrors": True,
                    "ssl_mode": "default",
                    "lookup_label": "easyhaproxy",
+                   "stats": {
+                       "enabled": True,
+                       "username": "admin",
+                       "password": "",
+                       "port": "1936",
+                       "cors_origin": ""
+                   },
                    "logLevel": {
                        "easyhaproxy": Functions.DEBUG,
                        "haproxy": Functions.INFO,
@@ -78,6 +92,13 @@ def test_container_env_sslmode():
                    "customerrors": False,
                    "ssl_mode": "strict",
                    "lookup_label": "easyhaproxy",
+                   "stats": {
+                       "enabled": True,
+                       "username": "admin",
+                       "password": "",
+                       "port": "1936",
+                       "cors_origin": ""
+                   },
                    "logLevel": {
                        "easyhaproxy": Functions.DEBUG,
                        "haproxy": Functions.INFO,
@@ -114,6 +135,13 @@ def test_container_env_stats():
                    "customerrors": False,
                    "ssl_mode": "default",
                    "lookup_label": "easyhaproxy",
+                   "stats": {
+                       "enabled": True,
+                       "username": "abc",
+                       "password": "",
+                       "port": "2101",
+                       "cors_origin": ""
+                   },
                    "logLevel": {
                        "easyhaproxy": Functions.DEBUG,
                        "haproxy": Functions.INFO,
@@ -151,6 +179,7 @@ def test_container_env_stats_password():
                    "ssl_mode": "default",
                    "lookup_label": "easyhaproxy",
                    "stats": {
+                       "enabled": True,
                        "username": "admin",
                        "password": "xyz",
                        "port": "1936",
@@ -194,6 +223,7 @@ def test_container_env_stats_password_2():
                    "ssl_mode": "default",
                    "lookup_label": "easyhaproxy",
                    "stats": {
+                       "enabled": True,
                        "username": "abc",
                        "password": "xyz",
                        "port": "2101",
@@ -236,6 +266,13 @@ def test_container_env_certbot_email():
                    "customerrors": False,
                    "ssl_mode": "default",
                    "lookup_label": "easyhaproxy",
+                   "stats": {
+                       "enabled": True,
+                       "username": "admin",
+                       "password": "",
+                       "port": "1936",
+                       "cors_origin": ""
+                   },
                    "logLevel": {
                        "easyhaproxy": Functions.DEBUG,
                        "haproxy": Functions.INFO,
@@ -279,6 +316,13 @@ def test_container_env_certbot_full():
             "customerrors": False,
             "ssl_mode": "default",
             "lookup_label": "easyhaproxy",
+            "stats": {
+                "enabled": True,
+                "username": "admin",
+                "password": "",
+                "port": "1936",
+                "cors_origin": ""
+            },
             "logLevel": {
                 "easyhaproxy": Functions.DEBUG,
                 "haproxy": Functions.INFO,
@@ -324,6 +368,13 @@ def test_container_log_level():
            "customerrors": False,
            "ssl_mode": "default",
            "lookup_label": "easyhaproxy",
+           "stats": {
+               "enabled": True,
+               "username": "admin",
+               "password": "",
+               "port": "1936",
+               "cors_origin": ""
+           },
            "logLevel": {
                "easyhaproxy": Functions.ERROR,
                "haproxy": Functions.FATAL,

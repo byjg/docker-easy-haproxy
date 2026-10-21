@@ -48,7 +48,8 @@ Set `service.create: true` and `service.type: NodePort` for most setups. DaemonS
 | Value                              | Description                                         | Default    |
 |------------------------------------|-----------------------------------------------------|------------|
 | `easyhaproxy.stats.username`       | HAProxy stats username                                                              | `admin`    |
-| `easyhaproxy.stats.password`       | HAProxy stats password. **Required** to enable the stats endpoint and dashboard.   | `password` |
+| `easyhaproxy.stats.enabled`        | Serve the stats endpoint and dashboard. `false` also removes ports 1936/11936 from the pod and Service. | `true`     |
+| `easyhaproxy.stats.password`       | Login password for the stats endpoint and dashboard. Empty serves them without a login. | `password` |
 | `easyhaproxy.stats.corsOrigin`     | Allowed origin for stats API CORS (e.g. `http://node01:11936`). **Required** for the dashboard to load in a browser. | `""`       |
 | `easyhaproxy.refresh`              | Seconds between service discovery polls             | `"10"`     |
 | `easyhaproxy.customErrors`         | Enable custom HTML error pages                      | `"true"`   |

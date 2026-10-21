@@ -16,15 +16,17 @@ sidebar_label: "Environment Variables"
 | EASYHAPROXY_LOG_LEVEL     | (Optional) The log level for EasyHAproxy messages. Available: TRACE,DEBUG,INFO,WARN,ERROR,FATAL                                                                                                | DEBUG              |
 | CERTBOT_LOG_LEVEL         | (Optional) The log level for Certbot messages. Available: TRACE,DEBUG,INFO,WARN,ERROR,FATAL                                                                                                    | DEBUG              |
 | HAPROXY_LOG_LEVEL         | (Optional) The log level for HAProxy messages. Available: TRACE,DEBUG,INFO,WARN,ERROR,FATAL                                                                                                    | INFO               |
+| HAPROXY_STATS_ENABLE      | (Optional) Serve the statistics endpoint and the monitoring dashboard. Set to `false` to turn them off.                                                                                       | `true`             |
 | HAPROXY_USERNAME          | (Optional) The HAProxy username for the statistics endpoint (used only when `HAPROXY_PASSWORD` is set).                                                                                        | `admin`            |
-| HAPROXY_PASSWORD          | (Optional) The HAProxy password to the statistics endpoint. Stats are **disabled** unless this is defined.                                                                                     | *empty*            |
-| HAPROXY_STATS_PORT        | (Optional) The HAProxy port to the statistics. If set to `false`, disable statistics. Only applies when `HAPROXY_PASSWORD` is defined.                                                         | `1936`             |
-| HAPROXY_STATS_CORS_ORIGIN | Required for the monitoring dashboard to function. Set to the origin you use to open the dashboard (e.g. `http://localhost:11936`). The dashboard page calls the stats API from a different port, so the browser enforces CORS — without this header the dashboard shows no data. Only applies when `HAPROXY_PASSWORD` is defined. | *empty*            |
+| HAPROXY_PASSWORD          | (Optional) The password for the statistics endpoint and dashboard. **Without it they are served without a login.**                                                                                     | *empty*            |
+| HAPROXY_STATS_PORT        | (Optional) The HAProxy port to the statistics. The dashboard uses this port + 10000. `false` also turns statistics off.                                                         | `1936`             |
+| HAPROXY_STATS_CORS_ORIGIN | Required for the monitoring dashboard to function. Set to the origin you use to open the dashboard (e.g. `http://localhost:11936`). The dashboard page calls the stats API from a different port, so the browser enforces CORS — without this header the dashboard shows no data. | *empty*            |
 | HAPROXY_CUSTOMERRORS      | (Optional) If HAProxy will use custom HTML errors. true/false.                                                                                                                                 | `false`            |
 
 :::tip HAProxy Stats & Dashboard
-Statistics are only configured when `HAPROXY_PASSWORD` is set. Without a password, neither the
-stats endpoint nor the monitoring dashboard is generated.
+Statistics and the monitoring dashboard are on by default. Without `HAPROXY_PASSWORD` they are served
+**without a login**, and EasyHAProxy logs a warning at startup. Set a password, or `HAPROXY_STATS_ENABLE=false`
+when the ports can be reached from outside.
 When enabled, the real-time dashboard is available at `http://<host>:<HAPROXY_STATS_PORT + 10000>/`
 (default `http://<host>:11936/`). See the [Monitoring Dashboard guide](../guides/dashboard.md) for details.
 :::

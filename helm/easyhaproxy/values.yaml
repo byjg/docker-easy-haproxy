@@ -79,6 +79,7 @@ affinity: {}
 
 easyhaproxy:
   stats:
+    enabled: true        # false: no stats page or dashboard, and ports 1936/11936 are not exposed
     username: admin
     password: password
     corsOrigin: ""

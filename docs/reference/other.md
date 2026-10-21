@@ -30,7 +30,7 @@ These headers help backend applications:
 Some ports on the EasyHAProxy container and in the firewall are required to be open. However, you don't need to expose the other container ports because EasyHAProxy will handle that.
 
 - The ports `80` and `443`.
-- If you enable the HAProxy statistics, you must also expose the port defined in `HAPROXY_STATS_PORT` environment variable (default 1936). Statistics are only generated when you set `HAPROXY_PASSWORD`.
+- If you enable the HAProxy statistics, you must also expose the port defined in `HAPROXY_STATS_PORT` environment variable (default 1936). Statistics are on by default (`HAPROXY_STATS_ENABLE=false` turns them off) and need `HAPROXY_PASSWORD` to require a login.
 - Every port defined in `easyhaproxy.[definitions].port` also should be exposed.
 
 For example:
