@@ -42,6 +42,28 @@ helm upgrade --install ingress byjg/easyhaproxy \
     --set service.type=ClusterIP
 ```
 
+```bash title="LoadBalancer (cloud providers)"
+helm upgrade --install ingress byjg/easyhaproxy \
+    --namespace easyhaproxy \
+    --set service.create=true \
+    --set service.type=LoadBalancer
+```
+
+On a cloud provider (DigitalOcean, AWS, GCP, Azure…), `LoadBalancer` asks the provider for an external load balancer in front of EasyHAProxy, and its address is written to your Ingress status. Use `service.annotations` for provider-specific load balancer settings.
+
+### 3) Persist ACME certificates
+
+If you use automatic certificates (`easyhaproxy.certbot` annotation), set the ACME e-mail and keep the issued certificates on a volume:
+
+```bash title="ACME with persisted certificates"
+helm upgrade --install ingress byjg/easyhaproxy \
+    --namespace easyhaproxy \
+    --set service.create=true \
+    --set service.type=LoadBalancer \
+    --set easyhaproxy.certbot.email=you@example.com \
+    --set persistence.certbot.enabled=true
+```
+
 See [Deployment Modes](../getting-started/kubernetes.md#deployment-modes) for a comparison of all three modes.
 
 For the complete list of configurable values, see the [Helm Values reference](../reference/helm.md).

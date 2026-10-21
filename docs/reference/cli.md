@@ -76,6 +76,7 @@ See the [plugins guide](../guides/plugins.md) for available plugins.
 | Flag                                       | Environment Variable                 | Default  | Description                                  |
 |--------------------------------------------|--------------------------------------|----------|----------------------------------------------|
 | `--update-ingress-status BOOL`             | `EASYHAPROXY_UPDATE_INGRESS_STATUS`  | `true`   | Update Ingress status with load-balancer IP  |
-| `--deployment-mode MODE`                   | `EASYHAPROXY_DEPLOYMENT_MODE`        | `auto`   | Deployment mode: `auto`, `single`, `cluster` |
+| `--deployment-mode MODE`                   | `EASYHAPROXY_DEPLOYMENT_MODE`        | `auto`   | Deployment mode: `auto`, `daemonset`, `nodeport`, `clusterip` |
 | `--external-hostname HOSTNAME`             | `EASYHAPROXY_EXTERNAL_HOSTNAME`      | *(none)* | External hostname reported in Ingress status |
+| `--service-name NAME`                      | `EASYHAPROXY_SERVICE_NAME`           | *(none)* | Name of the EasyHAProxy Service (set by the Helm chart) |
 | `--ingress-status-update-interval SECONDS` | `EASYHAPROXY_STATUS_UPDATE_INTERVAL` | `30`     | Interval to update Ingress status            |

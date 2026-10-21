@@ -251,7 +251,7 @@ class TestCloudflarePlugin:
             port="80",
             host_config={}
         )
-        result = plugin.process(context)
+        plugin.process(context)
 
         # Verify file was written with our IPs
         assert os.path.exists("/tmp/test_cloudflare_ips.lst")
@@ -335,7 +335,7 @@ class TestCloudflarePlugin:
             port="80",
             host_config={}
         )
-        result = plugin.process(context)
+        plugin.process(context)
 
         # Verify fallback to built-in IPs
         assert os.path.exists("/tmp/test_invalid.lst")

@@ -125,10 +125,12 @@ def _build_parser() -> argparse.ArgumentParser:
                         choices=["true", "false"],
                         help="Update Kubernetes Ingress status with load-balancer IP. Also set by EASYHAPROXY_UPDATE_INGRESS_STATUS.")
     parser.add_argument("--deployment-mode", metavar="MODE",
-                        choices=["auto", "single", "cluster"],
+                        choices=["auto", "daemonset", "nodeport", "clusterip"],
                         help="Kubernetes deployment mode. Also set by EASYHAPROXY_DEPLOYMENT_MODE.")
     parser.add_argument("--external-hostname", metavar="HOSTNAME",
                         help="External hostname reported in Ingress status. Also set by EASYHAPROXY_EXTERNAL_HOSTNAME.")
+    parser.add_argument("--service-name", metavar="NAME",
+                        help="Name of the EasyHAProxy Service in its namespace. Also set by EASYHAPROXY_SERVICE_NAME.")
     parser.add_argument("--ingress-status-update-interval", metavar="SECONDS", type=int,
                         help="Interval in seconds to update Ingress status. Also set by EASYHAPROXY_STATUS_UPDATE_INTERVAL.")
 
@@ -164,6 +166,7 @@ def _apply_args_to_env(args: argparse.Namespace) -> None:
         "update_ingress_status":           "EASYHAPROXY_UPDATE_INGRESS_STATUS",
         "deployment_mode":                 "EASYHAPROXY_DEPLOYMENT_MODE",
         "external_hostname":               "EASYHAPROXY_EXTERNAL_HOSTNAME",
+        "service_name":                    "EASYHAPROXY_SERVICE_NAME",
         "ingress_status_update_interval":  "EASYHAPROXY_STATUS_UPDATE_INTERVAL",
     }
     for arg_name, env_name in mapping.items():

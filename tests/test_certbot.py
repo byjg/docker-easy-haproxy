@@ -699,7 +699,7 @@ class TestCertbotFindMissingCertificates:
 
             with patch.object(certbot, 'get_certificate_status', return_value='not_found'):
                 with patch.object(certbot, 'find_live_certificates'):
-                    result = certbot.check_certificates(['frozen.com', 'normal.com'])
+                    certbot.check_certificates(['frozen.com', 'normal.com'])
 
             # Should only request certificate for normal.com
             call_args = mock_run_bash.call_args[0]
