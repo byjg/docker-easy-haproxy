@@ -339,7 +339,7 @@ class TestKubernetesSecretPattern:
         mock_networking_api.list_ingress_for_all_namespaces.return_value = Mock(items=[ingress])
 
         # Create processor with mocked API clients
-        processor = Kubernetes(api_instance=mock_core_api, v1=mock_networking_api)
+        Kubernetes(api_instance=mock_core_api, v1=mock_networking_api)
 
         # Verify secret was read from correct namespace
         mock_core_api.read_namespaced_secret.assert_called_once_with("my-secret", "production")
@@ -359,7 +359,7 @@ class TestKubernetesSecretPattern:
         mock_networking_api.list_ingress_for_all_namespaces.return_value = Mock(items=[ingress])
 
         # Create processor with mocked API clients
-        processor = Kubernetes(api_instance=mock_core_api, v1=mock_networking_api)
+        Kubernetes(api_instance=mock_core_api, v1=mock_networking_api)
 
         # Should not raise exception
 
