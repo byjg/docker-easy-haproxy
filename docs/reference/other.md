@@ -74,8 +74,13 @@ docker run \
 
 ## Setting Custom Errors
 
-If enabled, map the volume : `/etc/easyhaproxy/haproxy/errors-custom/` to your container and put a file named `ERROR_NUMBER.http`
-where ERROR_NUMBER is the HTTP error code (e.g., `503.http`)
+HAProxy answers some requests itself: `404` for a host no service is configured for, `503` when every server of a service is
+down, `502`/`504` when a backend fails or times out, and `400`/`403`/`408`/`500`. EasyHAProxy ships a page for each, on by
+default; `HAPROXY_CUSTOMERRORS=false` goes back to HAProxy's built-in ones.
+
+To use your own, map the volume `/etc/easyhaproxy/haproxy/errors-custom/` to your container and put a file named
+`ERROR_NUMBER.http` (e.g., `503.http`). Each file is a complete HTTP response, status line and headers included, and must
+stay under HAProxy's buffer size (16 KB by default).
 
 ----
 [Open source ByJG](http://opensource.byjg.com)

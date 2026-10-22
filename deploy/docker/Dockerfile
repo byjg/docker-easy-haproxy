@@ -14,11 +14,13 @@ WORKDIR /scripts
 COPY pyproject.toml uv.lock LICENSE README.md ./
 COPY src/ ./src/
 COPY tests/ ./tests/
+# tests/test_pages.py checks the pages in the image match their templates
+COPY deploy/docker/assets/ ./deploy/docker/assets/
 
 RUN uv sync --frozen
 RUN uv run pytest -s -vv tests/
 RUN uv sync --no-dev
-RUN rm -rf tests/
+RUN rm -rf tests/ deploy/
 
 # ==============================================================================
 # Stage 2: Lean runtime image

@@ -22,3 +22,5 @@
     use_backend srv_{{ host }} if is_rule_{{ host }}
     {% endif %}
     {% endfor %}
+    default_backend no_route
+

@@ -5,7 +5,7 @@ from functions import ContainerEnv, Functions
 
 def test_container_env_empty():
     assert {
-               "customerrors": False,
+               "customerrors": True,
                "ssl_mode": "default",
                "lookup_label": "easyhaproxy",
                "stats": {
@@ -41,6 +41,12 @@ def test_container_env_empty():
            } == ContainerEnv.read()
 
     # os.environ['CERTBOT_LOG_LEVEL'] = 'warn'
+
+
+def test_container_env_customerrors_off():
+    """Custom error pages are on unless turned off"""
+    os.environ['HAPROXY_CUSTOMERRORS'] = 'false'
+    assert ContainerEnv.read()["customerrors"] is False
 
 
 def test_container_env_customerrors():
@@ -89,7 +95,7 @@ def test_container_env_sslmode():
     os.environ['EASYHAPROXY_SSL_MODE'] = 'STRICT'
     try:
         assert {
-                   "customerrors": False,
+                   "customerrors": True,
                    "ssl_mode": "strict",
                    "lookup_label": "easyhaproxy",
                    "stats": {
@@ -132,7 +138,7 @@ def test_container_env_stats():
     os.environ['HAPROXY_STATS_PORT'] = '2101'
     try:
         assert {
-                   "customerrors": False,
+                   "customerrors": True,
                    "ssl_mode": "default",
                    "lookup_label": "easyhaproxy",
                    "stats": {
@@ -175,7 +181,7 @@ def test_container_env_stats_password():
     os.environ['HAPROXY_PASSWORD'] = 'xyz'
     try:
         assert {
-                   "customerrors": False,
+                   "customerrors": True,
                    "ssl_mode": "default",
                    "lookup_label": "easyhaproxy",
                    "stats": {
@@ -219,7 +225,7 @@ def test_container_env_stats_password_2():
     os.environ['HAPROXY_PASSWORD'] = 'xyz'
     try:
         assert {
-                   "customerrors": False,
+                   "customerrors": True,
                    "ssl_mode": "default",
                    "lookup_label": "easyhaproxy",
                    "stats": {
@@ -263,7 +269,7 @@ def test_container_env_certbot_email():
     os.environ['EASYHAPROXY_CERTBOT_EMAIL'] = 'acme@example.org'
     try:
         assert {
-                   "customerrors": False,
+                   "customerrors": True,
                    "ssl_mode": "default",
                    "lookup_label": "easyhaproxy",
                    "stats": {
@@ -313,7 +319,7 @@ def test_container_env_certbot_full():
     os.environ['EASYHAPROXY_CERTBOT_MANUAL_AUTH_HOOK'] = "something_manual_auth_hook"
     try:
         assert {
-            "customerrors": False,
+            "customerrors": True,
             "ssl_mode": "default",
             "lookup_label": "easyhaproxy",
             "stats": {
@@ -365,7 +371,7 @@ def test_container_log_level():
     os.environ['HAPROXY_LOG_LEVEL'] = Functions.FATAL
     try:
         assert {
-           "customerrors": False,
+           "customerrors": True,
            "ssl_mode": "default",
            "lookup_label": "easyhaproxy",
            "stats": {

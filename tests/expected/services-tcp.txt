@@ -41,3 +41,9 @@ backend srv_agent_quantum_local_31339
 backend certbot_backend
     mode http
     server certbot 127.0.0.1:2080
+
+# A host no service is configured for: 404, not the 503 HAProxy gives a request
+# with no backend. 503 stays for a service whose servers are all down.
+backend no_route
+    mode http
+    http-request deny deny_status 404

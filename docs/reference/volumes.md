@@ -28,6 +28,7 @@ All EasyHAProxy files are organized under `/etc/easyhaproxy/`. This can be custo
 │   └── errors-custom/                  # 📦 Base image
 │       ├── 400.http                    # Bad Request
 │       ├── 403.http                    # Forbidden
+│       ├── 404.http                    # Not Found (a host no service is configured for)
 │       ├── 408.http                    # Request Timeout
 │       ├── 500.http                    # Internal Server Error
 │       ├── 502.http                    # Bad Gateway
@@ -186,7 +187,7 @@ Cloudflare IP ranges for the [Cloudflare plugin](plugins/cloudflare.md) to resto
 /etc/easyhaproxy/haproxy/errors-custom/{code}.http
 ```
 
-Custom HTTP error pages (400, 403, 408, 500, 502, 503, 504). Default error pages are included in the base image.
+Custom HTTP error pages (400, 403, 404, 408, 500, 502, 503, 504), on by default (`HAPROXY_CUSTOMERRORS=false` turns them off). Default error pages are included in the base image; they load nothing from elsewhere and do not name EasyHAProxy.
 
 :::tip Customize Error Pages
 ```bash

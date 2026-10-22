@@ -23,6 +23,7 @@ defaults
     timeout server    10m
     errorfile 400 /etc/easyhaproxy/haproxy/errors-custom/400.http
     errorfile 403 /etc/easyhaproxy/haproxy/errors-custom/403.http
+    errorfile 404 /etc/easyhaproxy/haproxy/errors-custom/404.http
     errorfile 408 /etc/easyhaproxy/haproxy/errors-custom/408.http
     errorfile 500 /etc/easyhaproxy/haproxy/errors-custom/500.http
     errorfile 502 /etc/easyhaproxy/haproxy/errors-custom/502.http
@@ -66,6 +67,7 @@ frontend http_in_443
     # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
     acl is_rule_host1_com_br_443 req.hdr(host),host_only -i host1.com.br
     use_backend srv_host1_com_br_443 if is_rule_host1_com_br_443
+    default_backend no_route
 
 backend srv_host1_com_br_443
     balance roundrobin
@@ -91,6 +93,7 @@ frontend http_in_80
     # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
     acl is_rule_host2_com_br_80 req.hdr(host),host_only -i host2.com.br
     use_backend srv_host2_com_br_80 if is_rule_host2_com_br_80
+    default_backend no_route
 
 backend srv_host1_com_br_80
     balance roundrobin
@@ -118,6 +121,7 @@ frontend http_in_8080
     # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
     acl is_rule_host3_com_br_8080 req.hdr(host),host_only -i host3.com.br
     use_backend srv_host3_com_br_8080 if is_rule_host3_com_br_8080
+    default_backend no_route
 
 backend srv_host3_com_br_8080
     balance roundrobin
@@ -132,3 +136,9 @@ backend srv_host3_com_br_8080
 backend certbot_backend
     mode http
     server certbot 127.0.0.1:2080
+
+# A host no service is configured for: 404, not the 503 HAProxy gives a request
+# with no backend. 503 stays for a service whose servers are all down.
+backend no_route
+    mode http
+    http-request deny deny_status 404

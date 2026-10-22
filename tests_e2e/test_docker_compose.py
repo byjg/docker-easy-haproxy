@@ -1098,8 +1098,8 @@ class TestHostRouting:
         assert service_name(19910, "host2.local:19910") == "web-80"
 
     def test_unknown_host(self, docker_compose_host_routing):
-        """A host no service is labeled for gets a 503"""
-        assert service_name(19910, "unknown.local:19910") == "503"
+        """A host no service is labeled for gets a 404 (503 is for a service that is down)"""
+        assert service_name(19910, "unknown.local:19910") == "404"
 
 
 # =============================================================================

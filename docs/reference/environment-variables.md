@@ -21,7 +21,7 @@ sidebar_label: "Environment Variables"
 | HAPROXY_PASSWORD          | (Optional) The password for the statistics endpoint and dashboard. **Without it they are served without a login.**                                                                                     | *empty*            |
 | HAPROXY_STATS_PORT        | (Optional) The HAProxy port to the statistics. The dashboard uses this port + 10000. `false` also turns statistics off.                                                         | `1936`             |
 | HAPROXY_STATS_CORS_ORIGIN | Required for the monitoring dashboard to function. Set to the origin you use to open the dashboard (e.g. `http://localhost:11936`). The dashboard page calls the stats API from a different port, so the browser enforces CORS — without this header the dashboard shows no data. | *empty*            |
-| HAPROXY_CUSTOMERRORS      | (Optional) If HAProxy will use custom HTML errors. true/false.                                                                                                                                 | `false`            |
+| HAPROXY_CUSTOMERRORS      | (Optional) If HAProxy will use custom HTML errors. true/false.                                                                                                                                 | `true`             |
 
 :::tip HAProxy Stats & Dashboard
 Statistics and the monitoring dashboard are on by default. Without `HAPROXY_PASSWORD` they are served

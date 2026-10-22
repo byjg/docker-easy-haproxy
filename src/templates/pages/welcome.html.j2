@@ -1,0 +1,37 @@
+{# The page answering every request until the first service is configured. #}
+{% extends "base.html.j2" %}
+{% block content %}
+<header>
+<img alt="EasyHAProxy" src="data:image/png;base64,{{ logo }}">
+<div>
+<h1>EasyHAProxy is running</h1>
+<p class="lead">No service is configured yet. This page goes away as soon as the first one is.</p>
+</div>
+</header>
+<section>
+<h2>Kubernetes</h2>
+Create an Ingress with <code>ingressClassName: easyhaproxy</code>.
+<a href="https://opensource.byjg.com/docs/devops/docker-easy-haproxy/getting-started/kubernetes">Kubernetes guide</a>
+</section>
+<section>
+<h2>Docker and Docker Swarm</h2>
+Add <code>easyhaproxy.*</code> labels to a container or service.
+<a href="https://opensource.byjg.com/docs/devops/docker-easy-haproxy/getting-started/docker">Docker guide</a> &middot;
+<a href="https://opensource.byjg.com/docs/devops/docker-easy-haproxy/getting-started/swarm">Swarm guide</a>
+</section>
+<section>
+<h2>Static</h2>
+Describe the services in a YAML file.
+<a href="https://opensource.byjg.com/docs/devops/docker-easy-haproxy/getting-started/static">Static guide</a>
+</section>
+<section>
+<h2>HTTPS</h2>
+Use your own certificates or get them from Let's Encrypt.
+<a href="https://opensource.byjg.com/docs/devops/docker-easy-haproxy/guides/ssl">SSL guide</a> &middot;
+<a href="https://opensource.byjg.com/docs/devops/docker-easy-haproxy/guides/acme">ACME guide</a>
+</section>
+<footer>
+All labels and annotations: <a href="https://opensource.byjg.com/docs/devops/docker-easy-haproxy/reference/container-labels">reference</a>.
+Full documentation: <a href="https://opensource.byjg.com/docs/devops/docker-easy-haproxy/">opensource.byjg.com</a>.
+</footer>
+{% endblock %}

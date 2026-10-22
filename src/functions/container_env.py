@@ -23,7 +23,8 @@ class ContainerEnv:
             ContainerEnv._yaml_to_env(yaml_config)
 
         env_vars = {
-            "customerrors": True if os.getenv("HAPROXY_CUSTOMERRORS") == "true" else False,
+            # On unless turned off: HAProxy's built-in pages are bare text.
+            "customerrors": os.getenv("HAPROXY_CUSTOMERRORS", "true").lower() != "false",
             "ssl_mode": os.getenv("EASYHAPROXY_SSL_MODE").lower() if os.getenv("EASYHAPROXY_SSL_MODE") else 'default'
         }
 

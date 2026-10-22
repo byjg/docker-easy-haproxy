@@ -67,7 +67,8 @@ EasyHAProxy picks the service for a request in two steps:
 | port 443                          | `example.org`          | `example.org` on port 443 (HTTPS)                     |
 | port 80                           | `example.org:8080`     | `example.org` on port 80, never the port 8080 service |
 | port 80                           | `other.org`            | `other.org` on port 80                                |
-| port 80                           | a host with no service | `503 Service Unavailable`                             |
+| port 80                           | a host with no service | `404 Not Found`                                       |
+| port 80                           | `example.org`, all its servers down | `503 Service Unavailable`                |
 
 This means:
 
