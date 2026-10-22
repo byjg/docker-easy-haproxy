@@ -27,7 +27,8 @@ from typing import Generator
 import urllib.request
 import pytest
 import requests
-from utils import generate_jwt_token, wait_for_pods_ready, create_tls_secret_from_pem, extract_backend_block
+from utils import generate_jwt_token, wait_for_pods_ready, create_tls_secret_from_pem, extract_backend_block, \
+    echo_header, echo_client_ip
 
 # Import JWT libraries for token generation
 try:
@@ -666,29 +667,9 @@ def k8s_jwt_validator_secret(kind_cluster) -> Generator[dict, None, None]:
 
 
 @pytest.fixture(scope="class")
-def k8s_cloudflare(kind_cluster, kind_cmd) -> Generator[str, None, None]:
+def k8s_cloudflare(kind_cluster) -> Generator[str, None, None]:
     """Fixture for cloudflare.yml with base64-encoded IP list"""
     kubectl_cmd = kind_cluster["kubectl"]
-    cluster_name = kind_cluster["name"]
-
-    # Build header-echo server image locally
-    header_echo_dir = BASE_DIR / "fixtures" / "header-echo"
-    print()  # Newline for better test output formatting
-    print("  → Building header-echo-server:test image...")
-    subprocess.run(
-        ["docker", "build", "-t", "header-echo-server:test", str(header_echo_dir)],
-        check=True,
-        capture_output=True
-    )
-
-    # Load image into kind cluster
-    print("  → Loading header-echo-server:test into kind cluster...")
-    subprocess.run(
-        [kind_cmd, "load", "docker-image", "header-echo-server:test",
-         "--name", cluster_name],
-        check=True,
-        capture_output=True
-    )
 
     # Create a modified cloudflare manifest with base64-encoded test IPs
     # Include 127.0.0.1 and Docker/kind network ranges so test requests work
@@ -1670,7 +1651,7 @@ class TestCloudflare:
             "CF-Connecting-IP header extraction not found in myapp backend"
 
         # Verify X-Forwarded-For header update is in this backend
-        assert "http-request set-header X-Forwarded-For %[var(txn.real_ip)] if from_cloudflare" in backend_block, \
+        assert "http-request set-header X-Forwarded-For %[var(txn.real_ip)] if { var(txn.real_ip) -m found }" in backend_block, \
             "X-Forwarded-For header update not found in myapp backend"
 
     def test_cloudflare_ip_file_contains_custom_ips(self, k8s_cloudflare):
@@ -1726,8 +1707,7 @@ class TestCloudflare:
 
         # Verify JSON structure
         assert "headers" in data, "Response should contain 'headers' field"
-        assert "client_ip" in data, "Response should contain 'client_ip' field"
-        assert "x_forwarded_for" in data, "Response should contain 'x_forwarded_for' field"
+        assert "remote_addr" in data, "Response should contain 'remote_addr' field"
 
     def test_cloudflare_ip_translation_works(self, k8s_cloudflare):
         """Test that Cloudflare plugin actually translates CF-Connecting-IP to X-Forwarded-For"""
@@ -1747,12 +1727,14 @@ class TestCloudflare:
 
         # VERIFY: X-Forwarded-For was set to the CF-Connecting-IP value
         # This proves the Cloudflare plugin actually works, not just that config exists
-        assert data['x_forwarded_for'] == test_ip, \
-            f"Expected X-Forwarded-For to be '{test_ip}' (from CF-Connecting-IP), " \
-            f"got '{data['x_forwarded_for']}'. Cloudflare IP translation NOT working!"
+        # "option forwardfor" appends the Cloudflare IP the request came from
+        x_forwarded_for = [ip.strip() for ip in echo_header(data, 'X-Forwarded-For').split(',')]
+        assert x_forwarded_for[0] == test_ip and len(x_forwarded_for) == 2, \
+            f"Expected X-Forwarded-For to be '{test_ip}, <Cloudflare IP>' (from CF-Connecting-IP), " \
+            f"got '{echo_header(data, 'X-Forwarded-For')}'. Cloudflare IP translation NOT working!"
 
         # Verify client_ip is still the HAProxy/ingress IP (connection doesn't change)
-        assert data['client_ip'] != test_ip, \
+        assert echo_client_ip(data) != test_ip, \
             f"client_ip should be HAProxy pod IP, not the translated IP"
 
 

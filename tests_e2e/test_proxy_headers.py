@@ -30,7 +30,7 @@ from pathlib import Path
 from typing import Generator
 import pytest
 import requests
-from utils import DockerComposeFixture
+from utils import DockerComposeFixture, echo_header
 
 BASE_DIR = Path(__file__).parent.absolute()
 DOCKER_DIR = BASE_DIR / "docker"
@@ -38,7 +38,7 @@ DOCKER_DIR = BASE_DIR / "docker"
 
 @pytest.fixture(scope="class")
 def docker_compose_proxy_headers() -> Generator[None, None, None]:
-    """Fixture for testing proxy headers with header-echo server"""
+    """Fixture for testing proxy headers with the static-httpserver echo backend"""
     fixture = DockerComposeFixture(str(DOCKER_DIR / "docker-compose-proxy-headers.yml"))
     fixture.up()
     yield
@@ -101,37 +101,30 @@ class TestProxyHeaders:
 
         data = response.json()
 
-        # Verify all headers are present and not "NOT SET"
-        assert 'x_forwarded_for' in data, "Missing x_forwarded_for in response"
-        assert 'x_forwarded_port' in data, "Missing x_forwarded_port in response"
-        assert 'x_forwarded_proto' in data, "Missing x_forwarded_proto in response"
-        assert 'x_forwarded_host' in data, "Missing x_forwarded_host in response"
-        assert 'x_request_id' in data, "Missing x_request_id in response"
-
         # Verify X-Forwarded-For is set (should contain the client IP)
-        assert data['x_forwarded_for'] != 'NOT SET', \
+        assert echo_header(data, 'X-Forwarded-For'), \
             "X-Forwarded-For should be set by HAProxy"
 
         # Verify header values are correct
-        assert data['x_forwarded_port'] == '80', \
-            f"Expected X-Forwarded-Port to be '80', got '{data['x_forwarded_port']}'"
+        assert echo_header(data, 'X-Forwarded-Port') == '80', \
+            f"Expected X-Forwarded-Port to be '80', got '{echo_header(data, 'X-Forwarded-Port')}'"
 
         # Note: X-Forwarded-Proto is only added when ssl_fc is true (HTTPS requests)
-        # For HTTP requests, it may be NOT SET or empty
+        # For HTTP requests, it may be missing or empty
         # This is correct behavior - the header indicates SSL was used
-        assert data['x_forwarded_proto'] in ['NOT SET', '', 'http'], \
-            f"X-Forwarded-Proto should be NOT SET or empty for HTTP requests, got '{data['x_forwarded_proto']}'"
+        assert echo_header(data, 'X-Forwarded-Proto') in [None, '', 'http'], \
+            f"X-Forwarded-Proto should be missing or empty for HTTP requests, got '{echo_header(data, 'X-Forwarded-Proto')}'"
 
-        assert data['x_forwarded_host'] == 'test.local', \
-            f"Expected X-Forwarded-Host to be 'test.local', got '{data['x_forwarded_host']}'"
+        assert echo_header(data, 'X-Forwarded-Host') == 'test.local', \
+            f"Expected X-Forwarded-Host to be 'test.local', got '{echo_header(data, 'X-Forwarded-Host')}'"
 
-        assert data['x_request_id'] != 'NOT SET', \
-            "X-Request-ID should not be 'NOT SET'"
+        assert echo_header(data, 'X-Request-ID'), \
+            "X-Request-ID should be set by HAProxy"
 
         # Verify X-Request-ID is a valid UUID format
         uuid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-        assert re.match(uuid_pattern, data['x_request_id'], re.IGNORECASE), \
-            f"X-Request-ID '{data['x_request_id']}' is not a valid UUID format"
+        assert re.match(uuid_pattern, echo_header(data, 'X-Request-ID'), re.IGNORECASE), \
+            f"X-Request-ID '{echo_header(data, 'X-Request-ID')}' is not a valid UUID format"
 
     def test_x_request_id_uniqueness(self, docker_compose_proxy_headers):
         """Test that X-Request-ID is unique for each request"""
@@ -146,7 +139,7 @@ class TestProxyHeaders:
             assert response.status_code == 200
 
             data = response.json()
-            request_id = data['x_request_id']
+            request_id = echo_header(data, 'X-Request-ID')
 
             # Verify it's a valid UUID
             uuid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
@@ -175,10 +168,10 @@ class TestProxyHeaders:
         assert response.status_code == 200
 
         data = response.json()
-        # For HTTP without SSL termination, X-Forwarded-Proto is NOT SET
+        # For HTTP without SSL termination, X-Forwarded-Proto is not sent
         # This is correct - the header only indicates when SSL was used
-        assert data['x_forwarded_proto'] in ['NOT SET', ''], \
-            f"HTTP request without SSL should have X-Forwarded-Proto NOT SET or empty, got '{data['x_forwarded_proto']}'"
+        assert echo_header(data, 'X-Forwarded-Proto') in [None, ''], \
+            f"HTTP request without SSL should have no X-Forwarded-Proto, got '{echo_header(data, 'X-Forwarded-Proto')}'"
 
     def test_haproxy_logs_contain_unique_id(self, docker_compose_proxy_headers):
         """Test that HAProxy access logs contain the unique-id (X-Edge-Request-ID)"""
@@ -190,7 +183,7 @@ class TestProxyHeaders:
         assert response.status_code == 200
 
         data = response.json()
-        request_id = data['x_request_id']
+        request_id = echo_header(data, 'X-Request-ID')
 
         # Wait a moment for logs to be written
         time.sleep(0.5)
@@ -246,8 +239,8 @@ class TestProxyHeaders:
         assert response.status_code == 200
 
         data = response.json()
-        assert data['x_forwarded_host'] == host, \
-            f"Expected X-Forwarded-Host to be '{host}', got '{data['x_forwarded_host']}'"
+        assert echo_header(data, 'X-Forwarded-Host') == host, \
+            f"Expected X-Forwarded-Host to be '{host}', got '{echo_header(data, 'X-Forwarded-Host')}'"
 
     def test_x_forwarded_port_reflects_destination_port(self, docker_compose_proxy_headers):
         """Test X-Forwarded-Port reflects the port HAProxy received the request on"""
@@ -259,8 +252,8 @@ class TestProxyHeaders:
         assert response.status_code == 200
 
         data = response.json()
-        assert data['x_forwarded_port'] == '80', \
-            f"Expected X-Forwarded-Port to be '80', got '{data['x_forwarded_port']}'"
+        assert echo_header(data, 'X-Forwarded-Port') == '80', \
+            f"Expected X-Forwarded-Port to be '80', got '{echo_header(data, 'X-Forwarded-Port')}'"
 
         # Note: Testing other ports would require exposing them in docker-compose
         # Our current setup only exposes port 80

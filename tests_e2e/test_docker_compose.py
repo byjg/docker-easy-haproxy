@@ -33,7 +33,7 @@ import pytest
 import requests
 import jwt as jwt_lib
 from typing import Generator
-from utils import extract_backend_block, DockerComposeFixture
+from utils import extract_backend_block, DockerComposeFixture, echo_header, echo_client_ip
 
 # Base directory for docker-compose files
 BASE_DIR = Path(__file__).parent.absolute()
@@ -661,15 +661,15 @@ class TestCloudflare:
         assert "http-request set-var(txn.real_ip) req.hdr(CF-Connecting-IP) if from_cloudflare" in backend_block
 
         # Verify X-Forwarded-For header restoration with transaction variable
-        assert "http-request set-header X-Forwarded-For %[var(txn.real_ip)] if from_cloudflare" in backend_block
+        assert "http-request set-header X-Forwarded-For %[var(txn.real_ip)] if { var(txn.real_ip) -m found }" in backend_block
 
     def test_normal_request(self, docker_compose_cloudflare):
         """
         Test normal request without CF-Connecting-IP header
 
         When a request comes from a Cloudflare IP (Docker network is in cloudflare_ips.lst)
-        but has NO CF-Connecting-IP header, the X-Forwarded-For will be empty because
-        HAProxy tries to extract from a non-existent header. This is expected behavior.
+        but has NO CF-Connecting-IP header, the plugin leaves X-Forwarded-For alone and the
+        backend only gets the connection IP that "option forwardfor" adds.
         """
         response = requests.get(
             "http://127.0.0.1/",
@@ -677,17 +677,15 @@ class TestCloudflare:
         )
         assert response.status_code == 200
         data = response.json()
-        assert 'headers' in data
-        assert 'x_forwarded_for' in data
 
-        # Verify X-Forwarded-For is empty (not a translated IP)
+        # Verify X-Forwarded-For is only the connection IP, without an empty entry before it
         # Request comes from "Cloudflare IP" (Docker network) but has no CF-Connecting-IP
-        x_forwarded_for = data['x_forwarded_for']
-        assert x_forwarded_for == '', \
-            f"Expected X-Forwarded-For to be empty (no CF-Connecting-IP provided), got '{x_forwarded_for}'"
+        x_forwarded_for = echo_header(data, 'X-Forwarded-For')
+        assert x_forwarded_for and ',' not in x_forwarded_for and x_forwarded_for.startswith('172.'), \
+            f"Expected X-Forwarded-For to be the connection IP only (no CF-Connecting-IP provided), got '{x_forwarded_for}'"
 
         # Verify client_ip is the HAProxy container IP (backend sees connection from HAProxy)
-        client_ip = data['client_ip']
+        client_ip = echo_client_ip(data)
         assert client_ip.startswith('172.'), \
             f"Expected client_ip to be HAProxy container IP (172.x.x.x), got '{client_ip}'"
 
@@ -711,16 +709,18 @@ class TestCloudflare:
         )
         assert response.status_code == 200
 
-        # Parse JSON response from header-echo server
+        # Parse JSON response from the echo backend
         data = response.json()
 
-        # VERIFY: X-Forwarded-For was set to the CF-Connecting-IP value
-        assert data['x_forwarded_for'] == test_ip, \
-            f"Expected X-Forwarded-For to be '{test_ip}', got '{data['x_forwarded_for']}'. " \
+        # VERIFY: X-Forwarded-For starts with the CF-Connecting-IP value, followed by the
+        # Cloudflare IP the request came from (appended by "option forwardfor")
+        x_forwarded_for = [ip.strip() for ip in echo_header(data, 'X-Forwarded-For').split(',')]
+        assert x_forwarded_for[0] == test_ip and len(x_forwarded_for) == 2, \
+            f"Expected X-Forwarded-For to be '{test_ip}, <Cloudflare IP>', got '{echo_header(data, 'X-Forwarded-For')}'. " \
             f"Cloudflare IP translation is NOT working!"
 
         # Verify client_ip is still the HAProxy container IP (connection doesn't change)
-        client_ip = data['client_ip']
+        client_ip = echo_client_ip(data)
         assert client_ip.startswith('172.'), \
             f"Expected client_ip to be HAProxy container IP (172.x.x.x), got '{client_ip}'"
 

@@ -94,8 +94,10 @@ spec:
     spec:
       containers:
       - name: webapp
-        image: header-echo-server:test
-        imagePullPolicy: Never
+        image: byjg/static-httpserver:0.6.0
+        env:
+        - name: ECHO_MODE
+          value: "true"
         ports:
         - containerPort: 8080
         resources:

@@ -132,12 +132,15 @@ Backend section:
 ```haproxy
 # Cloudflare - Restore original visitor IP
 acl from_cloudflare src -f /etc/easyhaproxy/cloudflare_ips.lst
-http-request set-var(txn.real_ip) req.hdr(CF-Connecting-IP) if from_cloudflare
-http-request set-header X-Forwarded-For %[var(txn.real_ip)] if from_cloudflare
+http-request set-var(txn.real_ip) req.hdr(CF-Connecting-IP) if from_cloudflare { req.hdr(CF-Connecting-IP) -m len gt 0 }
+http-request set-header X-Forwarded-For %[var(txn.real_ip)] if { var(txn.real_ip) -m found }
 ```
 
 With `option forwardfor`, HAProxy also appends the connection IP, so the backend receives
 `X-Forwarded-For: <visitor_ip>, <connection_ip>`. Use the first value, or read the `CF-Connecting-IP` header directly.
+
+A request without a `CF-Connecting-IP` header, or with an empty one, keeps its `X-Forwarded-For`, and the backend
+receives `X-Forwarded-For: <connection_ip>`.
 
 ## Log Format
 
@@ -151,7 +154,7 @@ The line starts with `real_ip/connection_ip:port`, replacing the `client_ip:port
 
 | Field           | Example       | Description                                                                                       |
 |-----------------|---------------|---------------------------------------------------------------------------------------------------|
-| `real_ip`       | `203.0.113.7` | Visitor IP from `CF-Connecting-IP`. `-` if not from a trusted IP, or the domain doesn't use the plugin |
+| `real_ip`       | `203.0.113.7` | Visitor IP from `CF-Connecting-IP`. `-` if not from a trusted IP, without that header, or the domain doesn't use the plugin |
 | `connection_ip` | `10.42.0.1`   | IP connected to HAProxy: a Cloudflare edge IP, or `cloudflared` when using a [tunnel](#cloudflare-tunnel) |
 | `port`          | `50126`       | Source port of that connection                                                                    |
 
