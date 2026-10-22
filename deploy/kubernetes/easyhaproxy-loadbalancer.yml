@@ -1,0 +1,233 @@
+---
+# Source: easyhaproxy/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ingress-easyhaproxy
+  namespace: easyhaproxy
+  labels:
+    helm.sh/chart: easyhaproxy-2.0.7
+    app.kubernetes.io/name: easyhaproxy
+    app.kubernetes.io/instance: ingress
+    app.kubernetes.io/version: "6.4.0"
+    app.kubernetes.io/managed-by: Helm
+
+---
+# Source: easyhaproxy/templates/clusterrole.yaml
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ingress-easyhaproxy
+  namespace: easyhaproxy
+  labels:
+    helm.sh/chart: easyhaproxy-2.0.7
+    app.kubernetes.io/name: easyhaproxy
+    app.kubernetes.io/instance: ingress
+    app.kubernetes.io/version: "6.4.0"
+    app.kubernetes.io/managed-by: Helm
+rules:
+- apiGroups:
+  - ""
+  resources:
+  # - configmaps
+  # - endpoints
+  - nodes
+  - pods
+  - services
+  - namespaces
+  # - events
+  - serviceaccounts
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - "networking.k8s.io"
+  resources:
+  - ingresses
+  - ingresses/status
+  - ingressclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - "networking.k8s.io"
+  resources:
+  - ingresses/status
+  verbs:
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  # - watch
+  # - create
+  # - patch
+  # - update
+# - apiGroups:
+#   - "discovery.k8s.io"
+#   resources:
+#   - endpointslices
+#   verbs:
+#   - get
+#   - list
+#   - watch
+---
+# Source: easyhaproxy/templates/clusterrolebinding.yaml
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ingress-easyhaproxy
+  namespace: easyhaproxy
+  labels:
+    helm.sh/chart: easyhaproxy-2.0.7
+    app.kubernetes.io/name: easyhaproxy
+    app.kubernetes.io/instance: ingress
+    app.kubernetes.io/version: "6.4.0"
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ingress-easyhaproxy
+subjects:
+- kind: ServiceAccount
+  name: ingress-easyhaproxy
+  namespace: easyhaproxy
+
+---
+# Source: easyhaproxy/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingress-easyhaproxy
+  namespace: easyhaproxy
+  labels:
+    helm.sh/chart: easyhaproxy-2.0.7
+    app.kubernetes.io/name: easyhaproxy
+    app.kubernetes.io/instance: ingress
+    app.kubernetes.io/version: "6.4.0"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    {}
+spec:
+  type: LoadBalancer
+  ports:
+    - name: http
+      port: 80
+      
+    - name: https
+      port: 443
+      
+    - name: stats
+      port: 1936
+      
+    - name: dashboard
+      port: 11936
+      
+
+
+  selector:
+    app.kubernetes.io/name: easyhaproxy
+    app.kubernetes.io/instance: ingress
+
+---
+# Source: easyhaproxy/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingress-easyhaproxy
+  namespace: easyhaproxy
+  labels:
+    helm.sh/chart: easyhaproxy-2.0.7
+    app.kubernetes.io/name: easyhaproxy
+    app.kubernetes.io/instance: ingress
+    app.kubernetes.io/version: "6.4.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: easyhaproxy
+      app.kubernetes.io/instance: ingress
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: easyhaproxy
+        app.kubernetes.io/instance: ingress
+    spec:
+      serviceAccountName: ingress-easyhaproxy
+      securityContext:
+        {}
+      containers:
+        - name: easyhaproxy
+          securityContext:
+            {}
+          image: "byjg/easy-haproxy:6.4.0"
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 80
+              
+            - name: https
+              containerPort: 443
+              
+            - name: stats
+              containerPort: 1936
+              
+            - name: dashboard
+              containerPort: 11936
+              
+          resources:
+            {}
+          env:
+            - name: EASYHAPROXY_DISCOVER
+              value: kubernetes
+            - name: HAPROXY_STATS_ENABLE
+              value: "true"
+            - name: HAPROXY_USERNAME
+              value: admin
+            - name: HAPROXY_PASSWORD
+              value: "password"
+            - name: EASYHAPROXY_REFRESH_CONF
+              value: "10"
+            - name: HAPROXY_CUSTOMERRORS
+              value: "true"
+            - name: EASYHAPROXY_SSL_MODE
+              value: loose
+            - name: EASYHAPROXY_LOG_LEVEL
+              value: DEBUG
+            - name: HAPROXY_LOG_LEVEL
+              value: DEBUG
+            - name: CERTBOT_LOG_LEVEL
+              value: DEBUG
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: EASYHAPROXY_UPDATE_INGRESS_STATUS
+              value: "true"
+            - name: EASYHAPROXY_DEPLOYMENT_MODE
+              value: "auto"
+            - name: EASYHAPROXY_STATUS_UPDATE_INTERVAL
+              value: "30"
+            - name: EASYHAPROXY_SERVICE_NAME
+              value: "ingress-easyhaproxy"
+
+---
+# Source: easyhaproxy/templates/ingressclass.yaml
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: easyhaproxy
+  labels:
+    helm.sh/chart: easyhaproxy-2.0.7
+    app.kubernetes.io/name: easyhaproxy
+    app.kubernetes.io/instance: ingress
+    app.kubernetes.io/version: "6.4.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  controller: byjg.com/easyhaproxy
