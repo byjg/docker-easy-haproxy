@@ -61,6 +61,9 @@ services:
       - certs_certbot:/certs/certbot
     deploy:
       replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
     environment:
       EASYHAPROXY_DISCOVER: swarm
       EASYHAPROXY_REFRESH_CONF: "2"

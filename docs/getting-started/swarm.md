@@ -33,6 +33,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     deploy:
       replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
     environment:
       EASYHAPROXY_DISCOVER: swarm
       EASYHAPROXY_SSL_MODE: "loose"
@@ -55,6 +58,12 @@ networks:
 ```bash
 docker stack deploy --compose-file docker-compose.yml easyhaproxy
 ```
+
+:::warning Run on a manager node
+EasyHAProxy discovers services through the Docker socket of the node it runs on, and only a manager's
+Docker answers for the swarm. On a worker it exits with "This node is not a swarm manager", so keep the
+`node.role == manager` constraint. Any manager works, and Swarm still routes ports 80/443 from every node to it.
+:::
 
 :::danger Single Replica Only
 **Do not** add more than one replica for EasyHAProxy. To understand why, see the [limitations](../concepts/limitations.md) page.
