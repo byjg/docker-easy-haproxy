@@ -22,7 +22,7 @@ For installation instructions, see [Native install](../getting-started/native.md
 | `--label-prefix PREFIX`  | `EASYHAPROXY_LABEL_PREFIX` | `easyhaproxy`                                        | Label/annotation prefix used to discover services         |
 | `--ssl-mode MODE`        | `EASYHAPROXY_SSL_MODE`     | `default`                                            | TLS policy: `strict`, `default`, or `loose`               |
 | `--refresh-conf SECONDS` | `EASYHAPROXY_REFRESH_CONF` | `10`                                                 | Polling interval for configuration changes                |
-| `--customer-errors BOOL` | `HAPROXY_CUSTOMERRORS`     | `false`                                              | Enable custom HAProxy HTML error pages                    |
+| `--customer-errors BOOL` | `HAPROXY_CUSTOMERRORS`     | `true`                                               | Enable custom HAProxy HTML error pages                    |
 
 ## Logging
 

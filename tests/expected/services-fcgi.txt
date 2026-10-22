@@ -35,6 +35,7 @@ frontend http_in_80
     # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
     acl is_rule_phpapp-tcp_local_80 req.hdr(host),host_only -i phpapp-tcp.local
     use_backend srv_phpapp-tcp_local_80 if is_rule_phpapp-tcp_local_80
+    default_backend no_route
 
 backend srv_phpapp_local_80
     balance roundrobin
@@ -58,3 +59,9 @@ backend srv_phpapp-tcp_local_80
 backend certbot_backend
     mode http
     server certbot 127.0.0.1:2080
+
+# A host no service is configured for: 404, not the 503 HAProxy gives a request
+# with no backend. 503 stays for a service whose servers are all down.
+backend no_route
+    mode http
+    http-request deny deny_status 404

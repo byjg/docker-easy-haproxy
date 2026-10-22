@@ -35,6 +35,7 @@ defaults
 {% if data["customerrors"] %}
     errorfile 400 /etc/easyhaproxy/haproxy/errors-custom/400.http
     errorfile 403 /etc/easyhaproxy/haproxy/errors-custom/403.http
+    errorfile 404 /etc/easyhaproxy/haproxy/errors-custom/404.http
     errorfile 408 /etc/easyhaproxy/haproxy/errors-custom/408.http
     errorfile 500 /etc/easyhaproxy/haproxy/errors-custom/500.http
     errorfile 502 /etc/easyhaproxy/haproxy/errors-custom/502.http
@@ -155,4 +156,10 @@ backend srv_{{ host }}
 backend certbot_backend
     mode http
     server certbot 127.0.0.1:2080
+
+# A host no service is configured for: 404, not the 503 HAProxy gives a request
+# with no backend. 503 stays for a service whose servers are all down.
+backend no_route
+    mode http
+    http-request deny deny_status 404
 

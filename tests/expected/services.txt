@@ -51,6 +51,7 @@ frontend http_in_31337
     acl is_certbot_node-exporter_quantum_example_org_31337 path_beg /.well-known/acme-challenge/
     use_backend certbot_backend if is_certbot_node-exporter_quantum_example_org_31337 is_rule_node-exporter_quantum_example_org_31337
     use_backend srv_node-exporter_quantum_example_org_31337 if is_rule_node-exporter_quantum_example_org_31337
+    default_backend no_route
 
 backend srv_cadvisor_quantum_example_org_31337
     balance roundrobin
@@ -87,6 +88,7 @@ frontend http_in_443
     # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
     acl is_rule_www_somehost_com_br_443 req.hdr(host),host_only -i www.somehost.com.br
     use_backend srv_www_somehost_com_br_443 if is_rule_www_somehost_com_br_443
+    default_backend no_route
 
 backend srv_node-exporter_quantum_example_org_443
     balance roundrobin
@@ -119,6 +121,7 @@ frontend http_in_80
     # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
     acl is_rule_www_somehost_com_br_80 req.hdr(host),host_only -i www.somehost.com.br
     use_backend srv_www_somehost_com_br_80 if is_rule_www_somehost_com_br_80
+    default_backend no_route
 
 backend srv_www_somehost_com_br_80
     balance roundrobin
@@ -133,3 +136,9 @@ backend srv_www_somehost_com_br_80
 backend certbot_backend
     mode http
     server certbot 127.0.0.1:2080
+
+# A host no service is configured for: 404, not the 503 HAProxy gives a request
+# with no backend. 503 stays for a service whose servers are all down.
+backend no_route
+    mode http
+    http-request deny deny_status 404

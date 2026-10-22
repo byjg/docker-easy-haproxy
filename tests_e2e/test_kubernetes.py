@@ -841,10 +841,11 @@ def wait_for_easyhaproxy_discovery(kubectl_cmd: str, expected_host: str, timeout
 
         time.sleep(1)
 
-    # Step 4: Poll until HAProxy returns a real response (not 503/000).
-    # 503 means the backend is not ready yet; 200/401/403/etc. all mean the
-    # backend is up and HAProxy has fully configured the route.
-    print(f"  → Waiting for backend to become ready (non-503)...")
+    # Step 4: Poll until HAProxy returns a real response (not 000/404/503).
+    # 404 means HAProxy has no route for the host yet (its reload is still
+    # coming); 503 means the route is there but the backend is not ready.
+    # 200/401/403/etc. all mean the backend is up and the route configured.
+    print(f"  → Waiting for backend to become ready (not 404/503)...")
     while time.time() - start_time < timeout:
         try:
             result = subprocess.run(
@@ -855,7 +856,7 @@ def wait_for_easyhaproxy_discovery(kubectl_cmd: str, expected_host: str, timeout
                 timeout=5
             )
             http_code = result.stdout.strip()
-            if http_code and http_code not in ("000", "503"):
+            if http_code and http_code not in ("000", "404", "503"):
                 print(f"  ✓ Backend is ready (HTTP {http_code})")
                 return True
             if http_code:
@@ -1076,7 +1077,7 @@ class TestTLSService:
                     text=True,
                     timeout=5
                 )
-                if probe.stdout.strip() not in ("000", "503"):
+                if probe.stdout.strip() not in ("000", "404", "503"):
                     break
             except Exception:
                 pass

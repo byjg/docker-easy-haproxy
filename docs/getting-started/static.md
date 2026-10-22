@@ -55,7 +55,7 @@ stats:
   password: password  # If omitted, stats are public with no password
   port: 1936          # Optional (default 1936)
 
-customerrors: true   # Optional (default false)
+customerrors: true   # Optional (default true)
 
 ssl_mode: default    # Optional
 

@@ -1,0 +1,12 @@
+{# Served to the visitors of every site behind EasyHAProxy: no logo and no name. #}
+{% extends "base.html.j2" %}
+{% block style %}
+main{min-height:calc(100vh - 64px);display:flex;flex-direction:column;justify-content:center;text-align:center}
+.code{font-size:4.5rem;font-weight:700;line-height:1;margin:0;color:var(--accent)}
+h1{margin-top:12px}
+{% endblock %}
+{% block content %}
+<p class="code">{{ code }}</p>
+<h1>{{ reason }}</h1>
+<p class="lead">{{ message }}</p>
+{% endblock %}

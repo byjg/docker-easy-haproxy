@@ -10,7 +10,7 @@
 # - The same domain on different ports goes to different services.
 # - HTTP and HTTPS for the same domain go to different services.
 # - Two domains on the same port go to different services.
-# - An unknown host gets a 503.
+# - An unknown host gets a 404.
 #
 # The services run byjg/static-httpserver in echo mode: each answers with JSON
 # naming itself ("name") and showing the request it received ("host", "headers").
@@ -49,7 +49,7 @@
 #
 # # Unknown host
 # curl -I -H "Host: unknown.local" localhost:19910
-# # Expected: HTTP/1.1 503 Service Unavailable
+# # Expected: HTTP/1.1 404 Not Found
 # ```
 #
 # CLEAN UP:
