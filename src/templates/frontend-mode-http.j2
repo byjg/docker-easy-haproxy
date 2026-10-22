@@ -1,24 +1,24 @@
     mode http
     {% for k in o["redirect"] %}
-    redirect prefix {{ o["redirect"][k] }} code 301 if { hdr(host) -i {{ k }} }
+    redirect prefix {{ o["redirect"][k] }} code 301 if { req.hdr(host),host_only -i {{ k }} }
     {% endfor %}
     
     {%- for k in o["hosts"] %}
         {% set host = k.replace(".", "_") + "_{0}".format(o["port"]) %}
         {% set certbot = o["hosts"][k]["certbot"] %}
 
-    acl is_rule_{{ host }}_1 hdr(host) -i {{ k }}
-    acl is_rule_{{ host }}_2 hdr(host) -i {{ k }}:{{ o["port"] }}
+    # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
+    acl is_rule_{{ host }} req.hdr(host),host_only -i {{ k }}
     {% if certbot %}
     acl is_certbot_{{ host }} path_beg /.well-known/acme-challenge/
     {% endif %}
     {% if o["hosts"][k]["redirect_ssl"] %}
-    http-request redirect scheme https code 301 if {% if certbot %}!is_certbot_{{ host }} {% endif %}is_rule_{{ host }}_1 OR {% if certbot %}!is_certbot_{{ host }} {% endif %}is_rule_{{ host }}_2
+    http-request redirect scheme https code 301 if {% if certbot %}!is_certbot_{{ host }} {% endif %}is_rule_{{ host }}
     {% endif %}
     {% if certbot %}
-    use_backend certbot_backend if is_certbot_{{ host }} is_rule_{{ host }}_1 OR is_certbot_{{ host }} is_rule_{{ host }}_2
+    use_backend certbot_backend if is_certbot_{{ host }} is_rule_{{ host }}
     {% endif %}
     {% if not o["hosts"][k]["redirect_ssl"] %}
-    use_backend srv_{{ host }} if is_rule_{{ host }}_1 OR is_rule_{{ host }}_2
+    use_backend srv_{{ host }} if is_rule_{{ host }}
     {% endif %}
     {% endfor %}

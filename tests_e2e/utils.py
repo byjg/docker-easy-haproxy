@@ -244,6 +244,24 @@ def extract_backend_block(config: str, backend_name: str) -> str:
     return '\n'.join(backend_lines)
 
 
+def echo_header(echo: dict, name: str):
+    """
+    Return a request header from a byjg/static-httpserver --echo response.
+
+    The echo server is written in Go, which canonicalizes header names
+    (X-Request-ID arrives as X-Request-Id), so the lookup ignores case.
+
+    Returns:
+        The header value, or None if the request did not carry it
+    """
+    return {k.lower(): v for k, v in echo["headers"].items()}.get(name.lower())
+
+
+def echo_client_ip(echo: dict) -> str:
+    """Return the IP the echo server saw the connection from (remote_addr without the port)"""
+    return echo["remote_addr"].rsplit(":", 1)[0]
+
+
 def create_tls_secret_from_pem(kubectl_cmd: str, secret_name: str, namespace: str, pem_file: Path):
     """
     Create a Kubernetes TLS secret from a PEM file.

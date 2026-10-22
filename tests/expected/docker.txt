@@ -55,13 +55,13 @@ frontend http_in_443
     bind *:443  ssl crt /etc/easyhaproxy/certs/certbot/ alpn h2,http/1.1 crt /etc/easyhaproxy/certs/haproxy/ alpn h2,http/1.1
     mode http
 
-    acl is_rule_hostssl_local_443_1 hdr(host) -i hostssl.local
-    acl is_rule_hostssl_local_443_2 hdr(host) -i hostssl.local:443
-    use_backend srv_hostssl_local_443 if is_rule_hostssl_local_443_1 OR is_rule_hostssl_local_443_2
+    # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
+    acl is_rule_hostssl_local_443 req.hdr(host),host_only -i hostssl.local
+    use_backend srv_hostssl_local_443 if is_rule_hostssl_local_443
 
-    acl is_rule_host2_local_443_1 hdr(host) -i host2.local
-    acl is_rule_host2_local_443_2 hdr(host) -i host2.local:443
-    use_backend srv_host2_local_443 if is_rule_host2_local_443_1 OR is_rule_host2_local_443_2
+    # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
+    acl is_rule_host2_local_443 req.hdr(host),host_only -i host2.local
+    use_backend srv_host2_local_443 if is_rule_host2_local_443
 
 backend srv_hostssl_local_443
     balance roundrobin
@@ -86,9 +86,9 @@ frontend http_in_80
     bind *:80
     mode http
 
-    acl is_rule_host1_local_80_1 hdr(host) -i host1.local
-    acl is_rule_host1_local_80_2 hdr(host) -i host1.local:80
-    use_backend srv_host1_local_80 if is_rule_host1_local_80_1 OR is_rule_host1_local_80_2
+    # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
+    acl is_rule_host1_local_80 req.hdr(host),host_only -i host1.local
+    use_backend srv_host1_local_80 if is_rule_host1_local_80
 
 backend srv_host1_local_80
     balance roundrobin
@@ -104,11 +104,11 @@ frontend http_in_90
     bind *:90
     mode http
 
-    acl is_rule_host2_local_90_1 hdr(host) -i host2.local
-    acl is_rule_host2_local_90_2 hdr(host) -i host2.local:90
+    # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
+    acl is_rule_host2_local_90 req.hdr(host),host_only -i host2.local
     acl is_certbot_host2_local_90 path_beg /.well-known/acme-challenge/
-    use_backend certbot_backend if is_certbot_host2_local_90 is_rule_host2_local_90_1 OR is_certbot_host2_local_90 is_rule_host2_local_90_2
-    use_backend srv_host2_local_90 if is_rule_host2_local_90_1 OR is_rule_host2_local_90_2
+    use_backend certbot_backend if is_certbot_host2_local_90 is_rule_host2_local_90
+    use_backend srv_host2_local_90 if is_rule_host2_local_90
 
 backend srv_host2_local_90
     balance roundrobin

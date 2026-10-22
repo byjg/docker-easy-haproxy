@@ -33,8 +33,13 @@ Example Container Label:
 HAProxy Config Generated:
     # Cloudflare - Restore original visitor IP
     acl from_cloudflare src -f /etc/easyhaproxy/cloudflare_ips.lst
-    http-request set-var(txn.real_ip) req.hdr(CF-Connecting-IP) if from_cloudflare
-    http-request set-header X-Forwarded-For %[var(txn.real_ip)] if from_cloudflare
+    http-request set-var(txn.real_ip) req.hdr(CF-Connecting-IP) if from_cloudflare { req.hdr(CF-Connecting-IP) -m len gt 0 }
+    http-request set-header X-Forwarded-For %[var(txn.real_ip)] if { var(txn.real_ip) -m found }
+
+X-Forwarded-For received by the backend:
+    The backend's "option forwardfor" appends the IP HAProxy received the request from,
+    so the backend gets "<visitor IP>, <Cloudflare IP>". Without a CF-Connecting-IP
+    header, X-Forwarded-For is left alone and the backend gets "<connection IP>".
 
 Log Format (when update_log_format=true):
     Shows real visitor IP alongside connection IP for debugging
@@ -196,8 +201,8 @@ class CloudflarePlugin(PluginInterface):
         # Generate HAProxy config snippet for backend
         haproxy_config = f"""# Cloudflare - Restore original visitor IP
 acl from_cloudflare src -f {self.ip_list_path}
-http-request set-var(txn.real_ip) req.hdr(CF-Connecting-IP) if from_cloudflare
-http-request set-header X-Forwarded-For %[var(txn.real_ip)] if from_cloudflare"""
+http-request set-var(txn.real_ip) req.hdr(CF-Connecting-IP) if from_cloudflare {{ req.hdr(CF-Connecting-IP) -m len gt 0 }}
+http-request set-header X-Forwarded-For %[var(txn.real_ip)] if {{ var(txn.real_ip) -m found }}"""
 
         # Generate log format config (frontend level)
         # Industry-standard format: real_ip/proxy_ip [time] request status bytes timings

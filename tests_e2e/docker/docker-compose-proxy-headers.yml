@@ -37,9 +37,11 @@ services:
       - "443:443/tcp"
       - "1936:1936/tcp"
 
-  # Header echo server for testing - responds with all received headers
+  # Echo backend for testing - responds with the request it received, headers included
   webapp:
-    build: ../fixtures/header-echo
+    image: byjg/static-httpserver:0.6.0
+    environment:
+      ECHO_MODE: "true"
     labels:
       easyhaproxy.http.host: test.local
       easyhaproxy.http.port: 80

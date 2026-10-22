@@ -70,9 +70,9 @@ frontend http_in_80
     bind *:80
     mode http
 
-    acl is_rule_host1_com_br_80_1 hdr(host) -i host1.com.br
-    acl is_rule_host1_com_br_80_2 hdr(host) -i host1.com.br:80
-    use_backend srv_host1_com_br_80 if is_rule_host1_com_br_80_1 OR is_rule_host1_com_br_80_2
+    # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
+    acl is_rule_host1_com_br_80 req.hdr(host),host_only -i host1.com.br
+    use_backend srv_host1_com_br_80 if is_rule_host1_com_br_80
 
 backend srv_host1_com_br_80
     balance roundrobin

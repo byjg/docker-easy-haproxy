@@ -87,8 +87,11 @@ class TestCloudflarePlugin:
         assert result.haproxy_config is not None
         assert "Cloudflare" in result.haproxy_config
         assert f"acl from_cloudflare src -f {Consts.base_path}/cloudflare_ips.lst" in result.haproxy_config
-        assert "http-request set-var(txn.real_ip) req.hdr(CF-Connecting-IP)" in result.haproxy_config
-        assert "http-request set-header X-Forwarded-For %[var(txn.real_ip)]" in result.haproxy_config
+        # Only a non-empty CF-Connecting-IP sets X-Forwarded-For; otherwise the backend got ", <hop>"
+        assert ("http-request set-var(txn.real_ip) req.hdr(CF-Connecting-IP) "
+                "if from_cloudflare { req.hdr(CF-Connecting-IP) -m len gt 0 }") in result.haproxy_config
+        assert ("http-request set-header X-Forwarded-For %[var(txn.real_ip)] "
+                "if { var(txn.real_ip) -m found }") in result.haproxy_config
         assert result.metadata["domain"] == "example.com"
         assert result.metadata["ip_list_path"] == f"{Consts.base_path}/cloudflare_ips.lst"
 

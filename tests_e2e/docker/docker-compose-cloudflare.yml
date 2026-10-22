@@ -70,9 +70,11 @@ services:
       - "80:80/tcp"
       - "1936:1936/tcp"
 
-  # Web application behind Cloudflare (header-echo server for testing)
+  # Web application behind Cloudflare (echo backend for testing)
   webapp:
-    build: ../fixtures/header-echo
+    image: byjg/static-httpserver:0.6.0
+    environment:
+      ECHO_MODE: "true"
     labels:
       easyhaproxy.http.host: myapp.local
       easyhaproxy.http.port: 80
