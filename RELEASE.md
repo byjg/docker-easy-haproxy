@@ -54,7 +54,7 @@ EasyHAProxy follows [Semantic Versioning](https://semver.org/):
   - **MINOR**: New features, plugin additions, backward-compatible changes
   - **PATCH**: Bug fixes, documentation updates, minor improvements
 
-**Current Version:** `6.3.0` (as of Chart.yaml)
+**Current Version:** `6.4.0` (as of Chart.yaml)
 
 ## Automated Release (Recommended)
 
@@ -329,6 +329,7 @@ helm show chart byjg/easyhaproxy
 
 | Version | Release Date | Type  | Highlights                                                                                                                            |
 |---------|--------------|-------|---------------------------------------------------------------------------------------------------------------------------------------|
+| 6.4.0   | 2026-10-22   | Minor | Welcome page instead of a crash when nothing is routed, Host matched without its port (NodePort and remapped ports reach their service), chart NodePort defaults in the valid range, static manifests rendered from the chart (new LoadBalancer manifest), Cloudflare plugin no longer sends an empty X-Forwarded-For |
 | 6.3.0   | 2026-10-21   | Minor | HAPROXY_STATS_ENABLE to turn stats/dashboard off, stats without a password documented with a startup warning, HAPROXY_STATS_PORT honored without a password, chart stats.enabled |
 | 6.2.0   | 2026-10-21   | Minor | Ingress status follows a cloud LoadBalancer address, EASYHAPROXY_SERVICE_NAME, Helm chart LoadBalancer Service and certbot persistence |
 | 6.1.1   | 2026-06-25   | Patch | Add pass_headers support to FastCGI plugin, fix flaky ACME e2e test timeout |

@@ -43,7 +43,7 @@ Exposes HAProxy on NodePort `31080` (HTTP), `31443` (HTTPS), `31936` (stats) and
 
 ```bash
 kubectl apply -f \
-    https://raw.githubusercontent.com/byjg/docker-easy-haproxy/6.3.0/deploy/kubernetes/easyhaproxy-nodeport.yml
+    https://raw.githubusercontent.com/byjg/docker-easy-haproxy/6.4.0/deploy/kubernetes/easyhaproxy-nodeport.yml
 ```
 
 ### ClusterIP (behind a LoadBalancer)
@@ -52,7 +52,7 @@ Cluster-internal only. Pair with an external cloud LoadBalancer or `kubectl port
 
 ```bash
 kubectl apply -f \
-    https://raw.githubusercontent.com/byjg/docker-easy-haproxy/6.3.0/deploy/kubernetes/easyhaproxy-clusterip.yml
+    https://raw.githubusercontent.com/byjg/docker-easy-haproxy/6.4.0/deploy/kubernetes/easyhaproxy-clusterip.yml
 ```
 
 ### LoadBalancer (cloud providers)
@@ -82,7 +82,7 @@ Label **one** node only: the DaemonSet runs a pod on every labeled node, and sev
 kubectl label nodes node-01 "easyhaproxy/node=master"
 
 kubectl apply -f \
-    https://raw.githubusercontent.com/byjg/docker-easy-haproxy/6.3.0/deploy/kubernetes/easyhaproxy-daemonset.yml
+    https://raw.githubusercontent.com/byjg/docker-easy-haproxy/6.4.0/deploy/kubernetes/easyhaproxy-daemonset.yml
 ```
 
 If you need to configure environment variables (log levels, stats password, etc.), see the [environment variable reference](../reference/environment-variables.md).
