@@ -93,7 +93,8 @@ class HaproxyConfigGenerator:
             data=self.mapping,
             global_plugin_configs=self.global_plugin_configs,
             defaults_plugin_configs=self.defaults_plugin_configs,
-            dashboard_server_port=Consts.DASHBOARD_SERVER_PORT
+            dashboard_server_port=Consts.DASHBOARD_SERVER_PORT,
+            www_path=Consts.www_path
         )
 
     def parse(self, container_metadata):

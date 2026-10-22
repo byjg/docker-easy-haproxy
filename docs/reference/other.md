@@ -25,6 +25,12 @@ These headers help backend applications:
 
 **Note:** Headers are only added in HTTP mode, not TCP mode.
 
+## Before the First Service
+
+While no container, service or Ingress is configured, EasyHAProxy answers every request on port `80` with a page
+that explains how to add the first one and links to this documentation. The page does not show the EasyHAProxy
+version. It goes away as soon as a service is configured.
+
 ## Exposing Ports
 
 Some ports on the EasyHAProxy container and in the firewall are required to be open. However, you don't need to expose the other container ports because EasyHAProxy will handle that.

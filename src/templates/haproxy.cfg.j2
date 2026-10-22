@@ -106,6 +106,14 @@ backend srv_dashboard
     mode http
     server Local 127.0.0.1:{{ dashboard_server_port }} check
 {% endif %}
+{% if not data["easymapping"] %}
+
+# Nothing to route yet: keep a listener so HAProxy starts, and show how to add a service
+frontend welcome
+    bind *:80
+    mode http
+    http-request return status 200 content-type "text/html; charset=utf-8" file {{ www_path }}/welcome.html
+{% endif %}
 {% for o in data["easymapping"] -%}
     {% set mode = o["mode"] or "http" %}
 

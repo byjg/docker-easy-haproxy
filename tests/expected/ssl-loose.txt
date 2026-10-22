@@ -49,6 +49,12 @@ backend srv_dashboard
     mode http
     server Local 127.0.0.1:9190 check
 
+# Nothing to route yet: keep a listener so HAProxy starts, and show how to add a service
+frontend welcome
+    bind *:80
+    mode http
+    http-request return status 200 content-type "text/html; charset=utf-8" file /tmp/easyhaproxy_test/www/welcome.html
+
 backend certbot_backend
     mode http
     server certbot 127.0.0.1:2080

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>EasyHAProxy is running</title>
+<style>
+:root{--bg:#f6f6f4;--card:#fff;--fg:#222;--muted:#666;--accent:#8a7f2e;--code:#efefea}
+@media (prefers-color-scheme:dark){:root{--bg:#1b1b1a;--card:#262624;--fg:#eee;--muted:#aaa;--accent:#c2c63c;--code:#33332f}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif}
+main{max-width:720px;margin:0 auto;padding:32px 16px}
+header{display:flex;align-items:center;gap:16px}
+header img{width:72px;height:72px}
+h1{font-size:1.5rem;margin:0}
+p.lead{color:var(--muted);margin:4px 0 0}
+section{background:var(--card);border-radius:8px;padding:12px 16px;margin-top:16px}
+h2{font-size:1.05rem;margin:0 0 4px}
+code{background:var(--code);padding:1px 4px;border-radius:4px;font-size:.9em}
+a{color:var(--accent)}
+footer{color:var(--muted);font-size:.9rem;margin-top:24px}
+</style>
+</head>
+<body>
+<main>
+<header>
+<img alt="EasyHAProxy" src="data:image/png;base64,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">
+<div>
+<h1>EasyHAProxy is running</h1>
+<p class="lead">No service is configured yet. This page goes away as soon as the first one is.</p>
+</div>
+</header>
+<section>
+<h2>Kubernetes</h2>
+Create an Ingress with <code>ingressClassName: easyhaproxy</code>.
+<a href="https://opensource.byjg.com/docs/devops/docker-easy-haproxy/getting-started/kubernetes">Kubernetes guide</a>
+</section>
+<section>
+<h2>Docker and Docker Swarm</h2>
+Add <code>easyhaproxy.*</code> labels to a container or service.
+<a href="https://opensource.byjg.com/docs/devops/docker-easy-haproxy/getting-started/docker">Docker guide</a> &middot;
+<a href="https://opensource.byjg.com/docs/devops/docker-easy-haproxy/getting-started/swarm">Swarm guide</a>
+</section>
+<section>
+<h2>Static</h2>
+Describe the services in a YAML file.
+<a href="https://opensource.byjg.com/docs/devops/docker-easy-haproxy/getting-started/static">Static guide</a>
+</section>
+<section>
+<h2>HTTPS</h2>
+Use your own certificates or get them from Let's Encrypt.
+<a href="https://opensource.byjg.com/docs/devops/docker-easy-haproxy/guides/ssl">SSL guide</a> &middot;
+<a href="https://opensource.byjg.com/docs/devops/docker-easy-haproxy/guides/acme">ACME guide</a>
+</section>
+<footer>
+All labels and annotations: <a href="https://opensource.byjg.com/docs/devops/docker-easy-haproxy/reference/container-labels">reference</a>.
+Full documentation: <a href="https://opensource.byjg.com/docs/devops/docker-easy-haproxy/">opensource.byjg.com</a>.
+</footer>
+</main>
+</body>
+</html>
