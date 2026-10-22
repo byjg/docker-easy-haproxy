@@ -24,7 +24,7 @@ Controls whether EasyHAProxy runs as a **Deployment** (with a Service) or a **Da
 
 | Value                 | Description                                                                                 | Default     |
 |-----------------------|---------------------------------------------------------------------------------------------|-------------|
-| `replicaCount`        | Number of replicas (only used when `service.create: true`)                                  | `1`         |
+| `replicaCount`        | Number of replicas (only used when `service.create: true`; a DaemonSet runs one pod per labeled node) | `1`         |
 | `service.create`      | `true` → Deployment + Service (NodePort, ClusterIP or LoadBalancer). `false` → DaemonSet with host ports. | `false`     |
 | `service.type`        | Service type when `service.create: true`: `NodePort`, `ClusterIP` or `LoadBalancer`                       | `ClusterIP` |
 | `service.annotations` | Annotations to add to the Service resource                                                  | `{}`        |
@@ -104,6 +104,10 @@ Label the target node before installing:
 ```bash
 kubectl label nodes node-01 "easyhaproxy/node=master"
 ```
+
+:::warning Label exactly one node
+`replicaCount` does not apply to a DaemonSet: it runs one EasyHAProxy pod on **every** node with the label. Two labeled nodes mean two copies, with the problems described in [Limitations](../concepts/limitations.md), in particular failing ACME certificates.
+:::
 
 ## Standard Kubernetes Fields
 

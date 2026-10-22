@@ -21,9 +21,10 @@ Choose the deployment mode that fits your infrastructure:
 |-----------|------------|------------------------|------------|-------------------------------|
 | NodePort  | Deployment | 31080 / 31443 / 31936  | No         | Most setups **(recommended)** |
 | ClusterIP | Deployment | cluster-internal only  | No         | Behind a LoadBalancer **(recommended)** |
+| LoadBalancer | Deployment | 80 / 443 on a cloud load balancer | No | Cloud providers (DigitalOcean, AWS, GCP, Azure…) |
 | DaemonSet | DaemonSet  | 80 / 443 / 1936 (host) | Yes        | Bare-metal, special cases     |
 
-**NodePort** and **ClusterIP** run as a Deployment — no node label needed, and they survive node replacements safely.
+**NodePort**, **ClusterIP** and **LoadBalancer** run as a Deployment — no node label needed, and they survive node replacements safely.
 
 **DaemonSet** binds to host ports and requires a node label (`easyhaproxy/node=master`) via `nodeAffinity`. The label must be manually reapplied after any node replacement, which can cause outages. Use only for bare-metal or special-case setups.
 
@@ -53,10 +54,26 @@ kubectl apply -f \
     https://raw.githubusercontent.com/byjg/docker-easy-haproxy/6.3.0/deploy/kubernetes/easyhaproxy-clusterip.yml
 ```
 
+### LoadBalancer (cloud providers)
+
+The cloud provider creates a load balancer in front of EasyHAProxy, and its address is written to the status of your Ingresses. Install it with Helm:
+
+```bash
+helm repo add byjg https://opensource.byjg.com/helm
+helm upgrade --install ingress byjg/easyhaproxy \
+    --namespace easyhaproxy \
+    --set service.create=true \
+    --set service.type=LoadBalancer
+```
+
+Get the address with `kubectl get svc -n easyhaproxy ingress-easyhaproxy` (`EXTERNAL-IP` column) and point your DNS to it. The load balancer also exposes the stats ports 1936/11936: set `easyhaproxy.stats.password`, or `easyhaproxy.stats.enabled=false`. See the [Helm guide](../guides/helm.md) for certificate persistence and other options.
+
 ### DaemonSet (special cases — requires node label)
 
 :::warning Requires node label maintenance
 The node label must be reapplied after any node replacement. Failing to do so will cause an outage.
+
+Label **one** node only: the DaemonSet runs a pod on every labeled node, and several copies break ACME certificates (see [Limitations](../concepts/limitations.md)).
 :::
 
 ```bash
