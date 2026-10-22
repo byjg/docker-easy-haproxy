@@ -27,13 +27,14 @@ class ContainerEnv:
             "ssl_mode": os.getenv("EASYHAPROXY_SSL_MODE").lower() if os.getenv("EASYHAPROXY_SSL_MODE") else 'default'
         }
 
-        if os.getenv("HAPROXY_PASSWORD"):
-            env_vars["stats"] = {
-                "username": os.getenv("HAPROXY_USERNAME") if os.getenv("HAPROXY_USERNAME") else "admin",
-                "password": os.getenv("HAPROXY_PASSWORD"),
-                "port": os.getenv("HAPROXY_STATS_PORT") if os.getenv("HAPROXY_STATS_PORT") else "1936",
-                "cors_origin": os.getenv("HAPROXY_STATS_CORS_ORIGIN", ""),
-            }
+        # Stats are on unless disabled; without a password they are served without a login
+        env_vars["stats"] = {
+            "enabled": os.getenv("HAPROXY_STATS_ENABLE", "true").lower() != "false",
+            "username": os.getenv("HAPROXY_USERNAME") if os.getenv("HAPROXY_USERNAME") else "admin",
+            "password": os.getenv("HAPROXY_PASSWORD", ""),
+            "port": os.getenv("HAPROXY_STATS_PORT") if os.getenv("HAPROXY_STATS_PORT") else "1936",
+            "cors_origin": os.getenv("HAPROXY_STATS_CORS_ORIGIN", ""),
+        }
 
         env_vars["lookup_label"] = os.getenv("EASYHAPROXY_LABEL_PREFIX") if os.getenv(
             "EASYHAPROXY_LABEL_PREFIX") else "easyhaproxy"
@@ -138,6 +139,8 @@ class ContainerEnv:
         # Convert stats
         if 'stats' in yaml_config:
             stats = yaml_config['stats']
+            if 'enabled' in stats:
+                os.environ['HAPROXY_STATS_ENABLE'] = str(stats['enabled']).lower()
             if 'username' in stats:
                 os.environ['HAPROXY_USERNAME'] = str(stats['username'])
             if 'password' in stats:

@@ -10,6 +10,7 @@ from deepdiff import DeepDiff
 from functions import (
     Certbot,
     Consts,
+    ContainerEnv,
     DaemonizeHAProxy,
     Functions,
     logger_easyhaproxy,
@@ -84,8 +85,11 @@ def _build_parser() -> argparse.ArgumentParser:
                         help="Certbot log level. Also set by CERTBOT_LOG_LEVEL.")
 
     # Stats
+    parser.add_argument("--haproxy-stats-enable", metavar="BOOL",
+                        choices=["true", "false"],
+                        help="Serve the HAProxy stats and dashboard. Also set by HAPROXY_STATS_ENABLE.")
     parser.add_argument("--haproxy-password", metavar="PASSWORD",
-                        help="Enable HAProxy stats dashboard with this password. Also set by HAPROXY_PASSWORD.")
+                        help="Password for the HAProxy stats and dashboard. Also set by HAPROXY_PASSWORD.")
     parser.add_argument("--haproxy-username", metavar="USERNAME",
                         help="HAProxy stats dashboard username. Also set by HAPROXY_USERNAME.")
     parser.add_argument("--haproxy-stats-port", metavar="PORT",
@@ -149,6 +153,7 @@ def _apply_args_to_env(args: argparse.Namespace) -> None:
         "log_level":                       "EASYHAPROXY_LOG_LEVEL",
         "haproxy_log_level":               "HAPROXY_LOG_LEVEL",
         "certbot_log_level":               "CERTBOT_LOG_LEVEL",
+        "haproxy_stats_enable":            "HAPROXY_STATS_ENABLE",
         "haproxy_password":                "HAPROXY_PASSWORD",
         "haproxy_username":                "HAPROXY_USERNAME",
         "haproxy_stats_port":              "HAPROXY_STATS_PORT",
@@ -184,6 +189,12 @@ def start():
     os.makedirs(Consts.certs_haproxy, exist_ok=True)
 
     start_dashboard_server()
+
+    stats = ContainerEnv.read()["stats"]
+    if stats["enabled"] and not stats["password"]:
+        logger_easyhaproxy.warning(
+            f"HAProxy stats and dashboard are served WITHOUT a login on port {stats['port']}. "
+            "Set HAPROXY_PASSWORD to require one, or HAPROXY_STATS_ENABLE=false to turn them off.")
 
     processor_obj.save_config(Consts.haproxy_config)
     processor_obj.save_certs(Consts.certs_haproxy)

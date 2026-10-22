@@ -38,13 +38,14 @@ Valid levels: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`
 
 | Flag                                 | Environment Variable        | Default      | Description                                 |
 |--------------------------------------|-----------------------------|--------------|---------------------------------------------|
-| `--haproxy-password PASSWORD`        | `HAPROXY_PASSWORD`          | *(disabled)* | Enable stats dashboard with this password   |
+| `--haproxy-stats-enable BOOL`        | `HAPROXY_STATS_ENABLE`      | `true`       | Serve the stats and dashboard               |
+| `--haproxy-password PASSWORD`        | `HAPROXY_PASSWORD`          | *(none)*     | Require this password for stats and dashboard |
 | `--haproxy-username USERNAME`        | `HAPROXY_USERNAME`          | `admin`      | Stats dashboard username                    |
 | `--haproxy-stats-port PORT`          | `HAPROXY_STATS_PORT`        | `1936`       | Stats dashboard port                        |
 | `--haproxy-stats-cors-origin ORIGIN` | `HAPROXY_STATS_CORS_ORIGIN` | *(none)*     | Allowed CORS origin for the stats dashboard |
 
 :::tip
-The stats dashboard is only enabled when `--haproxy-password` (or `HAPROXY_PASSWORD`) is set.
+Stats and the dashboard are on by default. Without `--haproxy-password` (or `HAPROXY_PASSWORD`) they are served without a login; turn them off with `--haproxy-stats-enable false`.
 :::
 
 ## ACME / Certbot (SSL certificates)

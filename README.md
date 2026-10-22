@@ -66,7 +66,7 @@ EasyHAProxy is part of some projects:
 
 [![HAProxy Monitor](docs/dashboard_thumbnail.png)](docs/guides/dashboard.md)
 
-A real-time dashboard is available at `http://<host>:11936/` whenever `HAPROXY_PASSWORD` is set —
+A real-time dashboard is available at `http://<host>:11936/` (set `HAPROXY_PASSWORD` to require a login) —
 no extra containers, no Prometheus, no Grafana. See the [dashboard guide](docs/guides/dashboard.md).
 
 ## See EasyHAProxy in action

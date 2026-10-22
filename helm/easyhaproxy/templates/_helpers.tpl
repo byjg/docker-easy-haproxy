@@ -60,3 +60,10 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+"true" when the stats page and dashboard are served. Missing from older values means enabled.
+*/}}
+{{- define "easyhaproxy.statsEnabled" -}}
+{{- if dig "enabled" true .Values.easyhaproxy.stats }}true{{ end }}
+{{- end }}
