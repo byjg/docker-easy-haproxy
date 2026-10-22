@@ -62,15 +62,15 @@ backend srv_dashboard
 frontend http_in_19901
     bind *:19901
     mode http
-    redirect prefix www.google.com code 301 if { hdr(host) -i google.helloworld.com }
+    redirect prefix www.google.com code 301 if { req.hdr(host),host_only -i google.helloworld.com }
 
-    acl is_rule_www_helloworld_com_19901_1 hdr(host) -i www.helloworld.com
-    acl is_rule_www_helloworld_com_19901_2 hdr(host) -i www.helloworld.com:19901
-    use_backend srv_www_helloworld_com_19901 if is_rule_www_helloworld_com_19901_1 OR is_rule_www_helloworld_com_19901_2
+    # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
+    acl is_rule_www_helloworld_com_19901 req.hdr(host),host_only -i www.helloworld.com
+    use_backend srv_www_helloworld_com_19901 if is_rule_www_helloworld_com_19901
 
-    acl is_rule_hello_com_19901_1 hdr(host) -i hello.com
-    acl is_rule_hello_com_19901_2 hdr(host) -i hello.com:19901
-    use_backend srv_hello_com_19901 if is_rule_hello_com_19901_1 OR is_rule_hello_com_19901_2
+    # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
+    acl is_rule_hello_com_19901 req.hdr(host),host_only -i hello.com
+    use_backend srv_hello_com_19901 if is_rule_hello_com_19901
 
 backend srv_www_helloworld_com_19901
     balance roundrobin

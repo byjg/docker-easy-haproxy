@@ -1,0 +1,126 @@
+# ==============================================================================
+# EXAMPLE: Host Routing Across Ports
+# ==============================================================================
+#
+# WHAT THIS DEMONSTRATES:
+# - The port a request arrives on picks the frontend; the Host header picks the
+#   service inside it. The port in the Host header is ignored.
+# - A remapped port (19910 -> 80, like a NodePort 31080 -> 80) reaches the
+#   service on the container port.
+# - The same domain on different ports goes to different services.
+# - HTTP and HTTPS for the same domain go to different services.
+# - Two domains on the same port go to different services.
+# - An unknown host gets a 503.
+#
+# The services run byjg/static-httpserver in echo mode: each answers with JSON
+# naming itself ("name") and showing the request it received ("host", "headers").
+#
+# REQUIREMENTS (run these first):
+# ```bash
+# # No special requirements - this example runs on localhost:19910, 19911 and 19443
+# ```
+#
+# HOW TO START:
+# ```bash
+# docker compose -f docker-compose-host-routing.yml up -d
+# ```
+#
+# HOW TO VERIFY IT'S WORKING:
+# ```bash
+# # Remapped port: Host carries 19910, the container port is 80
+# curl -H "Host: host2.local:19910" localhost:19910
+# # Expected: "name":"web-80"
+#
+# # Same domain, its own port
+# curl -H "Host: host2.local:19911" localhost:19911
+# # Expected: "name":"api-19911"
+#
+# # The port picks the frontend, not the Host header
+# curl -H "Host: host2.local:19911" localhost:19910
+# # Expected: "name":"web-80"
+#
+# # Same domain over HTTPS
+# curl -k -H "Host: host2.local:19443" https://localhost:19443
+# # Expected: "name":"secure-443"
+#
+# # Another domain on the same port
+# curl -H "Host: other.local:19910" localhost:19910
+# # Expected: "name":"other-80"
+#
+# # Unknown host
+# curl -I -H "Host: unknown.local" localhost:19910
+# # Expected: HTTP/1.1 503 Service Unavailable
+# ```
+#
+# CLEAN UP:
+# ```bash
+# docker compose -f docker-compose-host-routing.yml down
+# ```
+#
+# ==============================================================================
+
+services:
+  haproxy:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    image: byjg/easy-haproxy:local
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./host2.local.pem:/etc/easyhaproxy/certs/haproxy/host2.local.pem
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-u", "admin:password", "http://localhost:1936"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    environment:
+      EASYHAPROXY_DISCOVER: docker
+      HAPROXY_USERNAME: admin
+      HAPROXY_PASSWORD: password
+      HAPROXY_STATS_PORT: 1936
+    ports:
+      - "19910:80/tcp"
+      - "19911:19911/tcp"
+      - "19443:443/tcp"
+
+  web:
+    image: byjg/static-httpserver:0.6.0
+    environment:
+      ECHO_MODE: "true"
+      SERVER_NAME: web-80
+    labels:
+      easyhaproxy.http.host: host2.local
+      easyhaproxy.http.port: 80
+      easyhaproxy.http.localport: 8080
+
+  api:
+    image: byjg/static-httpserver:0.6.0
+    environment:
+      ECHO_MODE: "true"
+      SERVER_NAME: api-19911
+    labels:
+      easyhaproxy.http.host: host2.local
+      easyhaproxy.http.port: 19911
+      easyhaproxy.http.localport: 8080
+
+  secure:
+    image: byjg/static-httpserver:0.6.0
+    environment:
+      ECHO_MODE: "true"
+      SERVER_NAME: secure-443
+    labels:
+      easyhaproxy.https.host: host2.local
+      easyhaproxy.https.port: 443
+      easyhaproxy.https.localport: 8080
+      easyhaproxy.https.ssl: true
+
+  other:
+    image: byjg/static-httpserver:0.6.0
+    environment:
+      ECHO_MODE: "true"
+      SERVER_NAME: other-80
+    labels:
+      easyhaproxy.http.host: other.local
+      easyhaproxy.http.port: 80
+      easyhaproxy.http.localport: 8080

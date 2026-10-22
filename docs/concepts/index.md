@@ -52,6 +52,35 @@ Labels / Annotations / YAML file
 
 The key insight: **you never write `haproxy.cfg` by hand**. You express intent through labels/annotations/YAML, and EasyHAProxy translates that into valid HAProxy configuration on every discovery cycle.
 
+## Request Routing
+
+EasyHAProxy picks the service for a request in two steps:
+
+1. **The port picks the frontend.** Each port EasyHAProxy listens on (`80`, `443`, or any `port` you label) has its own frontend, and it only holds the services labeled for that port.
+2. **The Host header picks the service** inside that frontend. The port in the Host header is ignored, so `example.org`, `example.org:80` and `example.org:31080` all match `example.org`.
+
+| Request arrives on                | Host header            | Service                                               |
+|-----------------------------------|------------------------|-------------------------------------------------------|
+| port 80                           | `example.org`          | `example.org` on port 80                              |
+| port 80, through NodePort `31080` | `example.org:31080`    | `example.org` on port 80                              |
+| port 8080                         | `example.org:8080`     | `example.org` on port 8080                            |
+| port 443                          | `example.org`          | `example.org` on port 443 (HTTPS)                     |
+| port 80                           | `example.org:8080`     | `example.org` on port 80, never the port 8080 service |
+| port 80                           | `other.org`            | `other.org` on port 80                                |
+| port 80                           | a host with no service | `503 Service Unavailable`                             |
+
+This means:
+
+- The same domain can serve different services on different ports, and HTTP and HTTPS can go to different services.
+- Many domains can share one port, as with one NodePort or one Load Balancer for the whole cluster.
+- A remapped port, such as a NodePort (`31080` → `80`) or `docker run -p 8080:80`, reaches the service labeled for the container port.
+
+:::warning Proxies in front of EasyHAProxy
+A proxy or Load Balancer in front of EasyHAProxy must keep the original Host header. A TCP Load Balancer always does.
+nginx with `proxy_pass http://node:31080` sends `Host: node:31080` by default, which matches no service. Add
+`proxy_set_header Host $host;`.
+:::
+
 ## Plugin Execution Model
 
 Plugins are Python classes that implement `PluginInterface`. They are discovered automatically from:

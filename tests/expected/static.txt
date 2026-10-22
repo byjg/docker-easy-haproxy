@@ -63,9 +63,9 @@ frontend http_in_443
     bind *:443  ssl crt /etc/easyhaproxy/certs/certbot/ alpn h2,http/1.1 crt /etc/easyhaproxy/certs/haproxy/ alpn h2,http/1.1
     mode http
 
-    acl is_rule_host1_com_br_443_1 hdr(host) -i host1.com.br
-    acl is_rule_host1_com_br_443_2 hdr(host) -i host1.com.br:443
-    use_backend srv_host1_com_br_443 if is_rule_host1_com_br_443_1 OR is_rule_host1_com_br_443_2
+    # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
+    acl is_rule_host1_com_br_443 req.hdr(host),host_only -i host1.com.br
+    use_backend srv_host1_com_br_443 if is_rule_host1_com_br_443
 
 backend srv_host1_com_br_443
     balance roundrobin
@@ -80,17 +80,17 @@ backend srv_host1_com_br_443
 frontend http_in_80
     bind *:80
     mode http
-    redirect prefix http://host1.com.br code 301 if { hdr(host) -i www.host1.com.br }
+    redirect prefix http://host1.com.br code 301 if { req.hdr(host),host_only -i www.host1.com.br }
 
-    acl is_rule_host1_com_br_80_1 hdr(host) -i host1.com.br
-    acl is_rule_host1_com_br_80_2 hdr(host) -i host1.com.br:80
+    # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
+    acl is_rule_host1_com_br_80 req.hdr(host),host_only -i host1.com.br
     acl is_certbot_host1_com_br_80 path_beg /.well-known/acme-challenge/
-    use_backend certbot_backend if is_certbot_host1_com_br_80 is_rule_host1_com_br_80_1 OR is_certbot_host1_com_br_80 is_rule_host1_com_br_80_2
-    use_backend srv_host1_com_br_80 if is_rule_host1_com_br_80_1 OR is_rule_host1_com_br_80_2
+    use_backend certbot_backend if is_certbot_host1_com_br_80 is_rule_host1_com_br_80
+    use_backend srv_host1_com_br_80 if is_rule_host1_com_br_80
 
-    acl is_rule_host2_com_br_80_1 hdr(host) -i host2.com.br
-    acl is_rule_host2_com_br_80_2 hdr(host) -i host2.com.br:80
-    use_backend srv_host2_com_br_80 if is_rule_host2_com_br_80_1 OR is_rule_host2_com_br_80_2
+    # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
+    acl is_rule_host2_com_br_80 req.hdr(host),host_only -i host2.com.br
+    use_backend srv_host2_com_br_80 if is_rule_host2_com_br_80
 
 backend srv_host1_com_br_80
     balance roundrobin
@@ -115,9 +115,9 @@ frontend http_in_8080
     bind *:8080
     mode http
 
-    acl is_rule_host3_com_br_8080_1 hdr(host) -i host3.com.br
-    acl is_rule_host3_com_br_8080_2 hdr(host) -i host3.com.br:8080
-    use_backend srv_host3_com_br_8080 if is_rule_host3_com_br_8080_1 OR is_rule_host3_com_br_8080_2
+    # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
+    acl is_rule_host3_com_br_8080 req.hdr(host),host_only -i host3.com.br
+    use_backend srv_host3_com_br_8080 if is_rule_host3_com_br_8080
 
 backend srv_host3_com_br_8080
     balance roundrobin

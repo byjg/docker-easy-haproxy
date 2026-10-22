@@ -39,6 +39,7 @@ kubectl create namespace easyhaproxy
 ### NodePort (recommended)
 
 Exposes HAProxy on NodePort `31080` (HTTP), `31443` (HTTPS), `31936` (stats) and `31937` (dashboard). Point your DNS or external load balancer to any node IP on these ports.
+`http://example.org:31080` reaches the Ingress for `example.org`; the port in the Host header is ignored (see [Request Routing](../concepts/index.md#request-routing)).
 
 ```bash
 kubectl apply -f \

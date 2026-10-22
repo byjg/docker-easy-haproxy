@@ -28,13 +28,13 @@ frontend http_in_80
     bind *:80
     mode http
 
-    acl is_rule_phpapp_local_80_1 hdr(host) -i phpapp.local
-    acl is_rule_phpapp_local_80_2 hdr(host) -i phpapp.local:80
-    use_backend srv_phpapp_local_80 if is_rule_phpapp_local_80_1 OR is_rule_phpapp_local_80_2
+    # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
+    acl is_rule_phpapp_local_80 req.hdr(host),host_only -i phpapp.local
+    use_backend srv_phpapp_local_80 if is_rule_phpapp_local_80
 
-    acl is_rule_phpapp-tcp_local_80_1 hdr(host) -i phpapp-tcp.local
-    acl is_rule_phpapp-tcp_local_80_2 hdr(host) -i phpapp-tcp.local:80
-    use_backend srv_phpapp-tcp_local_80 if is_rule_phpapp-tcp_local_80_1 OR is_rule_phpapp-tcp_local_80_2
+    # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
+    acl is_rule_phpapp-tcp_local_80 req.hdr(host),host_only -i phpapp-tcp.local
+    use_backend srv_phpapp-tcp_local_80 if is_rule_phpapp-tcp_local_80
 
 backend srv_phpapp_local_80
     balance roundrobin

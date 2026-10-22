@@ -42,15 +42,15 @@ frontend http_in_31337
     bind *:31337
     mode http
 
-    acl is_rule_cadvisor_quantum_example_org_31337_1 hdr(host) -i cadvisor.quantum.example.org
-    acl is_rule_cadvisor_quantum_example_org_31337_2 hdr(host) -i cadvisor.quantum.example.org:31337
-    use_backend srv_cadvisor_quantum_example_org_31337 if is_rule_cadvisor_quantum_example_org_31337_1 OR is_rule_cadvisor_quantum_example_org_31337_2
+    # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
+    acl is_rule_cadvisor_quantum_example_org_31337 req.hdr(host),host_only -i cadvisor.quantum.example.org
+    use_backend srv_cadvisor_quantum_example_org_31337 if is_rule_cadvisor_quantum_example_org_31337
 
-    acl is_rule_node-exporter_quantum_example_org_31337_1 hdr(host) -i node-exporter.quantum.example.org
-    acl is_rule_node-exporter_quantum_example_org_31337_2 hdr(host) -i node-exporter.quantum.example.org:31337
+    # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
+    acl is_rule_node-exporter_quantum_example_org_31337 req.hdr(host),host_only -i node-exporter.quantum.example.org
     acl is_certbot_node-exporter_quantum_example_org_31337 path_beg /.well-known/acme-challenge/
-    use_backend certbot_backend if is_certbot_node-exporter_quantum_example_org_31337 is_rule_node-exporter_quantum_example_org_31337_1 OR is_certbot_node-exporter_quantum_example_org_31337 is_rule_node-exporter_quantum_example_org_31337_2
-    use_backend srv_node-exporter_quantum_example_org_31337 if is_rule_node-exporter_quantum_example_org_31337_1 OR is_rule_node-exporter_quantum_example_org_31337_2
+    use_backend certbot_backend if is_certbot_node-exporter_quantum_example_org_31337 is_rule_node-exporter_quantum_example_org_31337
+    use_backend srv_node-exporter_quantum_example_org_31337 if is_rule_node-exporter_quantum_example_org_31337
 
 backend srv_cadvisor_quantum_example_org_31337
     balance roundrobin
@@ -74,19 +74,19 @@ backend srv_node-exporter_quantum_example_org_31337
 frontend http_in_443
     bind *:443  ssl crt /etc/easyhaproxy/certs/certbot/ alpn h2,http/1.1 crt /etc/easyhaproxy/certs/haproxy/ alpn h2,http/1.1
     mode http
-    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i somehost.com.br }
-    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i somehost.com }
-    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i www.somehost.com }
-    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i byjg.ca }
-    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i www.byjg.ca }
+    redirect prefix https://www.somehost.com.br code 301 if { req.hdr(host),host_only -i somehost.com.br }
+    redirect prefix https://www.somehost.com.br code 301 if { req.hdr(host),host_only -i somehost.com }
+    redirect prefix https://www.somehost.com.br code 301 if { req.hdr(host),host_only -i www.somehost.com }
+    redirect prefix https://www.somehost.com.br code 301 if { req.hdr(host),host_only -i byjg.ca }
+    redirect prefix https://www.somehost.com.br code 301 if { req.hdr(host),host_only -i www.byjg.ca }
 
-    acl is_rule_node-exporter_quantum_example_org_443_1 hdr(host) -i node-exporter.quantum.example.org
-    acl is_rule_node-exporter_quantum_example_org_443_2 hdr(host) -i node-exporter.quantum.example.org:443
-    use_backend srv_node-exporter_quantum_example_org_443 if is_rule_node-exporter_quantum_example_org_443_1 OR is_rule_node-exporter_quantum_example_org_443_2
+    # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
+    acl is_rule_node-exporter_quantum_example_org_443 req.hdr(host),host_only -i node-exporter.quantum.example.org
+    use_backend srv_node-exporter_quantum_example_org_443 if is_rule_node-exporter_quantum_example_org_443
 
-    acl is_rule_www_somehost_com_br_443_1 hdr(host) -i www.somehost.com.br
-    acl is_rule_www_somehost_com_br_443_2 hdr(host) -i www.somehost.com.br:443
-    use_backend srv_www_somehost_com_br_443 if is_rule_www_somehost_com_br_443_1 OR is_rule_www_somehost_com_br_443_2
+    # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
+    acl is_rule_www_somehost_com_br_443 req.hdr(host),host_only -i www.somehost.com.br
+    use_backend srv_www_somehost_com_br_443 if is_rule_www_somehost_com_br_443
 
 backend srv_node-exporter_quantum_example_org_443
     balance roundrobin
@@ -110,15 +110,15 @@ backend srv_www_somehost_com_br_443
 frontend http_in_80
     bind *:80
     mode http
-    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i somehost.com.br }
-    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i somehost.com }
-    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i www.somehost.com }
-    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i byjg.ca }
-    redirect prefix https://www.somehost.com.br code 301 if { hdr(host) -i www.byjg.ca }
+    redirect prefix https://www.somehost.com.br code 301 if { req.hdr(host),host_only -i somehost.com.br }
+    redirect prefix https://www.somehost.com.br code 301 if { req.hdr(host),host_only -i somehost.com }
+    redirect prefix https://www.somehost.com.br code 301 if { req.hdr(host),host_only -i www.somehost.com }
+    redirect prefix https://www.somehost.com.br code 301 if { req.hdr(host),host_only -i byjg.ca }
+    redirect prefix https://www.somehost.com.br code 301 if { req.hdr(host),host_only -i www.byjg.ca }
 
-    acl is_rule_www_somehost_com_br_80_1 hdr(host) -i www.somehost.com.br
-    acl is_rule_www_somehost_com_br_80_2 hdr(host) -i www.somehost.com.br:80
-    use_backend srv_www_somehost_com_br_80 if is_rule_www_somehost_com_br_80_1 OR is_rule_www_somehost_com_br_80_2
+    # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
+    acl is_rule_www_somehost_com_br_80 req.hdr(host),host_only -i www.somehost.com.br
+    use_backend srv_www_somehost_com_br_80 if is_rule_www_somehost_com_br_80
 
 backend srv_www_somehost_com_br_80
     balance roundrobin

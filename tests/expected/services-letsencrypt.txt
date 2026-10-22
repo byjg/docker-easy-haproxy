@@ -63,15 +63,15 @@ frontend http_in_80
     bind *:80
     mode http
 
-    acl is_rule_test_example_org_80_1 hdr(host) -i test.example.org
-    acl is_rule_test_example_org_80_2 hdr(host) -i test.example.org:80
+    # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
+    acl is_rule_test_example_org_80 req.hdr(host),host_only -i test.example.org
     acl is_certbot_test_example_org_80 path_beg /.well-known/acme-challenge/
-    http-request redirect scheme https code 301 if !is_certbot_test_example_org_80 is_rule_test_example_org_80_1 OR !is_certbot_test_example_org_80 is_rule_test_example_org_80_2
-    use_backend certbot_backend if is_certbot_test_example_org_80 is_rule_test_example_org_80_1 OR is_certbot_test_example_org_80 is_rule_test_example_org_80_2
+    http-request redirect scheme https code 301 if !is_certbot_test_example_org_80 is_rule_test_example_org_80
+    use_backend certbot_backend if is_certbot_test_example_org_80 is_rule_test_example_org_80
 
-    acl is_rule_test2_example_org_80_1 hdr(host) -i test2.example.org
-    acl is_rule_test2_example_org_80_2 hdr(host) -i test2.example.org:80
-    use_backend srv_test2_example_org_80 if is_rule_test2_example_org_80_1 OR is_rule_test2_example_org_80_2
+    # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
+    acl is_rule_test2_example_org_80 req.hdr(host),host_only -i test2.example.org
+    use_backend srv_test2_example_org_80 if is_rule_test2_example_org_80
 
 backend srv_test_example_org_80
     balance roundrobin
@@ -97,9 +97,9 @@ frontend http_in_443
     bind *:443  ssl crt /etc/easyhaproxy/certs/certbot/ alpn h2,http/1.1 crt /etc/easyhaproxy/certs/haproxy/ alpn h2,http/1.1
     mode http
 
-    acl is_rule_test_example_org_443_1 hdr(host) -i test.example.org
-    acl is_rule_test_example_org_443_2 hdr(host) -i test.example.org:443
-    use_backend srv_test_example_org_443 if is_rule_test_example_org_443_1 OR is_rule_test_example_org_443_2
+    # Match the host without its port: a NodePort or a remapped port still reaches this frontend's port
+    acl is_rule_test_example_org_443 req.hdr(host),host_only -i test.example.org
+    use_backend srv_test_example_org_443 if is_rule_test_example_org_443
 
 backend srv_test_example_org_443
     balance roundrobin
