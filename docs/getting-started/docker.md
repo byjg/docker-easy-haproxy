@@ -9,8 +9,10 @@ EasyHAProxy inspects running Docker containers, reads their labels, and configur
 
 :::warning Limitations
 - You cannot mix Docker containers with Swarm containers.
-- This method does not work with containers that use the `--network=host` option. See [limitations](../concepts/limitations.md) for details.
+- Containers that use `--network=host`, `--network=none` or `--network=container:<name>` are skipped, with a warning in the log. See [limitations](../concepts/limitations.md) for details.
 :::
+
+A container with EasyHAProxy labels that is on another network is connected to the EasyHAProxy network automatically. Containers without labels are left alone.
 
 ## Step 1 — Create a shared network
 

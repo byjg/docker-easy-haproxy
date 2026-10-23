@@ -58,9 +58,9 @@ class DaemonizeHAProxy:
                 )
                 return self.get_haproxy_command(DaemonizeHAProxy.HAPROXY_START, pid_file)
 
-    def __validate_config(self):
-        """Validate HAProxy configuration before starting."""
-        validation_cmd = ["haproxy", "-c", "-f", Consts.haproxy_config]
+    def validate_config(self, config_file=None):
+        """Validate the HAProxy configuration: the error, or None when HAProxy accepts it."""
+        validation_cmd = [DaemonizeHAProxy.get_haproxy_bin(), "-c", "-f", config_file or Consts.haproxy_config]
 
         # Add custom config files if they exist
         for config_file in self.get_custom_config_files().keys():
@@ -87,9 +87,9 @@ class DaemonizeHAProxy:
         if not isinstance(command, (list, tuple)):
             command = shlex.split(command)
 
-        # Validate HAProxy config before starting (but not on reload - HAProxy validates itself during reload)
+        # Validate HAProxy config before starting (a reload is only sent after main validated the config)
         if action == DaemonizeHAProxy.HAPROXY_START:
-            validation_error = self.__validate_config()
+            validation_error = self.validate_config()
             if validation_error:
                 logger_haproxy.fatal(f"HAProxy configuration validation failed:\n{validation_error}")
                 return validation_error

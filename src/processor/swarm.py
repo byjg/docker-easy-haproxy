@@ -2,6 +2,8 @@ import socket
 
 import docker
 
+from functions import logger_easyhaproxy
+
 from .interface import ProcessorInterface
 
 
@@ -29,22 +31,33 @@ class Swarm(ProcessorInterface):
         # Check if the service is attached to the HAProxy network
         self.parsed_object = {}
         for service in self.client.services.list():
-            if not any(self.label in key for key in service.attrs["Spec"]["Labels"]):
+            labels = service.attrs["Spec"].get("Labels") or {}
+            if not any(key.startswith(f"{self.label}.") for key in labels):
                 continue
 
-            ip_address = None
-            network_list = []
-            for endpoint in service.attrs["Endpoint"]["VirtualIPs"]:
-                if ha_proxy_network_id == endpoint["NetworkID"]:
-                    ip_address = endpoint["Addr"].split("/")[0]
-                    break
-                elif swarm_ingress_id != endpoint["NetworkID"]:
-                    network_list.append(endpoint["NetworkID"])
+            try:
+                # dnsrr has no virtual IP, so there is no address to send the requests to
+                endpoint_mode = (service.attrs["Spec"].get("EndpointSpec") or {}).get("Mode", "vip")
+                if endpoint_mode != "vip":
+                    logger_easyhaproxy.warn(f"Service {service.name} - Endpoint mode '{endpoint_mode}' is not supported; skipped")
+                    continue
 
-            # Attach the service to the HAProxy network
-            if ip_address is None:
-                network_list.append(ha_proxy_network_id)
-                service.update(networks=network_list)
-                continue  # skip to the next service to give time to update the network
+                ip_address = None
+                network_list = []
+                for endpoint in service.attrs["Endpoint"].get("VirtualIPs", []):
+                    if ha_proxy_network_id == endpoint["NetworkID"]:
+                        ip_address = endpoint["Addr"].split("/")[0]
+                        break
+                    elif swarm_ingress_id != endpoint["NetworkID"]:
+                        network_list.append(endpoint["NetworkID"])
 
-            self.parsed_object[ip_address] = service.attrs["Spec"]["Labels"]
+                # Attach the service to the HAProxy network
+                if ip_address is None:
+                    network_list.append(ha_proxy_network_id)
+                    service.update(networks=network_list)
+                    continue  # skip to the next service to give time to update the network
+
+                self.parsed_object[ip_address] = labels
+            except Exception as e:
+                # One service the code does not expect must not stop the others
+                logger_easyhaproxy.warn(f"Service {service.name} - Skipped: {e}")

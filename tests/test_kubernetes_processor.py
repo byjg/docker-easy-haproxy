@@ -30,6 +30,7 @@ def create_mock_ingress(annotations, namespace="default"):
     ingress.metadata.resource_version = "12345"
     ingress.spec = Mock()
     ingress.spec.tls = None
+    ingress.spec.default_backend = None
     ingress.spec.ingress_class_name = "easyhaproxy"
 
     # Create a proper rule with path and backend
@@ -50,6 +51,150 @@ def create_mock_ingress(annotations, namespace="default"):
     ingress.spec.rules = [rule]
 
     return ingress
+
+
+def create_mock_service(cluster_ip="10.0.0.1", ports=None):
+    service = Mock()
+    service.spec.cluster_ip = cluster_ip
+    service.spec.ports = ports or []
+    return service
+
+
+def create_mock_service_port(name, port):
+    service_port = Mock()
+    service_port.name = name
+    service_port.port = port
+    return service_port
+
+
+def scan(*ingresses, services=None):
+    """Run the processor over these Ingresses; services maps a Service name to its mock"""
+    services = services or {}
+    mock_core_api = MagicMock()
+    mock_core_api.read_namespaced_service.side_effect = lambda name, namespace: services.get(name, create_mock_service())
+    mock_networking_api = MagicMock()
+    mock_networking_api.list_ingress_for_all_namespaces.return_value = Mock(items=list(ingresses))
+    return Kubernetes(api_instance=mock_core_api, v1=mock_networking_api).get_parsed_object()
+
+
+def create_other_ingress():
+    """A valid Ingress next to the broken one: it must still be routed"""
+    ingress = create_mock_ingress({})
+    ingress.metadata.name = "other"
+    ingress.spec.rules[0].host = "other.example.com"
+    ingress.spec.rules[0].http.paths[0].backend.service.name = "other-service"
+    return ingress
+
+
+OTHER_SERVICE = {"other-service": create_mock_service("10.0.0.2")}
+
+
+def test_ingress_without_annotations():
+    """`kubectl create ingress` adds no annotations: the API returns None, not {}"""
+    parsed = scan(create_mock_ingress(None))
+
+    assert parsed["10.0.0.1"]["easyhaproxy.test-example-com_8080.host"] == "test.example.com"
+    assert parsed["10.0.0.1"]["easyhaproxy.test-example-com_8080.balance"] == "roundrobin"
+
+
+def test_ingress_with_default_backend_only():
+    ingress = create_mock_ingress({})
+    ingress.spec.default_backend = Mock()
+    ingress.spec.rules = None
+
+    assert list(scan(ingress, create_other_ingress(), services=OTHER_SERVICE)) == ["10.0.0.2"]
+
+
+def test_rule_without_host_is_skipped():
+    ingress = create_mock_ingress({})
+    ingress.spec.rules[0].host = None
+
+    assert list(scan(ingress, create_other_ingress(), services=OTHER_SERVICE)) == ["10.0.0.2"]
+
+
+def test_rule_without_http_is_skipped():
+    ingress = create_mock_ingress({})
+    ingress.spec.rules[0].http = None
+
+    assert list(scan(ingress, create_other_ingress(), services=OTHER_SERVICE)) == ["10.0.0.2"]
+
+
+def test_resource_backend_is_skipped():
+    ingress = create_mock_ingress({})
+    ingress.spec.rules[0].http.paths[0].backend.service = None
+
+    assert list(scan(ingress, create_other_ingress(), services=OTHER_SERVICE)) == ["10.0.0.2"]
+
+
+def test_headless_service_is_skipped():
+    """A headless Service has the cluster IP "None": HAProxy cannot start with `server None:8080`"""
+    services = {"test-service": create_mock_service("None"), **OTHER_SERVICE}
+
+    assert list(scan(create_mock_ingress({}), create_other_ingress(), services=services)) == ["10.0.0.2"]
+
+
+def test_external_name_service_is_skipped():
+    services = {"test-service": create_mock_service(None), **OTHER_SERVICE}
+
+    assert list(scan(create_mock_ingress({}), create_other_ingress(), services=services)) == ["10.0.0.2"]
+
+
+def test_named_service_port():
+    """`port: {name: http}` is the Service port with that name, not `server ip:None`"""
+    ingress = create_mock_ingress({})
+    ingress.spec.rules[0].http.paths[0].backend.service.port.number = None
+    ingress.spec.rules[0].http.paths[0].backend.service.port.name = "http"
+    services = {"test-service": create_mock_service(ports=[create_mock_service_port("admin", 9000),
+                                                           create_mock_service_port("http", 8080)])}
+
+    parsed = scan(ingress, services=services)
+
+    assert parsed["10.0.0.1"]["easyhaproxy.test-example-com_8080.localport"] == 8080
+
+
+def test_unknown_service_port_name_is_skipped():
+    ingress = create_mock_ingress({})
+    ingress.spec.rules[0].http.paths[0].backend.service.port.number = None
+    ingress.spec.rules[0].http.paths[0].backend.service.port.name = "missing"
+
+    assert list(scan(ingress, create_other_ingress(), services=OTHER_SERVICE)) == ["10.0.0.2"]
+
+
+def test_tls_without_hosts_keeps_the_rule():
+    ingress = create_mock_ingress({})
+    tls = Mock()
+    tls.secret_name = "cert"
+    tls.hosts = None
+    ingress.spec.tls = [tls]
+
+    parsed = scan(ingress)
+
+    assert parsed["10.0.0.1"]["easyhaproxy.test-example-com_8080.host"] == "test.example.com"
+    assert "easyhaproxy.test-example-com_8080.clone_to_ssl" not in parsed["10.0.0.1"]
+
+
+def test_unexpected_error_skips_only_that_ingress():
+    """Whatever breaks one Ingress, the others are still routed"""
+    ingress = create_mock_ingress({})
+    ingress.metadata.creation_timestamp.strftime.side_effect = ValueError("unexpected")
+
+    assert list(scan(ingress, create_other_ingress(), services=OTHER_SERVICE)) == ["10.0.0.2"]
+
+
+def test_rules_to_different_services_do_not_share_routes():
+    """Each Service gets only the hosts of its own rules"""
+    ingress = create_mock_ingress({})
+    second = Mock()
+    second.host = "second.example.com"
+    second.http.paths = [Mock()]
+    second.http.paths[0].backend.service.name = "other-service"
+    second.http.paths[0].backend.service.port.number = 9090
+    ingress.spec.rules.append(second)
+
+    parsed = scan(ingress, services=OTHER_SERVICE)
+
+    assert "easyhaproxy.second-example-com_9090.host" not in parsed["10.0.0.1"]
+    assert "easyhaproxy.test-example-com_8080.host" not in parsed["10.0.0.2"]
 
 
 class TestKubernetesSecretPattern:
@@ -482,3 +627,33 @@ class TestIngressStatusAddresses:
 
         assert processor._detect_deployment_mode() == 'clusterip'
         assert self.reported_addresses(mock_networking_api) == [{"ip": "203.0.113.10"}]
+
+
+def test_custom_label_prefix(monkeypatch):
+    """With EASYHAPROXY_LABEL_PREFIX, annotations use that prefix (it used to route nothing)"""
+    monkeypatch.setenv("EASYHAPROXY_LABEL_PREFIX", "myproxy")
+    ingress = create_mock_ingress({
+        "myproxy.redirect_ssl": "true",
+        "myproxy.plugin.cloudflare.restore_original_ip": "true",
+        "easyhaproxy.mode": "tcp",  # the default prefix no longer applies
+    })
+    mock_networking_api = MagicMock()
+    mock_networking_api.list_ingress_for_all_namespaces.return_value = Mock(items=[ingress])
+    mock_core_api = MagicMock()
+    mock_core_api.read_namespaced_service.return_value = create_mock_service()
+
+    processor = Kubernetes(api_instance=mock_core_api, v1=mock_networking_api)
+    processor.get_haproxy_conf()
+
+    assert processor.get_hosts() == ["test.example.com:80"]
+    assert processor.get_parsed_object()["10.0.0.1"] == {
+        "creation_timestamp": "01/01/2024 00:00:00",
+        "resource_version": "12345",
+        "namespace": "default",
+        "myproxy.test-example-com_8080.host": "test.example.com",
+        "myproxy.test-example-com_8080.port": 80,
+        "myproxy.test-example-com_8080.localport": 8080,
+        "myproxy.test-example-com_8080.redirect_ssl": "true",
+        "myproxy.test-example-com_8080.balance": "roundrobin",
+        "myproxy.test-example-com_8080.plugin.cloudflare.restore_original_ip": "true",
+    }

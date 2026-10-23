@@ -19,7 +19,8 @@ class Static(ProcessorInterface):
     def inspect_network(self):
         """Load YAML and convert containers to Docker-style container metadata"""
         # Load YAML
-        self.static_content = yaml.load(Functions.load(self.filename), Loader=yaml.FullLoader)
+        # An empty file, or a key with nothing under it, loads as None
+        self.static_content = yaml.load(Functions.load(self.filename), Loader=yaml.FullLoader) or {}
 
         # Convert containers to label format
         self.parsed_object = self._convert_yaml_to_labels()
@@ -32,11 +33,12 @@ class Static(ProcessorInterface):
         container_metadata = {}
 
         # Get global plugin configuration
-        global_plugins = self.static_content.get("plugins", {})
-        global_enabled = global_plugins.get("enabled", [])
-        global_plugin_config = global_plugins.get("config", {})
+        global_plugins = self.static_content.get("plugins") or {}
+        global_enabled = global_plugins.get("enabled") or []
+        global_plugin_config = global_plugins.get("config") or {}
 
-        for host_port, config in self.static_content.get("containers", {}).items():
+        for host_port, config in (self.static_content.get("containers") or {}).items():
+            config = config or {}
             # Parse hostname:port from key
             if ":" in host_port:
                 hostname, port = host_port.rsplit(":", 1)
@@ -55,15 +57,15 @@ class Static(ProcessorInterface):
                     container_metadata[fake_ip] = {}
 
                 container_metadata[fake_ip].update({
-                    f"easyhaproxy.{definition}.host": hostname,
-                    f"easyhaproxy.{definition}.port": port,
-                    f"easyhaproxy.{definition}.redirect": json.dumps({hostname: config["redirect"]}),
-                    f"easyhaproxy.{definition}.redirect_only": "true",  # Marker to skip backend
+                    f"{self.label}.{definition}.host": hostname,
+                    f"{self.label}.{definition}.port": port,
+                    f"{self.label}.{definition}.redirect": json.dumps({hostname: config["redirect"]}),
+                    f"{self.label}.{definition}.redirect_only": "true",  # Marker to skip backend
                 })
                 continue
 
             # Get IPs/containers
-            ip_list = config.get("ip", [hostname])
+            ip_list = config.get("ip") or [hostname]
 
             # Process each container/IP
             for container_spec in ip_list:
@@ -79,9 +81,9 @@ class Static(ProcessorInterface):
 
                 # Build labels dict
                 labels = {
-                    f"easyhaproxy.{definition}.host": hostname,
-                    f"easyhaproxy.{definition}.port": port,
-                    f"easyhaproxy.{definition}.localport": localport,
+                    f"{self.label}.{definition}.host": hostname,
+                    f"{self.label}.{definition}.port": port,
+                    f"{self.label}.{definition}.localport": localport,
                 }
 
                 # Add optional settings
@@ -91,7 +93,7 @@ class Static(ProcessorInterface):
                         # Convert boolean to string
                         if isinstance(value, bool):
                             value = "true" if value else "false"
-                        labels[f"easyhaproxy.{definition}.{key}"] = str(value)
+                        labels[f"{self.label}.{definition}.{key}"] = str(value)
 
                 # Handle plugins
                 host_plugins = config.get("plugins", global_enabled)
@@ -101,10 +103,10 @@ class Static(ProcessorInterface):
                         plugins_str = ",".join(host_plugins)
                     else:
                         plugins_str = host_plugins
-                    labels[f"easyhaproxy.{definition}.plugins"] = plugins_str
+                    labels[f"{self.label}.{definition}.plugins"] = plugins_str
 
                     # Process plugin configurations
-                    host_plugin_config = config.get("plugin", {})
+                    host_plugin_config = config.get("plugin") or {}
 
                     # Parse plugins list
                     plugins_list = host_plugins if isinstance(host_plugins, list) else [p.strip() for p in host_plugins.split(",")]
@@ -113,13 +115,13 @@ class Static(ProcessorInterface):
                         # Merge global and host-specific config
                         merged_config = {}
                         if plugin_name in global_plugin_config:
-                            merged_config.update(global_plugin_config[plugin_name])
+                            merged_config.update(global_plugin_config[plugin_name] or {})
                         if plugin_name in host_plugin_config:
-                            merged_config.update(host_plugin_config[plugin_name])
+                            merged_config.update(host_plugin_config[plugin_name] or {})
 
                         # Convert plugin config to labels
                         for config_key, config_value in merged_config.items():
-                            label_key = f"easyhaproxy.{definition}.plugin.{plugin_name}.{config_key}"
+                            label_key = f"{self.label}.{definition}.plugin.{plugin_name}.{config_key}"
 
                             # Convert list values to comma-separated strings
                             if isinstance(config_value, list):

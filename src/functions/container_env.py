@@ -139,7 +139,7 @@ class ContainerEnv:
 
         # Convert stats
         if 'stats' in yaml_config:
-            stats = yaml_config['stats']
+            stats = yaml_config['stats'] or {}
             if 'enabled' in stats:
                 os.environ['HAPROXY_STATS_ENABLE'] = str(stats['enabled']).lower()
             if 'username' in stats:
@@ -153,22 +153,22 @@ class ContainerEnv:
 
         # Convert logLevel
         if 'logLevel' in yaml_config:
-            log_level = yaml_config['logLevel']
+            log_level = yaml_config['logLevel'] or {}
             for source, level in log_level.items():
                 os.environ[source.upper() + '_LOG_LEVEL'] = str(level)
 
         # Convert certbot
         if 'certbot' in yaml_config:
-            certbot = yaml_config['certbot']
+            certbot = yaml_config['certbot'] or {}
             for config, value in certbot.items():
                 os.environ['EASYHAPROXY_CERTBOT_' + config.upper()] = str(value)
 
         # Convert plugins
         if 'plugins' in yaml_config:
-            plugins = yaml_config['plugins']
+            plugins = yaml_config['plugins'] or {}
 
             # Convert enabled list
-            if 'enabled' in plugins:
+            if plugins.get('enabled'):
                 enabled_list = plugins['enabled'] if isinstance(plugins['enabled'], list) else [plugins['enabled']]
                 os.environ['EASYHAPROXY_PLUGINS_ENABLED'] = ','.join(enabled_list)
 
@@ -178,8 +178,8 @@ class ContainerEnv:
 
             # Convert plugin configs
             if 'config' in plugins:
-                for plugin_name, plugin_config in plugins['config'].items():
-                    for config_key, config_value in plugin_config.items():
+                for plugin_name, plugin_config in (plugins['config'] or {}).items():
+                    for config_key, config_value in (plugin_config or {}).items():
                         # Convert to env var format: EASYHAPROXY_PLUGIN_<NAME>_<KEY>
                         env_key = f"EASYHAPROXY_PLUGIN_{plugin_name.upper()}_{config_key.upper()}"
 

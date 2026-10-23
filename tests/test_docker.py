@@ -1,5 +1,6 @@
 import os
 import time
+from unittest.mock import MagicMock, Mock
 
 import docker
 import pytest
@@ -106,3 +107,78 @@ def test_processor_docker():
 
 
 # test_processor_docker()
+
+
+def _mock_container(name, ip=None, labels=None, network_mode="bridge"):
+    container = Mock()
+    container.name = name
+    container.labels = labels or {}
+    networks = {"easyhaproxy": {"IPAddress": ip}} if ip else {}
+    container.attrs = {"HostConfig": {"NetworkMode": network_mode}, "NetworkSettings": {"Networks": networks}}
+    return container
+
+
+def _scan_docker(monkeypatch, containers):
+    client = MagicMock()
+    by_name = {container.name: container for container in containers}
+    client.containers.list.return_value = containers
+    client.containers.get.side_effect = lambda name: by_name.get(name, containers[0])
+    client.networks.get.return_value.connect.side_effect = docker.errors.APIError("cannot connect")
+    monkeypatch.setattr(docker, "from_env", lambda: client)
+    return ProcessorInterface.factory(ProcessorInterface.DOCKER).get_parsed_object(), client
+
+
+def test_processor_docker_skips_containers_that_cannot_join_the_network(monkeypatch):
+    """host, none and container:<name> cannot join the HAProxy network: connecting them failed the whole scan"""
+    labels = {"easyhaproxy.http.host": "web.test", "easyhaproxy.http.localport": "8080"}
+    containers = [
+        _mock_container("haproxy", ip="10.0.0.9"),
+        _mock_container("web", ip="10.0.0.2", labels=labels),
+        _mock_container("hostnet", labels=labels, network_mode="host"),
+        _mock_container("nonet", network_mode="none"),
+        _mock_container("sidecar", network_mode="container:web"),
+    ]
+
+    parsed, client = _scan_docker(monkeypatch, containers)
+
+    assert parsed == {"10.0.0.2": labels}
+    client.networks.get.return_value.connect.assert_not_called()
+
+
+def test_processor_docker_unexpected_error_skips_only_that_container(monkeypatch):
+    labels = {"easyhaproxy.http.host": "web.test", "easyhaproxy.http.localport": "8080"}
+    broken = _mock_container("broken", labels=labels)
+    broken.attrs = {"HostConfig": {"NetworkMode": "bridge"}}  # no NetworkSettings
+    containers = [_mock_container("haproxy", ip="10.0.0.9"), broken, _mock_container("web", ip="10.0.0.2", labels=labels)]
+
+    parsed, _ = _scan_docker(monkeypatch, containers)
+
+    assert parsed == {"10.0.0.2": labels}
+
+
+def test_processor_docker_does_not_connect_unlabeled_containers(monkeypatch):
+    """A container without EasyHAProxy labels is not routed, so it must not join the HAProxy network"""
+    labels = {"easyhaproxy.http.host": "web.test", "easyhaproxy.http.localport": "8080"}
+    containers = [_mock_container("haproxy", ip="10.0.0.9"),
+                  _mock_container("database"),  # on another network, no labels
+                  _mock_container("web", ip="10.0.0.2", labels=labels)]
+
+    parsed, client = _scan_docker(monkeypatch, containers)
+
+    assert parsed == {"10.0.0.2": labels}
+    client.networks.get.return_value.connect.assert_not_called()
+
+
+def test_processor_docker_custom_label_prefix(monkeypatch):
+    """Only labels that start with the prefix count: a short prefix must not match other labels"""
+    monkeypatch.setenv("EASYHAPROXY_LABEL_PREFIX", "my")
+    labels = {"my.http.host": "web.test", "my.http.localport": "8080"}
+    containers = [_mock_container("haproxy", ip="10.0.0.9"),
+                  _mock_container("app", labels={"com.mycompany.version": "1"}),  # another network
+                  _mock_container("old", labels={"easyhaproxy.http.host": "old.test"}),  # another network
+                  _mock_container("web", ip="10.0.0.2", labels=labels)]
+
+    parsed, client = _scan_docker(monkeypatch, containers)
+
+    assert parsed == {"10.0.0.2": labels}
+    client.networks.get.return_value.connect.assert_not_called()
