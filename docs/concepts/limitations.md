@@ -13,6 +13,8 @@ The `--network=host` option **cannot** be used with EasyHAProxy due to its netwo
 EasyHAProxy needs to inspect and interact with Docker containers from within the Docker network where it's running. Using the `--network=host` option bypasses Docker networking, preventing EasyHAProxy from accessing and configuring containers effectively.
 :::
 
+The same applies to the containers it routes to: a labeled container that uses `--network=host`, `--network=none` or `--network=container:<name>` cannot join the EasyHAProxy network, so it is skipped and the log says why. The other containers are still routed.
+
 ## Considerations for Multiple Replica Deployments in EasyHAProxy
 
 :::warning Single Replica Deployment Recommended

@@ -123,3 +123,43 @@ def test_processor_static_with_cors():
         os.path.join(os.path.dirname(os.path.realpath(__file__)), "./expected/static-cors.txt"))
 
 # test_processor_static()
+
+
+def _scan_static(tmp_path, content):
+    static_file = tmp_path / "static.yml"
+    static_file.write_text(content)
+    ProcessorInterface.static_file = str(static_file)
+    return ProcessorInterface.factory(ProcessorInterface.STATIC).get_parsed_object()
+
+
+def test_processor_static_empty_file(tmp_path):
+    assert _scan_static(tmp_path, "") == {}
+
+
+def test_processor_static_empty_sections(tmp_path):
+    """A key with nothing under it loads as None, not {}"""
+    assert _scan_static(tmp_path, "stats:\nlogLevel:\ncertbot:\nplugins:\ncontainers:\n") == {}
+
+
+def test_processor_static_host_without_settings(tmp_path):
+    """A host with nothing under it is sent to itself on port 80, like a host with no ip"""
+    assert _scan_static(tmp_path, "containers:\n  host.test:80:\n") == {
+        "host.test": {
+            "easyhaproxy.host_test_80.host": "host.test",
+            "easyhaproxy.host_test_80.port": "80",
+            "easyhaproxy.host_test_80.localport": "80",
+        }
+    }
+
+
+def test_processor_static_custom_label_prefix(monkeypatch):
+    """EASYHAPROXY_LABEL_PREFIX used to route nothing in static mode"""
+    ProcessorInterface.static_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "./fixtures/static.yml")
+    default = ProcessorInterface.factory(ProcessorInterface.STATIC)
+    default.get_haproxy_conf()
+
+    monkeypatch.setenv("EASYHAPROXY_LABEL_PREFIX", "myproxy")
+    custom = ProcessorInterface.factory(ProcessorInterface.STATIC)
+    custom.get_haproxy_conf()
+
+    assert custom.get_hosts() == default.get_hosts() != []

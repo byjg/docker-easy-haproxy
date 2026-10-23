@@ -180,6 +180,27 @@ def _apply_args_to_env(args: argparse.Namespace) -> None:
             os.environ[env_name] = str(value)
 
 
+def apply_config(processor_obj, haproxy, config_file=None, certs_folder=None):
+    """
+    Write the new haproxy.cfg, unless HAProxy rejects it: a reload with an
+    invalid configuration would stop HAProxy for every site. The previous
+    configuration is then put back. Returns True when the new one was written.
+    """
+    config_file = config_file or Consts.haproxy_config
+    previous = Functions.load(config_file) if os.path.exists(config_file) else None
+
+    processor_obj.save_config(config_file)
+    processor_obj.save_certs(certs_folder or Consts.certs_haproxy)
+    error = haproxy.validate_config(config_file)
+    if error is None:
+        return True
+
+    logger_easyhaproxy.error(f"HAProxy rejects the new configuration; keeping the previous one:\n{error}")
+    if previous is not None:
+        Functions.save(config_file, previous)
+    return False
+
+
 def start():
     processor_obj = ProcessorInterface.factory(os.getenv("EASYHAPROXY_DISCOVER"))
     if processor_obj is None:
@@ -229,15 +250,17 @@ def start():
             if certbot.check_certificates(certbot_certs_found) or DeepDiff(old_parsed, processor_obj.get_parsed_object()) != {} or not haproxy.is_alive() or DeepDiff(current_custom_config_files, haproxy.get_custom_config_files()) != {}:
                 logger_easyhaproxy.info('New configuration found. Reloading...')
                 logger_easyhaproxy.debug(f'Object Found: {processor_obj.get_parsed_object()}')
-                processor_obj.save_config(Consts.haproxy_config)
-                processor_obj.save_certs(Consts.certs_haproxy)
-                certbot_certs_found = processor_obj.get_certbot_hosts()
-                logger_easyhaproxy.info(f'Found hosts: {", ".join(processor_obj.get_hosts())}')  # Needs to after save_config
-                old_haproxy = haproxy
-                haproxy = DaemonizeHAProxy()
-                current_custom_config_files = haproxy.get_custom_config_files()
-                haproxy.haproxy(DaemonizeHAProxy.HAPROXY_RELOAD)
-                old_haproxy.terminate()
+                valid = apply_config(processor_obj, haproxy)
+                if valid:
+                    certbot_certs_found = processor_obj.get_certbot_hosts()
+                    logger_easyhaproxy.info(f'Found hosts: {", ".join(processor_obj.get_hosts())}')  # Needs to after save_config
+                # A HAProxy that stopped is started again, with the previous configuration if the new one is invalid
+                if valid or not haproxy.is_alive():
+                    old_haproxy = haproxy
+                    haproxy = DaemonizeHAProxy()
+                    current_custom_config_files = haproxy.get_custom_config_files()
+                    haproxy.haproxy(DaemonizeHAProxy.HAPROXY_RELOAD)
+                    old_haproxy.terminate()
 
         except Exception as e:
             logger_easyhaproxy.fatal(f"Err: {e}")

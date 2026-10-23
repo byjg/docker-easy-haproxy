@@ -2,6 +2,8 @@ import socket
 
 import docker
 
+from functions import logger_easyhaproxy
+
 from .interface import ProcessorInterface
 
 
@@ -26,10 +28,24 @@ class Docker(ProcessorInterface):
 
         self.parsed_object = {}
         for container in self.client.containers.list():
-            # Issue 32 - Docker container cannot connect to containers in different network.
-            if ha_proxy_network_name not in container.attrs["NetworkSettings"]["Networks"].keys():
-                ha_proxy_network.connect(container.name)
-                container = self.client.containers.get(container.name)  # refresh object
+            # Only containers with EasyHAProxy labels are routed, so only they join the HAProxy network
+            if not any(key.startswith(f"{self.label}.") for key in container.labels):
+                continue
 
-            ip_address = container.attrs["NetworkSettings"]["Networks"][ha_proxy_network_name]["IPAddress"]
-            self.parsed_object[ip_address] = container.labels
+            try:
+                # host, none and container:<name> cannot join another network
+                network_mode = container.attrs["HostConfig"]["NetworkMode"]
+                if network_mode in ("host", "none") or network_mode.startswith("container:"):
+                    logger_easyhaproxy.warn(f"Container {container.name} - Network mode '{network_mode}' is not supported; skipped")
+                    continue
+
+                # Issue 32 - Docker container cannot connect to containers in different network.
+                if ha_proxy_network_name not in container.attrs["NetworkSettings"]["Networks"].keys():
+                    ha_proxy_network.connect(container.name)
+                    container = self.client.containers.get(container.name)  # refresh object
+
+                ip_address = container.attrs["NetworkSettings"]["Networks"][ha_proxy_network_name]["IPAddress"]
+                self.parsed_object[ip_address] = container.labels
+            except Exception as e:
+                # One container the code does not expect must not stop the others
+                logger_easyhaproxy.warn(f"Container {container.name} - Skipped: {e}")

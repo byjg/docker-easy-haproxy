@@ -6,10 +6,10 @@ metadata:
   name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-2.0.8
+    helm.sh/chart: easyhaproxy-2.0.9
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
-    app.kubernetes.io/version: "6.5.0"
+    app.kubernetes.io/version: "6.5.1"
     app.kubernetes.io/managed-by: Helm
 
 ---
@@ -20,10 +20,10 @@ metadata:
   name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-2.0.8
+    helm.sh/chart: easyhaproxy-2.0.9
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
-    app.kubernetes.io/version: "6.5.0"
+    app.kubernetes.io/version: "6.5.1"
     app.kubernetes.io/managed-by: Helm
 rules:
 - apiGroups:
@@ -84,10 +84,10 @@ metadata:
   name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-2.0.8
+    helm.sh/chart: easyhaproxy-2.0.9
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
-    app.kubernetes.io/version: "6.5.0"
+    app.kubernetes.io/version: "6.5.1"
     app.kubernetes.io/managed-by: Helm
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -106,10 +106,10 @@ metadata:
   name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-2.0.8
+    helm.sh/chart: easyhaproxy-2.0.9
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
-    app.kubernetes.io/version: "6.5.0"
+    app.kubernetes.io/version: "6.5.1"
     app.kubernetes.io/managed-by: Helm
   annotations:
     {}
@@ -142,10 +142,10 @@ metadata:
   name: ingress-easyhaproxy
   namespace: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-2.0.8
+    helm.sh/chart: easyhaproxy-2.0.9
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
-    app.kubernetes.io/version: "6.5.0"
+    app.kubernetes.io/version: "6.5.1"
     app.kubernetes.io/managed-by: Helm
 spec:
   replicas: 1
@@ -166,7 +166,7 @@ spec:
         - name: easyhaproxy
           securityContext:
             {}
-          image: "byjg/easy-haproxy:6.5.0"
+          image: "byjg/easy-haproxy:6.5.1"
           imagePullPolicy: Always
           ports:
             - name: http
@@ -224,10 +224,10 @@ kind: IngressClass
 metadata:
   name: easyhaproxy
   labels:
-    helm.sh/chart: easyhaproxy-2.0.8
+    helm.sh/chart: easyhaproxy-2.0.9
     app.kubernetes.io/name: easyhaproxy
     app.kubernetes.io/instance: ingress
-    app.kubernetes.io/version: "6.5.0"
+    app.kubernetes.io/version: "6.5.1"
     app.kubernetes.io/managed-by: Helm
 spec:
   controller: byjg.com/easyhaproxy

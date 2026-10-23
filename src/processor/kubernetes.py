@@ -263,204 +263,252 @@ class Kubernetes(ProcessorInterface):
             if not is_match:
                 continue
 
-            ssl_hosts = []
-
-            annotations = ingress.metadata.annotations or {}
-            certbot = self._check_annotation(annotations, "easyhaproxy.certbot")
-            redirect_ssl = self._check_annotation(annotations, "easyhaproxy.redirect_ssl")
-            redirect = self._check_annotation(annotations, "easyhaproxy.redirect")
-            mode = self._check_annotation(annotations, "easyhaproxy.mode")
-            proto = self._check_annotation(annotations, "easyhaproxy.proto")
-            listen_port = self._check_annotation(annotations, "easyhaproxy.listen_port", 80)
-            plugins = self._check_annotation(annotations, "easyhaproxy.plugins")
-
-            # Extract plugin-specific configurations
-            plugin_annotations = {}
-            for annotation_key, annotation_value in annotations.items():
-                if annotation_key.startswith("easyhaproxy.plugin."):
-                    plugin_annotations[annotation_key] = annotation_value
-
-            # Get ingress name for logging
             ingress_name = f"{ingress.metadata.namespace}/{ingress.metadata.name}"
+            try:
+                routes = self._inspect_ingress(ingress)
+            except Exception as e:
+                # One Ingress the code does not expect must not stop the others
+                logger_easyhaproxy.warn(f"Ingress {ingress_name} - Skipped: {e}")
+                continue
 
-            # Generic k8s_secret annotation processing
-            # Pattern: easyhaproxy.plugin.X.k8s_secret.KEY: "secret_name" or "secret_name/key_name"
-            # Result: easyhaproxy.plugin.X.KEY: "<base64-encoded-content>"
-            k8s_secret_annotations = {}
-            for annotation_key, secret_value in list(plugin_annotations.items()):
-                # Check if this annotation contains k8s_secret pattern
-                if ".k8s_secret." in annotation_key:
-                    try:
-                        # Parse the annotation key
-                        # Example: "easyhaproxy.plugin.jwt_validator.k8s_secret.pubkey" -> "pubkey"
-                        parts = annotation_key.split(".k8s_secret.")
-                        if len(parts) != 2:
-                            logger_easyhaproxy.warn(
-                                f"Ingress {ingress_name} - Malformed k8s_secret annotation: {annotation_key}"
-                            )
-                            continue
-
-                        prefix = parts[0]  # "easyhaproxy.plugin.jwt_validator"
-                        config_key = parts[1]  # "pubkey"
-                        target_annotation = f"{prefix}.{config_key}"  # "easyhaproxy.plugin.jwt_validator.pubkey"
-
-                        # Parse secret_value: can be "secret_name" or "secret_name/key_name"
-                        if "/" in secret_value:
-                            secret_name, explicit_key_name = secret_value.split("/", 1)
-                            use_explicit_key = True
-                        else:
-                            secret_name = secret_value
-                            explicit_key_name = None
-                            use_explicit_key = False
-
-                        # Read the secret
-                        secret = self.api_instance.read_namespaced_secret(
-                            secret_name,
-                            ingress.metadata.namespace
-                        )
-
-                        # Try to find the key in the secret data
-                        secret_data = None
-                        tried_keys = []
-
-                        if use_explicit_key:
-                            # User specified exact key name - only try that one
-                            tried_keys = [explicit_key_name]
-                            if explicit_key_name in secret.data:
-                                secret_data = secret.data[explicit_key_name]
-                                logger_easyhaproxy.debug(
-                                    f"Ingress {ingress_name} - Found explicit secret key '{explicit_key_name}' "
-                                    f"in secret '{secret_name}'"
-                                )
-                        else:
-                            # No explicit key - try config_key and common variations
-                            tried_keys = [config_key]
-                            if config_key in secret.data:
-                                secret_data = secret.data[config_key]
-                            else:
-                                # Try common variations for the requested key
-                                variations = []
-                                if config_key == "pubkey":
-                                    variations = ["public-key", "jwt.pub", "tls.crt"]
-                                elif config_key == "password":
-                                    variations = ["pass", "pwd"]
-                                elif config_key == "api_key":
-                                    variations = ["apikey", "api-key", "key"]
-
-                                for variation in variations:
-                                    tried_keys.append(variation)
-                                    if variation in secret.data:
-                                        secret_data = secret.data[variation]
-                                        logger_easyhaproxy.debug(
-                                            f"Ingress {ingress_name} - Found secret key '{variation}' "
-                                            f"for requested key '{config_key}'"
-                                        )
-                                        break
-
-                        if secret_data:
-                            # Decode from base64 (Kubernetes secrets are base64-encoded)
-                            # Then re-encode to base64 for plugin (plugin expects base64-encoded)
-                            decoded = base64.b64decode(secret_data).decode('ascii')
-                            reencoded = base64.b64encode(decoded.encode('ascii')).decode('ascii')
-
-                            # Store the processed annotation
-                            k8s_secret_annotations[target_annotation] = reencoded
-
-                            logger_easyhaproxy.info(
-                                f"Ingress {ingress_name} - Loaded '{config_key}' from secret "
-                                f"'{secret_name}' for annotation '{target_annotation}'"
-                            )
-                        else:
-                            logger_easyhaproxy.warn(
-                                f"Ingress {ingress_name} - Secret '{secret_name}' found but "
-                                f"no matching key (tried: {', '.join(tried_keys)})"
-                            )
-
-                    except Exception as e:
-                        logger_easyhaproxy.warn(
-                            f"Ingress {ingress_name} - Failed to process k8s_secret annotation "
-                            f"'{annotation_key}' with value '{secret_value}': {e}"
-                        )
-
-            # Merge k8s_secret annotations into plugin_annotations
-            # k8s_secret annotations will NOT override existing explicit annotations (lower priority)
-            for key, value in k8s_secret_annotations.items():
-                if key not in plugin_annotations:
-                    plugin_annotations[key] = value
-                else:
-                    logger_easyhaproxy.debug(
-                        f"Ingress {ingress_name} - Skipping k8s_secret annotation '{key}' "
-                        f"because explicit annotation already exists"
-                    )
-
-            data = {"creation_timestamp": ingress.metadata.creation_timestamp.strftime("%x %X"),
-                    "resource_version": ingress.metadata.resource_version, "namespace": ingress.metadata.namespace}
-
-            if ingress.spec.tls is not None:
-                for tls in ingress.spec.tls:
-                    try:
-                        secret = self.api_instance.read_namespaced_secret(tls.secret_name, ingress.metadata.namespace)
-                        if "tls.crt" not in secret.data or "tls.key" not in secret.data:
-                            continue
-
-                        if tls.secret_name not in self.cert_cache or self.cert_cache[tls.secret_name] != secret.data:
-                            self.cert_cache[tls.secret_name] = secret.data
-                            Functions.save(
-                                f"{Consts.certs_haproxy}/{tls.secret_name}.pem",
-                                base64.b64decode(secret.data["tls.crt"]).decode('ascii') + "\n" + base64.b64decode(
-                                    secret.data["tls.key"]).decode('ascii')
-                            )
-
-                        ssl_hosts.extend(tls.hosts)
-                    except Exception as e:
-                        logger_easyhaproxy.warn(f"Ingress {ingress_name} - Get secret failed: '{e}'")
-
-            logger_easyhaproxy.debug(f"Ingress {ingress_name} - SSL Hosts found '{ssl_hosts}'")
-
-            for rule in ingress.spec.rules:
-                rule_data = {}
-                port_number = rule.http.paths[0].backend.service.port.number
-                definition = f"easyhaproxy.{rule.host.replace('.', '-')}_{port_number}"
-                rule_data[f"{definition}.host"] = rule.host
-                rule_data[f"{definition}.port"] = listen_port
-                rule_data[f"{definition}.localport"] = port_number
-                if rule.host in ssl_hosts:
-                    rule_data[f"{definition}.clone_to_ssl"] = 'true'
-                if redirect_ssl is not None:
-                    rule_data[f"{definition}.redirect_ssl"] = redirect_ssl
-                if certbot is not None:
-                    rule_data[f"{definition}.certbot"] = certbot
-                if redirect is not None:
-                    rule_data[f"{definition}.redirect"] = redirect
-                if mode is not None:
-                    rule_data[f"{definition}.mode"] = mode
-                if proto is not None:
-                    rule_data[f"{definition}.proto"] = proto
-                rule_data[f"{definition}.balance"] = self._check_annotation(ingress.metadata.annotations, "easyhaproxy.balance", "roundrobin")
-
-                # Add plugin configuration
-                if plugins is not None:
-                    rule_data[f"{definition}.plugins"] = plugins
-
-                # Add plugin-specific configurations
-                for plugin_key, plugin_value in plugin_annotations.items():
-                    # Convert easyhaproxy.plugin.X.Y to easyhaproxy.{definition}.plugin.X.Y
-                    plugin_config_key = plugin_key.replace("easyhaproxy.plugin.", f"{definition}.plugin.")
-                    rule_data[plugin_config_key] = plugin_value
-
-                service_name = rule.http.paths[0].backend.service.name
-                try:
-                    api_response = self.api_instance.read_namespaced_service(service_name, ingress.metadata.namespace)
-                    cluster_ip = api_response.spec.cluster_ip
-                except ApiException as e:
-                    cluster_ip = None
-                    logger_easyhaproxy.warn(f"Ingress {ingress_name} - Service {service_name} - Failed: '{e}'")
-
-                if cluster_ip is not None:
-                    if cluster_ip not in self.parsed_object.keys():
-                        self.parsed_object[cluster_ip] = data
-                    self.parsed_object[cluster_ip].update(rule_data)
+            for cluster_ip, route in routes.items():
+                self.parsed_object.setdefault(cluster_ip, {}).update(route)
 
             # Update ingress status if enabled
             if env_config['update_ingress_status'] and ingress_addresses:
                 self._update_ingress_status(ingress, ingress_addresses)
+
+    def _inspect_ingress(self, ingress):
+        """The routes of one Ingress, by the cluster IP of their Service"""
+        routes = {}
+        ssl_hosts = []
+
+        annotations = ingress.metadata.annotations or {}
+        # Annotations use the label prefix (EASYHAPROXY_LABEL_PREFIX, "easyhaproxy" by default)
+        certbot = self._check_annotation(annotations, f"{self.label}.certbot")
+        redirect_ssl = self._check_annotation(annotations, f"{self.label}.redirect_ssl")
+        redirect = self._check_annotation(annotations, f"{self.label}.redirect")
+        mode = self._check_annotation(annotations, f"{self.label}.mode")
+        proto = self._check_annotation(annotations, f"{self.label}.proto")
+        listen_port = self._check_annotation(annotations, f"{self.label}.listen_port", 80)
+        plugins = self._check_annotation(annotations, f"{self.label}.plugins")
+        plugin_prefix = f"{self.label}.plugin."
+
+        # Extract plugin-specific configurations
+        plugin_annotations = {}
+        for annotation_key, annotation_value in annotations.items():
+            if annotation_key.startswith(plugin_prefix):
+                plugin_annotations[annotation_key] = annotation_value
+
+        # Get ingress name for logging
+        ingress_name = f"{ingress.metadata.namespace}/{ingress.metadata.name}"
+
+        # Generic k8s_secret annotation processing
+        # Pattern: easyhaproxy.plugin.X.k8s_secret.KEY: "secret_name" or "secret_name/key_name"
+        # Result: easyhaproxy.plugin.X.KEY: "<base64-encoded-content>"
+        k8s_secret_annotations = {}
+        for annotation_key, secret_value in list(plugin_annotations.items()):
+            # Check if this annotation contains k8s_secret pattern
+            if ".k8s_secret." in annotation_key:
+                try:
+                    # Parse the annotation key
+                    # Example: "easyhaproxy.plugin.jwt_validator.k8s_secret.pubkey" -> "pubkey"
+                    parts = annotation_key.split(".k8s_secret.")
+                    if len(parts) != 2:
+                        logger_easyhaproxy.warn(
+                            f"Ingress {ingress_name} - Malformed k8s_secret annotation: {annotation_key}"
+                        )
+                        continue
+
+                    prefix = parts[0]  # "easyhaproxy.plugin.jwt_validator"
+                    config_key = parts[1]  # "pubkey"
+                    target_annotation = f"{prefix}.{config_key}"  # "easyhaproxy.plugin.jwt_validator.pubkey"
+
+                    # Parse secret_value: can be "secret_name" or "secret_name/key_name"
+                    if "/" in secret_value:
+                        secret_name, explicit_key_name = secret_value.split("/", 1)
+                        use_explicit_key = True
+                    else:
+                        secret_name = secret_value
+                        explicit_key_name = None
+                        use_explicit_key = False
+
+                    # Read the secret
+                    secret = self.api_instance.read_namespaced_secret(
+                        secret_name,
+                        ingress.metadata.namespace
+                    )
+
+                    # Try to find the key in the secret data
+                    secret_data = None
+                    tried_keys = []
+
+                    if use_explicit_key:
+                        # User specified exact key name - only try that one
+                        tried_keys = [explicit_key_name]
+                        if explicit_key_name in secret.data:
+                            secret_data = secret.data[explicit_key_name]
+                            logger_easyhaproxy.debug(
+                                f"Ingress {ingress_name} - Found explicit secret key '{explicit_key_name}' "
+                                f"in secret '{secret_name}'"
+                            )
+                    else:
+                        # No explicit key - try config_key and common variations
+                        tried_keys = [config_key]
+                        if config_key in secret.data:
+                            secret_data = secret.data[config_key]
+                        else:
+                            # Try common variations for the requested key
+                            variations = []
+                            if config_key == "pubkey":
+                                variations = ["public-key", "jwt.pub", "tls.crt"]
+                            elif config_key == "password":
+                                variations = ["pass", "pwd"]
+                            elif config_key == "api_key":
+                                variations = ["apikey", "api-key", "key"]
+
+                            for variation in variations:
+                                tried_keys.append(variation)
+                                if variation in secret.data:
+                                    secret_data = secret.data[variation]
+                                    logger_easyhaproxy.debug(
+                                        f"Ingress {ingress_name} - Found secret key '{variation}' "
+                                        f"for requested key '{config_key}'"
+                                    )
+                                    break
+
+                    if secret_data:
+                        # Decode from base64 (Kubernetes secrets are base64-encoded)
+                        # Then re-encode to base64 for plugin (plugin expects base64-encoded)
+                        decoded = base64.b64decode(secret_data).decode('ascii')
+                        reencoded = base64.b64encode(decoded.encode('ascii')).decode('ascii')
+
+                        # Store the processed annotation
+                        k8s_secret_annotations[target_annotation] = reencoded
+
+                        logger_easyhaproxy.info(
+                            f"Ingress {ingress_name} - Loaded '{config_key}' from secret "
+                            f"'{secret_name}' for annotation '{target_annotation}'"
+                        )
+                    else:
+                        logger_easyhaproxy.warn(
+                            f"Ingress {ingress_name} - Secret '{secret_name}' found but "
+                            f"no matching key (tried: {', '.join(tried_keys)})"
+                        )
+
+                except Exception as e:
+                    logger_easyhaproxy.warn(
+                        f"Ingress {ingress_name} - Failed to process k8s_secret annotation "
+                        f"'{annotation_key}' with value '{secret_value}': {e}"
+                    )
+
+        # Merge k8s_secret annotations into plugin_annotations
+        # k8s_secret annotations will NOT override existing explicit annotations (lower priority)
+        for key, value in k8s_secret_annotations.items():
+            if key not in plugin_annotations:
+                plugin_annotations[key] = value
+            else:
+                logger_easyhaproxy.debug(
+                    f"Ingress {ingress_name} - Skipping k8s_secret annotation '{key}' "
+                    f"because explicit annotation already exists"
+                )
+
+        data = {"creation_timestamp": ingress.metadata.creation_timestamp.strftime("%x %X"),
+                "resource_version": ingress.metadata.resource_version, "namespace": ingress.metadata.namespace}
+
+        if ingress.spec.tls is not None:
+            for tls in ingress.spec.tls:
+                try:
+                    secret = self.api_instance.read_namespaced_secret(tls.secret_name, ingress.metadata.namespace)
+                    if not secret.data or "tls.crt" not in secret.data or "tls.key" not in secret.data:
+                        continue
+
+                    if tls.secret_name not in self.cert_cache or self.cert_cache[tls.secret_name] != secret.data:
+                        self.cert_cache[tls.secret_name] = secret.data
+                        Functions.save(
+                            f"{Consts.certs_haproxy}/{tls.secret_name}.pem",
+                            base64.b64decode(secret.data["tls.crt"]).decode('ascii') + "\n" + base64.b64decode(
+                                secret.data["tls.key"]).decode('ascii')
+                        )
+
+                    ssl_hosts.extend(tls.hosts or [])
+                except Exception as e:
+                    logger_easyhaproxy.warn(f"Ingress {ingress_name} - Get secret failed: '{e}'")
+
+        logger_easyhaproxy.debug(f"Ingress {ingress_name} - SSL Hosts found '{ssl_hosts}'")
+
+        if ingress.spec.default_backend is not None:
+            logger_easyhaproxy.warn(f"Ingress {ingress_name} - defaultBackend is not supported; ignored")
+
+        for rule in ingress.spec.rules or []:
+            if not rule.host:
+                logger_easyhaproxy.warn(f"Ingress {ingress_name} - A rule without host is not supported; skipped")
+                continue
+            if rule.http is None:
+                logger_easyhaproxy.warn(f"Ingress {ingress_name} - Rule {rule.host} has no paths; skipped")
+                continue
+            backend = rule.http.paths[0].backend
+            if backend.service is None:
+                logger_easyhaproxy.warn(f"Ingress {ingress_name} - Rule {rule.host} - Only a Service backend is supported; skipped")
+                continue
+
+            service_name = backend.service.name
+            try:
+                service = self.api_instance.read_namespaced_service(service_name, ingress.metadata.namespace)
+            except ApiException as e:
+                logger_easyhaproxy.warn(f"Ingress {ingress_name} - Service {service_name} - Failed: '{e}'")
+                continue
+
+            # A headless Service has the string "None"; an ExternalName Service has no cluster IP
+            cluster_ip = service.spec.cluster_ip
+            if cluster_ip in (None, "None"):
+                logger_easyhaproxy.warn(f"Ingress {ingress_name} - Service {service_name} has no cluster IP (headless or ExternalName); skipped")
+                continue
+
+            port_number = self._service_port(backend.service.port, service)
+            if port_number is None:
+                logger_easyhaproxy.warn(f"Ingress {ingress_name} - Service {service_name} has no port named '{backend.service.port.name}'; skipped")
+                continue
+
+            rule_data = {}
+            definition = f"{self.label}.{rule.host.replace('.', '-')}_{port_number}"
+            rule_data[f"{definition}.host"] = rule.host
+            rule_data[f"{definition}.port"] = listen_port
+            rule_data[f"{definition}.localport"] = port_number
+            if rule.host in ssl_hosts:
+                rule_data[f"{definition}.clone_to_ssl"] = 'true'
+            if redirect_ssl is not None:
+                rule_data[f"{definition}.redirect_ssl"] = redirect_ssl
+            if certbot is not None:
+                rule_data[f"{definition}.certbot"] = certbot
+            if redirect is not None:
+                rule_data[f"{definition}.redirect"] = redirect
+            if mode is not None:
+                rule_data[f"{definition}.mode"] = mode
+            if proto is not None:
+                rule_data[f"{definition}.proto"] = proto
+            rule_data[f"{definition}.balance"] = self._check_annotation(annotations, f"{self.label}.balance", "roundrobin")
+
+            # Add plugin configuration
+            if plugins is not None:
+                rule_data[f"{definition}.plugins"] = plugins
+
+            # Add plugin-specific configurations
+            for plugin_key, plugin_value in plugin_annotations.items():
+                # Convert easyhaproxy.plugin.X.Y to easyhaproxy.{definition}.plugin.X.Y
+                plugin_config_key = f"{definition}.plugin." + plugin_key[len(plugin_prefix):]
+                rule_data[plugin_config_key] = plugin_value
+
+            routes.setdefault(cluster_ip, dict(data)).update(rule_data)
+
+        return routes
+
+    @staticmethod
+    def _service_port(port, service):
+        """The Service port an Ingress backend names, by number or by name"""
+        if port.number is not None:
+            return port.number
+        for service_port in service.spec.ports or []:
+            if service_port.name == port.name:
+                return service_port.port
+        return None
