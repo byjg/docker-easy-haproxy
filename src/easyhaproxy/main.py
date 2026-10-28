@@ -226,6 +226,7 @@ def start():
     old_haproxy = None
     haproxy = DaemonizeHAProxy()
     current_custom_config_files = haproxy.get_custom_config_files()
+    current_cert_files = haproxy.get_cert_files()
     haproxy.haproxy(DaemonizeHAProxy.HAPROXY_START)
     haproxy.sleep()
 
@@ -247,10 +248,13 @@ def start():
         try:
             old_parsed = processor_obj.get_parsed_object()
             processor_obj.refresh()
-            if certbot.check_certificates(certbot_certs_found) or DeepDiff(old_parsed, processor_obj.get_parsed_object()) != {} or not haproxy.is_alive() or DeepDiff(current_custom_config_files, haproxy.get_custom_config_files()) != {}:
+            if certbot.check_certificates(certbot_certs_found) or DeepDiff(old_parsed, processor_obj.get_parsed_object()) != {} or not haproxy.is_alive() or DeepDiff(current_custom_config_files, haproxy.get_custom_config_files()) != {} or DeepDiff(current_cert_files, haproxy.get_cert_files()) != {}:
                 logger_easyhaproxy.info('New configuration found. Reloading...')
                 logger_easyhaproxy.debug(f'Object Found: {processor_obj.get_parsed_object()}')
                 valid = apply_config(processor_obj, haproxy)
+                # apply_config rewrites the certificates from labels in the same folder:
+                # compare against the folder as it is now, or each pass would reload again
+                current_cert_files = haproxy.get_cert_files()
                 if valid:
                     certbot_certs_found = processor_obj.get_certbot_hosts()
                     logger_easyhaproxy.info(f'Found hosts: {", ".join(processor_obj.get_hosts())}')  # Needs to after save_config
