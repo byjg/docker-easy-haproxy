@@ -54,7 +54,7 @@ EasyHAProxy follows [Semantic Versioning](https://semver.org/):
   - **MINOR**: New features, plugin additions, backward-compatible changes
   - **PATCH**: Bug fixes, documentation updates, minor improvements
 
-**Current Version:** `6.5.1` (as of Chart.yaml)
+**Current Version:** `6.5.2` (as of Chart.yaml)
 
 ## Automated Release (Recommended)
 
@@ -329,6 +329,7 @@ helm show chart byjg/easyhaproxy
 
 | Version | Release Date | Type  | Highlights                                                                                                                            |
 |---------|--------------|-------|---------------------------------------------------------------------------------------------------------------------------------------|
+| 6.5.2   | 2026-10-27   | Patch | A certificate added, replaced or removed in the certificates folder (`/etc/easyhaproxy/certs/haproxy`) is served without restarting the container, as the SSL guide already described; SSL guide examples fixed (`sslcert` on a port 443 definition, not port 80), `clone_to_ssl` reference corrected |
 | 6.5.1   | 2026-10-22   | Patch | One Ingress, container or service the code does not expect is skipped with a warning instead of stopping discovery or crash-looping (e.g. an Ingress without annotations), the new haproxy.cfg is checked before every reload, Kubernetes named Service ports, Docker no longer connects unlabeled containers to its network, EASYHAPROXY_LABEL_PREFIX works in every mode |
 | 6.5.0   | 2026-10-22   | Minor | A host with no service gets 404 instead of 503 (503 is left for a service that is down), new self-contained error pages (404 added) on by default (HAPROXY_CUSTOMERRORS=false turns them off), Swarm guide runs EasyHAProxy on a manager node |
 | 6.4.0   | 2026-10-22   | Minor | Welcome page instead of a crash when nothing is routed, Host matched without its port (NodePort and remapped ports reach their service), chart NodePort defaults in the valid range, static manifests rendered from the chart (new LoadBalancer manifest), Cloudflare plugin no longer sends an empty X-Forwarded-For |

@@ -91,7 +91,7 @@ and rename it to `<domain>.pem`, so HAProxy never reads a half-written one.
 ```yaml
 services:
   easyhaproxy:
-    image: byjg/easy-haproxy:6.5.1
+    image: byjg/easy-haproxy:6.5.2
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - certs_haproxy:/etc/easyhaproxy/certs/haproxy
