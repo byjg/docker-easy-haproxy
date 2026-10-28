@@ -71,6 +71,11 @@ MIIEojCCA4qgAwIBAgIUegW2BimwuL4RzRZ2WYkHA6U5nkAwDQYJKoZIhvcNAQEL
 docker cp single.pem easyhaproxy:/etc/easyhaproxy/certs/haproxy/example.com.pem
 ```
 
+EasyHAProxy watches this folder: a `.pem` added, replaced or removed there
+reloads HAProxy within the refresh interval, without restarting the container
+and without dropping connections. Write a new file to a temporary name first
+and rename it to `<domain>.pem`, so HAProxy never reads a half-written one.
+
 :::warning Important Notes
 - The filename **must match the domain name**: `example.com.pem` for domain `example.com`
 - When using volume-mounted certificates, **do NOT** use the `easyhaproxy.[definition].sslcert` label
@@ -78,12 +83,15 @@ docker cp single.pem easyhaproxy:/etc/easyhaproxy/certs/haproxy/example.com.pem
 - SSL termination happens at HAProxy - your backend containers should only serve HTTP
 :::
 
-4. Configure your backend container (no sslcert label needed):
+4. Configure your backend container (no sslcert label needed). The HTTPS
+   definition listens on 443 with `ssl: true`; HAProxy picks the certificate by
+   SNI from the files in `/etc/easyhaproxy/certs/haproxy/`. The `http`
+   definition redirects port 80 to it:
 
 ```yaml
 services:
   easyhaproxy:
-    image: byjg/easy-haproxy:6.5.1
+    image: byjg/easy-haproxy:6.5.2
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - certs_haproxy:/etc/easyhaproxy/certs/haproxy
@@ -94,9 +102,14 @@ services:
   myapp:
     image: nginx
     labels:
-      easyhaproxy.web.host: example.com
-      easyhaproxy.web.port: 80        # Frontend port (HAProxy listens here)
-      easyhaproxy.web.localport: 80   # Backend port (your container)
+      easyhaproxy.http.host: example.com
+      easyhaproxy.http.port: 80            # Frontend port (HAProxy listens here)
+      easyhaproxy.http.localport: 80       # Backend port (your container)
+      easyhaproxy.http.redirect_ssl: true  # Redirect HTTP to HTTPS
+      easyhaproxy.https.host: example.com
+      easyhaproxy.https.port: 443
+      easyhaproxy.https.localport: 80
+      easyhaproxy.https.ssl: true          # TLS on this port, certificate from the volume
       # NO sslcert label when using volume method!
 
 volumes:
@@ -121,18 +134,29 @@ cat example.com.crt example.com.key > single.pem
 cat single.pem | base64 -w0
 ```
 
-3. Add the Base64 string to your container label:
+3. Add the Base64 string to your container label. The `sslcert` label turns the
+   definition's `port` into a TLS listener, so put it on a definition for port
+   443; a second definition on port 80 redirects HTTP to it:
 
 ```yaml
 services:
   myapp:
     image: nginx
     labels:
-      easyhaproxy.web.host: example.com
-      easyhaproxy.web.port: 80
-      easyhaproxy.web.localport: 80
-      easyhaproxy.web.sslcert: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t..."  # Base64 certificate
+      easyhaproxy.http.host: example.com
+      easyhaproxy.http.port: 80
+      easyhaproxy.http.localport: 80
+      easyhaproxy.http.redirect_ssl: true
+      easyhaproxy.https.host: example.com
+      easyhaproxy.https.port: 443
+      easyhaproxy.https.localport: 80
+      easyhaproxy.https.sslcert: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t..."  # Base64 certificate
 ```
+
+:::warning
+Do not put `sslcert` on a definition with `port: 80`: that listener would
+become TLS, so plain HTTP on port 80 stops working and nothing listens on 443.
+:::
 
 :::warning When Using Label Method
 - **There is no necessary to** mount the `/etc/easyhaproxy/certs/haproxy` volume for this domain

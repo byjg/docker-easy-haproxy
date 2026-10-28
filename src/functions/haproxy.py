@@ -18,11 +18,12 @@ class DaemonizeHAProxy:
     HAPROXY_START: Final[str] = "start"
     HAPROXY_RELOAD: Final[str] = "reload"
 
-    def __init__(self, custom_config_folder=None):
+    def __init__(self, custom_config_folder=None, certs_folder=None):
         self.process = None
         self.thread = None
         self.sleep_secs = None
         self.custom_config_folder = custom_config_folder if custom_config_folder is not None else Consts.custom_config_folder
+        self.certs_folder = certs_folder if certs_folder is not None else Consts.certs_haproxy
 
     def haproxy(self, action):
         error = self.__prepare(self.get_haproxy_command(action), action)
@@ -142,11 +143,23 @@ class DaemonizeHAProxy:
         time.sleep(self.sleep_secs)
 
     def get_custom_config_files(self):
-        if not os.path.exists(self.custom_config_folder):
+        return self._files_mtime(self.custom_config_folder, ".cfg")
+
+    def get_cert_files(self):
+        """
+        The certificates HAProxy loads from the folder (`bind ... crt <folder>`).
+        It reads them only when it starts or reloads, so a certificate added,
+        replaced or removed there needs a reload to be served.
+        """
+        return self._files_mtime(self.certs_folder, ".pem")
+
+    @staticmethod
+    def _files_mtime(folder, extension):
+        if not os.path.exists(folder):
             return {}
 
         files = {}
-        for file in os.listdir(self.custom_config_folder):
-            if file.endswith(".cfg"):
-                files[os.path.join(self.custom_config_folder, file)] = os.path.getmtime(os.path.join(self.custom_config_folder, file))
+        for file in os.listdir(folder):
+            if file.endswith(extension):
+                files[os.path.join(folder, file)] = os.path.getmtime(os.path.join(folder, file))
         return dict(sorted(files.items(), key=lambda t: t[0]))
