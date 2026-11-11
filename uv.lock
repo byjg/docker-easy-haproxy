@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.11"
 
 [[package]]
@@ -658,7 +658,7 @@ wheels = [
 
 [[package]]
 name = "easyhaproxy"
-version = "6.5.2"
+version = "6.5.3"
 source = { editable = "." }
 dependencies = [
     { name = "deepdiff" },
