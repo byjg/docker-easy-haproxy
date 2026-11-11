@@ -11,10 +11,10 @@ tests/test_pages.py fails when the committed files no longer match the
 templates.
 """
 
-import base64
 import os
 
 from jinja2 import Environment, FileSystemLoader
+from markupsafe import Markup
 
 PAGES_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "templates", "pages")
 ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))),
@@ -42,8 +42,8 @@ def _environment():
 
 
 def render_welcome():
-    with open(os.path.join(PAGES_DIR, "logo.png"), "rb") as f:
-        logo = base64.b64encode(f.read()).decode()
+    with open(os.path.join(PAGES_DIR, "logo.svg")) as f:
+        logo = Markup(f.read())
     return _environment().get_template("welcome.html.j2").render(title="EasyHAProxy is running", logo=logo)
 
 
