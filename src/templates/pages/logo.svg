@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="210" height="210" viewBox="25 20 210 210" role="img" aria-label="EasyHAProxy">
+  <style>
+    @media (prefers-color-scheme: dark) {
+      .ink { fill: #E6EDF3; }
+      .route { stroke: #A3B7C7; }
+    }
+  </style>
+  <defs>
+    <linearGradient id="cube-top" gradientUnits="userSpaceOnUse" x1="70" y1="64" x2="190" y2="64">
+      <stop stop-color="#D3E94C"/>
+      <stop offset="1" stop-color="#B3D63F"/>
+    </linearGradient>
+  </defs>
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <path class="route" d="M130 157 V181 M58 195 V181 H202 V195 M130 181 V195"
+          fill="none" stroke="#0F2A44" stroke-width="6"/>
+    <path d="M130 32 L190 65 L130 98 L70 65 Z" fill="url(#cube-top)"/>
+    <path d="M70 65 L130 98 V163 L70 130 Z" fill="#88C442"/>
+    <path d="M130 98 L190 65 V130 L130 163 Z" fill="#349967"/>
+    <path d="M72 66 L130 98 L188 66 M130 98 V160" fill="none" stroke="#F2F8CB" stroke-opacity=".65" stroke-width="3"/>
+    <g class="ink" fill="#0F2A44">
+      <rect x="40" y="195" width="36" height="24" rx="6"/>
+      <rect x="112" y="195" width="36" height="24" rx="6"/>
+      <rect x="184" y="195" width="36" height="24" rx="6"/>
+    </g>
+    <path d="M50 207 H66 M122 207 H138 M194 207 H210" fill="none" stroke="#68B846" stroke-width="4"/>
+  </g>
+</svg>
